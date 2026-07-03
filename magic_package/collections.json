@@ -1,0 +1,14 @@
+[
+  {
+    "id": "percorso_medievale",
+    "name": "Percorso Medievale",
+    "description": "Manoscritti del periodo medievale sec. XIV-XV",
+    "books": ["book01", "book02", "book03"]
+  },
+  {
+    "id": "percorso_illuminato",
+    "name": "Manoscritti Illuminati",
+    "description": "Codici miniati e manoscritti con illustrazioni",
+    "books": ["book04", "book05"]
+  }
+]

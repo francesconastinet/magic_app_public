@@ -1,4 +1,4 @@
-// --- MODELLI DATI CORSO 2 ---
+// --- MODELLI DATI ---
 
 class CollectionInfo {
   final String id;
@@ -99,6 +99,85 @@ class CollectionModel {
       name: json['name'] as String,
       description: json['description'] as String,
       manuscriptIds: List<String>.from(json['manuscripts'] as List),
+    );
+  }
+}
+
+// --- MODELLI NUOVA STRUTTURA PACCHETTO ---
+
+// Singolo link multimediale nel books.json
+class MediaItem {
+  final String tipo;
+  final String titolo;
+  final String url;
+  final String descrizione;
+
+  MediaItem({
+    required this.tipo,
+    required this.titolo,
+    required this.url,
+    required this.descrizione,
+  });
+
+  factory MediaItem.fromJson(Map<String, dynamic> json) {
+    return MediaItem(
+      tipo: json['tipo'] as String,
+      titolo: json['titolo'] as String,
+      url: json['url'] as String,
+      descrizione: json['descrizione'] as String? ?? '',
+    );
+  }
+}
+
+// Libro dalla nuova struttura books.json
+class BookModel {
+  final String id;
+  final String titolo;
+  final String autore;
+  final String anno;
+  final List<MediaItem> multimedia;
+
+  BookModel({
+    required this.id,
+    required this.titolo,
+    required this.autore,
+    required this.anno,
+    required this.multimedia,
+  });
+
+  factory BookModel.fromJson(Map<String, dynamic> json) {
+    return BookModel(
+      id: json['id'] as String,
+      titolo: json['titolo'] as String,
+      autore: json['autore'] as String,
+      anno: json['anno'] as String? ?? '',
+      multimedia: (json['multimedia'] as List? ?? [])
+          .map((m) => MediaItem.fromJson(m))
+          .toList(),
+    );
+  }
+}
+
+// Collezione dalla nuova struttura collections.json
+class CollectionV2Model {
+  final String id;
+  final String name;
+  final String description;
+  final List<String> bookIds;
+
+  CollectionV2Model({
+    required this.id,
+    required this.name,
+    required this.description,
+    required this.bookIds,
+  });
+
+  factory CollectionV2Model.fromJson(Map<String, dynamic> json) {
+    return CollectionV2Model(
+      id: json['id'] as String,
+      name: json['name'] as String,
+      description: json['description'] as String? ?? '',
+      bookIds: List<String>.from(json['books'] as List? ?? []),
     );
   }
 }

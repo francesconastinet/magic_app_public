@@ -1,0 +1,37 @@
+[
+  {
+    "id": "book01",
+    "titolo": "Manoscritto Girolamini",
+    "autore": "Autore Ignoto",
+    "anno": "Sec. XIV-XVII",
+    "multimedia": []
+  },
+  {
+    "id": "book02",
+    "titolo": "Codice Miniato",
+    "autore": "Scuola Napoletana",
+    "anno": "Sec. XV",
+    "multimedia": []
+  },
+  {
+    "id": "book03",
+    "titolo": "Antifonario",
+    "autore": "Anonimo sec. XIV",
+    "anno": "Sec. XIV",
+    "multimedia": []
+  },
+  {
+    "id": "book04",
+    "titolo": "Evangeliario Miniato",
+    "autore": "Bottega Napoletana",
+    "anno": "Sec. XIII",
+    "multimedia": []
+  },
+  {
+    "id": "book05",
+    "titolo": "Libro d'Ore",
+    "autore": "Anonimo fiammingo",
+    "anno": "Sec. XV",
+    "multimedia": []
+  }
+]

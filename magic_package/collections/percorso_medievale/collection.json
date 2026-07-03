@@ -1,6 +1,0 @@
-{
-  "id": "percorso_medievale",
-  "name": "Percorso Medievale",
-  "description": "Manoscritti del periodo medievale sec. XIV-XV",
-  "manuscripts": ["ms001", "ms002", "ms003"]
-}

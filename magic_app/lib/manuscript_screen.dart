@@ -17,6 +17,7 @@ class ManuscriptScreen extends StatelessWidget {
     required this.collectionName,
   });
 
+  /* Vecchia struttura — mantenuta per retrocompatibilita'
   Future<List<ManuscriptModel>> _caricaManoscritti() async {
     final service = PackageService();
 
@@ -39,6 +40,18 @@ class ManuscriptScreen extends StatelessWidget {
     return manoscritti;
   }
 
+  */
+
+  // Nuova struttura — legge books.json e collections.json
+  Future<List<BookModel>> _caricaLibri() async {
+    final service = PackageService();
+    // Legge i libri della collezione dalla nuova struttura
+    final libri = await service.leggiLibriDiCollezione(
+        packageId, collectionId);
+    if (libri.isEmpty) throw Exception('Nessun libro trovato');
+    return libri;
+  }
+
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
@@ -52,13 +65,13 @@ class ManuscriptScreen extends StatelessWidget {
             Text(collectionName,
                 style: const TextStyle(
                     fontSize: 18, fontWeight: FontWeight.bold)),
-            const Text('Manoscritti',
+            const Text('Libri',
                 style: TextStyle(fontSize: 12)),
           ],
         ),
       ),
-      body: FutureBuilder<List<ManuscriptModel>>(
-        future: _caricaManoscritti(),
+      body: FutureBuilder<List<BookModel>>(
+        future: _caricaLibri(),
         builder: (context, snapshot) {
           // STATO LOADING
           if (snapshot.connectionState == ConnectionState.waiting) {
@@ -68,7 +81,7 @@ class ManuscriptScreen extends StatelessWidget {
                 children: [
                   CircularProgressIndicator(),
                   SizedBox(height: 16),
-                  Text('Caricamento manoscritti...'),
+                  Text('Caricamento libri...'),
                 ],
               ),
             );
@@ -96,12 +109,12 @@ class ManuscriptScreen extends StatelessWidget {
           }
 
           // STATO DATA
-          final manoscritti = snapshot.data!;
+          final libri = snapshot.data!;
           return ListView.builder(
             padding: const EdgeInsets.only(top: 8),
-            itemCount: manoscritti.length,
+            itemCount: libri.length,
             itemBuilder: (context, index) {
-              final ms = manoscritti[index];
+              final book = libri[index];
               return Card(
                 child: ListTile(
                   contentPadding: const EdgeInsets.symmetric(
@@ -109,43 +122,47 @@ class ManuscriptScreen extends StatelessWidget {
                   leading: CircleAvatar(
                     backgroundColor: colorScheme.primaryContainer,
                     child: Text(
-                      ms.id.replaceAll('ms', ''),
+                      book.id.replaceAll('book', ''),
                       style: TextStyle(
                         color: colorScheme.onPrimaryContainer,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
                   ),
-                  title: Text(ms.titolo,
+                  title: Text(book.titolo,
                       style: const TextStyle(
                           fontWeight: FontWeight.bold)),
-                  subtitle: Text(ms.autore),
+                  subtitle: Text(book.autore),
                   trailing: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     crossAxisAlignment: CrossAxisAlignment.end,
                     children: [
-                      Text(ms.periodo,
+                      Text(book.anno,
                           style: TextStyle(
                               fontSize: 12,
                               color: colorScheme.onSurfaceVariant)),
                       const SizedBox(height: 4),
-                      Icon(Icons.arrow_forward_ios,
-                          size: 14, color: colorScheme.primary),
+                      // Icona multimedia se il libro ha contenuti
+                      book.multimedia.isNotEmpty
+                          ? Icon(Icons.play_circle_outline,
+                              size: 14, color: colorScheme.primary)
+                          : Icon(Icons.arrow_forward_ios,
+                              size: 14, color: colorScheme.primary),
                     ],
                   ),
                   onTap: () {
-                    // Converte ManuscriptModel in Opera e salva in AppState
+                    // Converte BookModel in Opera e salva in AppState
                     final opera = Opera(
-                      id: ms.id,
-                      titolo: ms.titolo,
-                      autore: ms.autore,
-                      biblioteca: ms.biblioteca,
-                      periodo: ms.periodo,
-                      supporto: ms.supporto,
+                      id: book.id,
+                      titolo: book.titolo,
+                      autore: book.autore,
+                      biblioteca: 'Biblioteca dei Girolamini',
+                      periodo: book.anno,
+                      supporto: '',
                     );
                     context.read<AppState>().selezionaOpera(opera);
-                    // Naviga alla schermata AR con i dati del manoscritto
-                    context.push('/ar/${ms.titolo}');
+                    // Naviga alla schermata AR con i dati del libro
+                    context.push('/ar/${book.titolo}');
                   },
                 ),
               );
