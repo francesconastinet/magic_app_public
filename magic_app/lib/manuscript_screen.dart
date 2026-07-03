@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import 'package:go_router/go_router.dart';
 import 'package_service.dart';
 import 'models.dart';
+import 'main.dart';
 
 class ManuscriptScreen extends StatelessWidget {
   final String packageId;
@@ -131,11 +134,18 @@ class ManuscriptScreen extends StatelessWidget {
                     ],
                   ),
                   onTap: () {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                          content: Text(
-                              '${ms.titolo} — dettaglio in arrivo!')),
+                    // Converte ManuscriptModel in Opera e salva in AppState
+                    final opera = Opera(
+                      id: ms.id,
+                      titolo: ms.titolo,
+                      autore: ms.autore,
+                      biblioteca: ms.biblioteca,
+                      periodo: ms.periodo,
+                      supporto: ms.supporto,
                     );
+                    context.read<AppState>().selezionaOpera(opera);
+                    // Naviga alla schermata AR con i dati del manoscritto
+                    context.push('/ar/${ms.titolo}');
                   },
                 ),
               );
