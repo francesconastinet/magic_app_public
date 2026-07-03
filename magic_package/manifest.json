@@ -1,0 +1,10 @@
+{
+  "version": "1.0.0",
+  "name": "Girolamini — Collezione Base",
+  "description": "Collezione di manoscritti della Biblioteca dei Girolamini di Napoli",
+  "packageUrl": "",
+  "collections": [
+    { "id": "percorso_medievale", "name": "Percorso Medievale", "manuscriptCount": 3 },
+    { "id": "percorso_illuminato", "name": "Manoscritti Illuminati", "manuscriptCount": 2 }
+  ]
+}

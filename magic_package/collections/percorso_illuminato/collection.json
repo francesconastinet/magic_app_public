@@ -1,0 +1,6 @@
+{
+  "id": "percorso_illuminato",
+  "name": "Manoscritti Illuminati",
+  "description": "Codici miniati e manoscritti con illustrazioni",
+  "manuscripts": ["ms004", "ms005"]
+}
