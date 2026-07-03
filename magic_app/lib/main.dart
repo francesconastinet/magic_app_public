@@ -4,6 +4,7 @@ import 'collection_screen.dart';
 import 'opera_repository.dart';
 import 'recognition_service.dart';
 import 'ar_screen.dart';
+import 'api_service.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
@@ -152,22 +153,46 @@ class HomeScreen extends StatelessWidget {
           ],
         ),
         actions: [
-          // BOTTONE DOWNLOAD ZIP
+          // BOTTONE DOWNLOAD ZIP - versionamento
           IconButton(
             icon: const Icon(Icons.folder_zip),
-            tooltip: 'Scarica pacchetto',
+            tooltip: 'Aggiorna pacchetto',
             onPressed: () async {
               try {
                 final service = PackageService();
+
+                // 1. Scarica manifest per ottenere versione disponibile
+                final manifest = await ApiService().scaricaManifest();
+                final versioneDisponibile = manifest.version;
+
+                // 2. Controlla se c'e' un aggiornamento disponibile
+                final aggiornamentoDisponibile =
+                    await service.isAggiornamentoDisponibile(
+                        AppConfig.packageId, versioneDisponibile);
+
+                if (!aggiornamentoDisponibile && context.mounted) {
+                  // Pacchetto gia' aggiornato — nessun download necessario
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(
+                          'Pacchetto aggiornato — versione $versioneDisponibile'),
+                      backgroundColor: Colors.green,
+                    ),
+                  );
+                  return;
+                }
+
+                if (!context.mounted) return;
                 double progresso = 0;
 
-                // Mostra dialog con progress bar
+                // 3. Mostra dialog con progress bar
                 showDialog(
                   context: context,
                   barrierDismissible: false,
                   builder: (ctx) => StatefulBuilder(
                     builder: (ctx, setStateDlg) => AlertDialog(
-                      title: const Text('Download in corso...'),
+                      title: Text(
+                          'Download versione $versioneDisponibile...'),
                       content: Column(
                         mainAxisSize: MainAxisSize.min,
                         children: [
@@ -181,10 +206,12 @@ class HomeScreen extends StatelessWidget {
                   ),
                 );
 
+                // 4. Scarica ed estrai — passa la versione per salvarla
                 await service.scaricaEEstrai(
                   // URL e packageId da AppConfig — non hardcodati
                   url: AppConfig.packageUrl,
                   packageId: AppConfig.packageId,
+                  versione: versioneDisponibile,
                   onProgress: (received, total) {
                     progresso = received / total;
                   },
@@ -192,11 +219,11 @@ class HomeScreen extends StatelessWidget {
 
                 if (context.mounted) Navigator.pop(context);
 
-                // Legge ms001 dal disco dopo il download
+                // 5. Legge ms001 dal disco dopo il download
                 final info = await service.leggiInfoManoscritto(
                     AppConfig.packageId, 'percorso_medievale', 'ms001');
 
-                // Test caricamento modello ML dinamico
+                // 6. Test caricamento modello ML dinamico
                 bool modelloCaricato = false;
                 try {
                   final riconoscitore = RecognitionService();
@@ -212,7 +239,8 @@ class HomeScreen extends StatelessWidget {
                   showDialog(
                     context: context,
                     builder: (_) => AlertDialog(
-                      title: const Text('Download completato!'),
+                      title: Text(
+                          'Versione $versioneDisponibile installata!'),
                       content: Column(
                         mainAxisSize: MainAxisSize.min,
                         crossAxisAlignment: CrossAxisAlignment.start,

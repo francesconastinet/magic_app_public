@@ -3,9 +3,11 @@ import 'package:flutter/services.dart';
 import 'package_storage.dart';
 import 'package:flutter/foundation.dart';
 import 'download_service.dart';
+import 'update_service.dart';
 
 class PackageService {
   final PackageStorage _storage = PackageStorage();
+  final UpdateService _updateService = UpdateService();
 
   // Carica e decodifica il ZIP dagli asset
   Future<Archive> _caricaArchivio() async {
@@ -41,6 +43,7 @@ class PackageService {
   Future<void> scaricaEEstrai({
     required String url,
     required String packageId,
+    String? versione,
     void Function(int received, int total)? onProgress,
   }) async {
     final downloader = DownloadService();
@@ -73,6 +76,12 @@ class PackageService {
     // 4. Elimina il file temporaneo
     await downloader.eliminaTemp(percorsoZip);
     debugPrint('Installati $fileEstratti file per $packageId');
+
+    // 5. Salva la versione installata su disco
+    if (versione != null) {
+      await _updateService.salvaVersioneInstallata(packageId, versione);
+      debugPrint('Versione $versione registrata per $packageId');
+    }
   }
 
   // Legge info.json di un manoscritto dal disco
@@ -93,6 +102,13 @@ class PackageService {
   // Verifica se il pacchetto e' gia' estratto
   Future<bool> isPacchettoInstallato(String packageId) async {
     return await _storage.pacchettoPresenteSync(packageId);
+  }
+
+  // Controlla se c'e' un aggiornamento disponibile
+  Future<bool> isAggiornamentoDisponibile(
+      String packageId, String versioneManifest) async {
+    return await _updateService.isAggiornamentoDisponibile(
+        packageId, versioneManifest);
   }
 
   // Lista file nel ZIP (per test)
