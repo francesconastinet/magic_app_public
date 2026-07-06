@@ -1,9 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
-import 'package:go_router/go_router.dart';
 import 'package_service.dart';
 import 'models.dart';
-import 'main.dart';
+import 'book_detail_screen.dart';
 
 class ManuscriptScreen extends StatelessWidget {
   final String packageId;
@@ -151,18 +149,13 @@ class ManuscriptScreen extends StatelessWidget {
                     ],
                   ),
                   onTap: () {
-                    // Converte BookModel in Opera e salva in AppState
-                    final opera = Opera(
-                      id: book.id,
-                      titolo: book.titolo,
-                      autore: book.autore,
-                      biblioteca: 'Biblioteca dei Girolamini',
-                      periodo: book.anno,
-                      supporto: '',
+                    // Naviga al dettaglio libro invece di andare direttamente in AR
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => BookDetailScreen(book: book),
+                      ),
                     );
-                    context.read<AppState>().selezionaOpera(opera);
-                    // Naviga alla schermata AR con i dati del libro
-                    context.push('/ar/${book.titolo}');
                   },
                 ),
               );
