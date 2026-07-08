@@ -5,13 +5,19 @@
     "autore": "Autore Ignoto",
     "anno": "Sec. XIV-XVII",
     "multimedia": [
-  {
-    "tipo": "video",
-    "titolo": "Video di test",
-    "url": "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
-    "descrizione": "Video di prova"
-  }
-]
+      {
+        "tipo": "video",
+        "titolo": "Video di test",
+        "url": "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
+        "descrizione": "Video di prova"
+      },
+      {
+        "tipo": "audio",
+        "titolo": "Audioguida di test",
+        "url": "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3",
+        "descrizione": "Traccia audio di prova"
+      }
+    ]
   },
   {
     "id": "book02",

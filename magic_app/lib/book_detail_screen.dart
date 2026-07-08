@@ -5,6 +5,7 @@ import 'models.dart';
 import 'main.dart';
 import 'media_service.dart';
 import 'chat_screen.dart';
+import 'audio_player_widget.dart';
 
 class BookDetailScreen extends StatelessWidget {
   final BookModel book;
@@ -131,39 +132,49 @@ class BookDetailScreen extends StatelessWidget {
                       .titleMedium
                       ?.copyWith(fontWeight: FontWeight.bold)),
               const SizedBox(height: 8),
-              ...book.multimedia.map((media) => Card(
-                    child: ListTile(
-                      leading: CircleAvatar(
-                        backgroundColor:
-                            _colorePerTipo(media.tipo).withValues(alpha: 0.15),
-                        child: Icon(
-                          _iconaPerTipo(media.tipo),
-                          color: _colorePerTipo(media.tipo),
-                        ),
+              ...book.multimedia.map((media) {
+                // Audio riprodotto in-app con AudioPlayerWidget
+                if (media.tipo == 'audio') {
+                  return Padding(
+                    padding: const EdgeInsets.only(bottom: 8),
+                    child: AudioPlayerWidget(media: media),
+                  );
+                }
+                // Altri tipi — apertura con url_launcher
+                return Card(
+                  child: ListTile(
+                    leading: CircleAvatar(
+                      backgroundColor:
+                          _colorePerTipo(media.tipo).withValues(alpha: 0.15),
+                      child: Icon(
+                        _iconaPerTipo(media.tipo),
+                        color: _colorePerTipo(media.tipo),
                       ),
-                      title: Text(media.titolo,
-                          style: const TextStyle(
-                              fontWeight: FontWeight.bold)),
-                      subtitle: media.descrizione.isNotEmpty
-                          ? Text(media.descrizione)
-                          : null,
-                      trailing: const Icon(Icons.arrow_forward_ios,
-                          size: 14),
-                      onTap: () async {
-                        // Apre il link multimediale con MediaService
-                        final aperto = await mediaService.apriMedia(media);
-                        if (!aperto && context.mounted) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: Text(
-                                  'Impossibile aprire ${mediaService.etichettaTipo(media.tipo)}'),
-                              backgroundColor: Colors.red,
-                            ),
-                          );
-                        }
-                      },
                     ),
-                  )),
+                    title: Text(media.titolo,
+                        style: const TextStyle(
+                            fontWeight: FontWeight.bold)),
+                    subtitle: media.descrizione.isNotEmpty
+                        ? Text(media.descrizione)
+                        : null,
+                    trailing: const Icon(Icons.arrow_forward_ios,
+                        size: 14),
+                    onTap: () async {
+                      // Apre il link multimediale con MediaService
+                      final aperto = await mediaService.apriMedia(media);
+                      if (!aperto && context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text(
+                                'Impossibile aprire ${mediaService.etichettaTipo(media.tipo)}'),
+                            backgroundColor: Colors.red,
+                          ),
+                        );
+                      }
+                    },
+                  ),
+                );
+              }),
               const SizedBox(height: 16),
             ] else ...[
               // Expanded nel Row per evitare overflow del testo
