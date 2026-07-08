@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import 'models.dart';
 import 'main.dart';
 import 'media_service.dart';
+import 'chat_screen.dart';
 
 class BookDetailScreen extends StatelessWidget {
   final BookModel book;
@@ -61,6 +62,21 @@ class BookDetailScreen extends StatelessWidget {
         foregroundColor: colorScheme.onPrimary,
         title: const Text('Dettaglio',
             style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+        actions: [
+          // Bottone Assistente Virtuale 
+          IconButton(
+            icon: const Icon(Icons.chat_bubble_outline),
+            tooltip: 'Assistente Virtuale',
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => ChatScreen(book: book),
+                ),
+              );
+            },
+          ),
+        ],
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
