@@ -4,6 +4,21 @@
     <uses-permission android:name="android.permission.INTERNET"/>
     <uses-feature android:name="android.hardware.camera" android:required="true"/>
 
+    <queries>
+        <intent>
+            <action android:name="android.intent.action.VIEW" />
+            <data android:scheme="https" />
+        </intent>
+        <intent>
+            <action android:name="android.intent.action.VIEW" />
+            <data android:scheme="http" />
+        </intent>
+        <intent>
+            <action android:name="android.intent.action.PROCESS_TEXT"/>
+            <data android:mimeType="text/plain"/>
+        </intent>
+    </queries>
+
     <application
         android:label="magic_app"
         android:name="${applicationName}"
@@ -30,12 +45,5 @@
             android:name="flutterEmbedding"
             android:value="2"/>
     </application>
-
-    <queries>
-        <intent>
-            <action android:name="android.intent.action.PROCESS_TEXT"/>
-            <data android:mimeType="text/plain"/>
-        </intent>
-    </queries>
 
 </manifest>

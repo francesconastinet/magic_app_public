@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import 'models.dart';
 import 'main.dart';
+import 'media_service.dart';
 
 class BookDetailScreen extends StatelessWidget {
   final BookModel book;
@@ -51,6 +52,8 @@ class BookDetailScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
+    // MediaService per aprire i link multimediali 
+    final mediaService = MediaService();
 
     return Scaffold(
       appBar: AppBar(
@@ -130,13 +133,18 @@ class BookDetailScreen extends StatelessWidget {
                           : null,
                       trailing: const Icon(Icons.arrow_forward_ios,
                           size: 14),
-                      onTap: () {
-                        // — apertura link multimediali
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
+                      onTap: () async {
+                        // Apre il link multimediale con MediaService
+                        final aperto = await mediaService.apriMedia(media);
+                        if (!aperto && context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
                               content: Text(
-                                  '${media.tipo}: ${media.titolo} — da implementare!')),
-                        );
+                                  'Impossibile aprire ${mediaService.etichettaTipo(media.tipo)}'),
+                              backgroundColor: Colors.red,
+                            ),
+                          );
+                        }
                       },
                     ),
                   )),

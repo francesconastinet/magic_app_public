@@ -4,7 +4,14 @@
     "titolo": "Manoscritto Girolamini",
     "autore": "Autore Ignoto",
     "anno": "Sec. XIV-XVII",
-    "multimedia": []
+    "multimedia": [
+  {
+    "tipo": "video",
+    "titolo": "Video di test",
+    "url": "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
+    "descrizione": "Video di prova"
+  }
+]
   },
   {
     "id": "book02",
