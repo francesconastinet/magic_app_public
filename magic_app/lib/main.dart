@@ -153,7 +153,7 @@ class HomeScreen extends StatelessWidget {
           ],
         ),
         actions: [
-          // BOTTONE DOWNLOAD ZIP - versionamento
+          // BOTTONE AGGIORNAMENTO PACCHETTO 
           IconButton(
             icon: const Icon(Icons.folder_zip),
             tooltip: 'Aggiorna pacchetto',
@@ -219,55 +219,15 @@ class HomeScreen extends StatelessWidget {
 
                 if (context.mounted) Navigator.pop(context);
 
-                // 5. Legge ms001 dal disco dopo il download
-                final info = await service.leggiInfoManoscritto(
-                    AppConfig.packageId, 'percorso_medievale', 'ms001');
-
-                // 6. Test caricamento modello ML dinamico
-                bool modelloCaricato = false;
-                try {
-                  final riconoscitore = RecognitionService();
-                  await riconoscitore.inizializzaDaFile(
-                      AppConfig.packageId, 'percorso_medievale');
-                  riconoscitore.dispose();
-                  modelloCaricato = true;
-                } catch (_) {
-                  modelloCaricato = false;
-                }
-
+                // 5. Mostra dialog di conferma installazione
                 if (context.mounted) {
                   showDialog(
                     context: context,
                     builder: (_) => AlertDialog(
                       title: Text(
                           'Versione $versioneDisponibile installata!'),
-                      content: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          if (info != null) ...[
-                            const Text('ms001 dal disco:',
-                                style: TextStyle(
-                                    fontWeight: FontWeight.bold)),
-                            Text('Titolo: ${info['titolo']}'),
-                            Text('Autore: ${info['autore']}'),
-                            Text('Periodo: ${info['periodo']}'),
-                            const SizedBox(height: 8),
-                          ],
-                          // Risultato test modello ML
-                          Text(
-                            modelloCaricato
-                                ? 'Modello ML: caricato dal pacchetto ✓'
-                                : 'Modello ML: errore caricamento ✗',
-                            style: TextStyle(
-                              color: modelloCaricato
-                                  ? Colors.green
-                                  : Colors.red,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ],
-                      ),
+                      content: const Text(
+                          'Il pacchetto e\' stato scaricato e installato correttamente.'),
                       actions: [
                         TextButton(
                           onPressed: () => Navigator.pop(context),

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:dio/dio.dart';
 import 'chat_service.dart';
 import 'models.dart';
 
@@ -22,10 +23,31 @@ class _ChatScreenState extends State<ChatScreen> {
   bool _botStaScrivendo = false;
 
   @override
+  void initState() {
+    super.initState();
+    // Messaggio di benvenuto contestuale al libro 
+    _aggiungiMessaggioBenvenuto();
+  }
+
+  @override
   void dispose() {
     _controller.dispose();
     _scrollController.dispose();
     super.dispose();
+  }
+
+  // Aggiunge messaggio di benvenuto con contesto del libro
+  void _aggiungiMessaggioBenvenuto() {
+    setState(() {
+      _messaggi.add(MessaggioChat(
+        testo: 'Ciao! Sono il tuo assistente virtuale per '
+            '"${widget.book.titolo}" di ${widget.book.autore}. '
+            'Puoi farmi domande su questo libro o sulla collezione '
+            'dei Girolamini. Come posso aiutarti?',
+        isUtente: false,
+        timestamp: DateTime.now(),
+      ));
+    });
   }
 
   // Scrolla verso il basso dopo il ridisegno del frame
@@ -64,10 +86,26 @@ class _ChatScreenState extends State<ChatScreen> {
         _messaggi.add(risposta);
         _botStaScrivendo = false;
       });
+    } on DioException catch (e) {
+      // Errore di connessione — distingue tra rete e server
+      final messaggioErrore = e.type == DioExceptionType.connectionTimeout ||
+              e.type == DioExceptionType.receiveTimeout ||
+              e.type == DioExceptionType.connectionError
+          ? 'Errore di connessione — verifica la rete e riprova'
+          : 'Errore del server — riprova tra qualche istante';
+
+      setState(() {
+        _messaggi.add(MessaggioChat(
+          testo: messaggioErrore,
+          isUtente: false,
+          timestamp: DateTime.now(),
+        ));
+        _botStaScrivendo = false;
+      });
     } catch (e) {
       setState(() {
         _messaggi.add(MessaggioChat(
-          testo: 'Errore: impossibile contattare il server',
+          testo: 'Errore imprevisto — riprova',
           isUtente: false,
           timestamp: DateTime.now(),
         ));
@@ -100,38 +138,19 @@ class _ChatScreenState extends State<ChatScreen> {
         children: [
           // Lista messaggi
           Expanded(
-            child: _messaggi.isEmpty
-                ? Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(Icons.chat_bubble_outline,
-                            size: 64,
-                            color: colorScheme.onSurfaceVariant
-                                .withValues(alpha: 0.4)),
-                        const SizedBox(height: 16),
-                        Text(
-                          'Fai una domanda su\n${widget.book.titolo}',
-                          textAlign: TextAlign.center,
-                          style: TextStyle(
-                              color: colorScheme.onSurfaceVariant),
-                        ),
-                      ],
-                    ),
-                  )
-                : ListView.builder(
-                    controller: _scrollController,
-                    padding: const EdgeInsets.all(16),
-                    itemCount:
-                        _messaggi.length + (_botStaScrivendo ? 1 : 0),
-                    itemBuilder: (context, index) {
-                      // Bubble "Bot sta scrivendo..."
-                      if (index == _messaggi.length && _botStaScrivendo) {
-                        return _buildBubbleScrittura(colorScheme);
-                      }
-                      return _buildBubble(_messaggi[index], colorScheme);
-                    },
-                  ),
+            child: ListView.builder(
+              controller: _scrollController,
+              padding: const EdgeInsets.all(16),
+              itemCount:
+                  _messaggi.length + (_botStaScrivendo ? 1 : 0),
+              itemBuilder: (context, index) {
+                // Bubble "Bot sta scrivendo..."
+                if (index == _messaggi.length && _botStaScrivendo) {
+                  return _buildBubbleScrittura(colorScheme);
+                }
+                return _buildBubble(_messaggi[index], colorScheme);
+              },
+            ),
           ),
 
           // Input testo
@@ -244,8 +263,7 @@ class _ChatScreenState extends State<ChatScreen> {
               ),
             ),
             ...msg.fonti.map((fonte) => Padding(
-                  padding:
-                      const EdgeInsets.only(left: 4, top: 2),
+                  padding: const EdgeInsets.only(left: 4, top: 2),
                   child: Text(
                     '• ${fonte.title.isNotEmpty ? fonte.title : fonte.identifier}',
                     style: TextStyle(
