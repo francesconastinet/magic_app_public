@@ -15,10 +15,10 @@ class CollectionInfo {
 
   factory CollectionInfo.fromJson(Map<String, dynamic> json) {
     return CollectionInfo(
-      id: json['id'] as String,
-      name: json['name'] as String,
-      description: json['description'] as String,
-      manuscriptCount: json['manuscriptCount'] as int,
+      id: json['id']?.toString() ?? '',
+      name: json['name']?.toString() ?? '',
+      description: json['description']?.toString() ?? '',
+      manuscriptCount: json['manuscriptCount'] as int? ?? 0,
     );
   }
 }
@@ -40,11 +40,11 @@ class PackageManifest {
 
   factory PackageManifest.fromJson(Map<String, dynamic> json) {
     return PackageManifest(
-      version: json['version'] as String,
-      name: json['name'] as String,
-      description: json['description'] as String,
-      packageUrl: json['packageUrl'] as String? ?? '',
-      collections: (json['collections'] as List)
+      version: json['version']?.toString() ?? '',
+      name: json['name']?.toString() ?? '',
+      description: json['description']?.toString() ?? '',
+      packageUrl: json['packageUrl']?.toString() ?? '',
+      collections: (json['collections'] as List? ?? [])
           .map((c) => CollectionInfo.fromJson(c))
           .toList(),
     );
@@ -70,12 +70,12 @@ class ManuscriptModel {
 
   factory ManuscriptModel.fromJson(Map<String, dynamic> json) {
     return ManuscriptModel(
-      id: json['id'] as String,
-      titolo: json['titolo'] as String,
-      autore: json['autore'] as String,
-      periodo: json['periodo'] as String,
-      supporto: json['supporto'] as String,
-      biblioteca: json['biblioteca'] as String,
+      id: json['id']?.toString() ?? '',
+      titolo: json['titolo']?.toString() ?? '',
+      autore: json['autore']?.toString() ?? '',
+      periodo: json['periodo']?.toString() ?? '',
+      supporto: json['supporto']?.toString() ?? '',
+      biblioteca: json['biblioteca']?.toString() ?? '',
     );
   }
 }
@@ -95,10 +95,12 @@ class CollectionModel {
 
   factory CollectionModel.fromJson(Map<String, dynamic> json) {
     return CollectionModel(
-      id: json['id'] as String,
-      name: json['name'] as String,
-      description: json['description'] as String,
-      manuscriptIds: List<String>.from(json['manuscripts'] as List),
+      id: json['id']?.toString() ?? '',
+      name: json['name']?.toString() ?? '',
+      description: json['description']?.toString() ?? '',
+      manuscriptIds: (json['manuscripts'] as List? ?? [])
+          .map((e) => e.toString())
+          .toList(),
     );
   }
 }
@@ -121,10 +123,10 @@ class MediaItem {
 
   factory MediaItem.fromJson(Map<String, dynamic> json) {
     return MediaItem(
-      tipo: json['tipo'] as String,
-      titolo: json['titolo'] as String,
-      url: json['url'] as String,
-      descrizione: json['descrizione'] as String? ?? '',
+      tipo: json['tipo']?.toString() ?? '',
+      titolo: json['titolo']?.toString() ?? '',
+      url: json['url']?.toString() ?? '',
+      descrizione: json['descrizione']?.toString() ?? '',
     );
   }
 }
@@ -147,10 +149,10 @@ class BookModel {
 
   factory BookModel.fromJson(Map<String, dynamic> json) {
     return BookModel(
-      id: json['id'] as String,
-      titolo: json['titolo'] as String,
-      autore: json['autore'] as String,
-      anno: json['anno'] as String? ?? '',
+      id: json['id']?.toString() ?? '',
+      titolo: json['titolo']?.toString() ?? '',
+      autore: json['autore']?.toString() ?? '',
+      anno: json['anno']?.toString() ?? '',
       multimedia: (json['multimedia'] as List? ?? [])
           .map((m) => MediaItem.fromJson(m))
           .toList(),
@@ -174,10 +176,12 @@ class CollectionV2Model {
 
   factory CollectionV2Model.fromJson(Map<String, dynamic> json) {
     return CollectionV2Model(
-      id: json['id'] as String,
-      name: json['name'] as String,
-      description: json['description'] as String? ?? '',
-      bookIds: List<String>.from(json['books'] as List? ?? []),
+      id: json['id']?.toString() ?? '',
+      name: json['name']?.toString() ?? '',
+      description: json['description']?.toString() ?? '',
+      bookIds: (json['books'] as List? ?? [])
+          .map((e) => e.toString())
+          .toList(),
     );
   }
 }

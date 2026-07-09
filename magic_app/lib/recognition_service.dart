@@ -28,7 +28,7 @@ class RecognitionService {
 
   bool get pronto => _pronto;
 
-  // Carica modello dagli asset (modalita' statica — Corso 1)
+  // Carica modello dagli asset (modalita' statica)
   Future<void> inizializza() async {
     final labelsData =
         await rootBundle.loadString('assets/labels.txt');
@@ -43,7 +43,7 @@ class RecognitionService {
     _pronto = true;
   }
 
-  // Carica modello dal pacchetto scaricato (modalita' dinamica — Corso 2)
+  // Carica modello dal pacchetto scaricato (modalita' dinamica)
   Future<void> inizializzaDaFile(
       String packageId, String collectionId) async {
     final docs = await getApplicationDocumentsDirectory();

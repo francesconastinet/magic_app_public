@@ -153,6 +153,113 @@ class HomeScreen extends StatelessWidget {
           ],
         ),
         actions: [
+          // BOTTONE DOWNLOAD DA API INTERNA  (solo VPN)
+          IconButton(
+            icon: const Icon(Icons.cloud_download),
+            tooltip: 'Scarica da API (VPN)',
+            onPressed: () async {
+              try {
+                final service = PackageService();
+                String statoMessaggio = 'Connessione...';
+
+                // Mostra dialog con stato
+                showDialog(
+                  context: context,
+                  barrierDismissible: false,
+                  builder: (ctx) => StatefulBuilder(
+                    builder: (ctx, setStateDlg) => AlertDialog(
+                      title: const Text('Download da API...'),
+                      content: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const CircularProgressIndicator(),
+                          const SizedBox(height: 16),
+                          Text(statoMessaggio),
+                        ],
+                      ),
+                    ),
+                  ),
+                );
+
+                // Scarica il pacchetto dalle API interne
+                final successo = await service.scaricaEEstraiDaApi(
+                  packageId: AppConfig.packageId,
+                  versione: 'api-latest',
+                  onStato: (msg) {
+                    statoMessaggio = msg;
+                  },
+                );
+
+                // Chiude il dialog solo se e' ancora aperto
+                if (context.mounted && Navigator.canPop(context)) {
+                  Navigator.pop(context);
+                }
+
+                // Piccolo delay per permettere al navigator di sbloccarsi
+                await Future.delayed(const Duration(milliseconds: 200));
+
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(successo
+                          ? 'Pacchetto API installato!'
+                          : 'Errore download API — verifica VPN'),
+                      backgroundColor:
+                          successo ? Colors.green : Colors.red,
+                    ),
+                  );
+                }
+
+                // Debug temporaneo — legge books.json dal pacchetto API
+                if (successo && context.mounted) {
+                  await Future.delayed(const Duration(milliseconds: 300));
+                  final libri =
+                      await service.leggiLibri(AppConfig.packageId);
+                  if (context.mounted) {
+                    showDialog(
+                      context: context,
+                      builder: (_) => AlertDialog(
+                        title: const Text('Contenuto pacchetto API'),
+                        content: SingleChildScrollView(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text('Libri trovati: ${libri.length}',
+                                  style: const TextStyle(
+                                      fontWeight: FontWeight.bold)),
+                              const Divider(),
+                              ...libri.map((b) => Padding(
+                                    padding:
+                                        const EdgeInsets.only(bottom: 8),
+                                    child: Text(
+                                        '• ${b.titolo} — ${b.autore}'),
+                                  )),
+                            ],
+                          ),
+                        ),
+                        actions: [
+                          TextButton(
+                            onPressed: () => Navigator.pop(context),
+                            child: const Text('OK'),
+                          ),
+                        ],
+                      ),
+                    );
+                  }
+                }
+              } catch (e) {
+                if (context.mounted && Navigator.canPop(context)) {
+                  Navigator.pop(context);
+                }
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Errore: $e')),
+                  );
+                }
+              }
+            },
+          ),
           // BOTTONE AGGIORNAMENTO PACCHETTO 
           IconButton(
             icon: const Icon(Icons.folder_zip),
@@ -217,7 +324,13 @@ class HomeScreen extends StatelessWidget {
                   },
                 );
 
-                if (context.mounted) Navigator.pop(context);
+                // Chiude il dialog solo se e' ancora aperto
+                if (context.mounted && Navigator.canPop(context)) {
+                  Navigator.pop(context);
+                }
+
+                // Piccolo delay per permettere al navigator di sbloccarsi
+                await Future.delayed(const Duration(milliseconds: 200));
 
                 // 5. Mostra dialog di conferma installazione
                 if (context.mounted) {
@@ -238,8 +351,10 @@ class HomeScreen extends StatelessWidget {
                   );
                 }
               } catch (e) {
-                if (context.mounted) {
+                if (context.mounted && Navigator.canPop(context)) {
                   Navigator.pop(context);
+                }
+                if (context.mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(content: Text('Errore: $e')),
                   );
