@@ -198,6 +198,7 @@ class HomeScreen extends StatelessWidget {
                 // Piccolo delay per permettere al navigator di sbloccarsi
                 await Future.delayed(const Duration(milliseconds: 200));
 
+                // Mostra esito download
                 if (context.mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
@@ -210,65 +211,7 @@ class HomeScreen extends StatelessWidget {
                   );
                 }
 
-                // Debug temporaneo — legge books.json e collections.json dal pacchetto API
-                if (successo && context.mounted) {
-                  await Future.delayed(const Duration(milliseconds: 300));
-                  final libri =
-                      await service.leggiLibri(AppConfig.packageId);
-                  final collezioni =
-                      await service.leggiCollezioniV2(AppConfig.packageId);
-                  if (context.mounted) {
-                    showDialog(
-                      context: context,
-                      builder: (_) => AlertDialog(
-                        title: const Text('Contenuto pacchetto API'),
-                        content: SingleChildScrollView(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              // Libri
-                              Text('Libri trovati: ${libri.length}',
-                                  style: const TextStyle(
-                                      fontWeight: FontWeight.bold)),
-                              const Divider(),
-                              ...libri.take(5).map((b) => Padding(
-                                    padding:
-                                        const EdgeInsets.only(bottom: 4),
-                                    child: Text(
-                                        '• ${b.titolo} — ${b.autore}'),
-                                  )),
-                              if (libri.length > 5)
-                                Text(
-                                    '... e altri ${libri.length - 5} libri',
-                                    style: const TextStyle(
-                                        fontStyle: FontStyle.italic)),
-                              const SizedBox(height: 12),
-                              // Collezioni
-                              Text(
-                                  'Collezioni trovate: ${collezioni.length}',
-                                  style: const TextStyle(
-                                      fontWeight: FontWeight.bold)),
-                              const Divider(),
-                              ...collezioni.map((c) => Padding(
-                                    padding:
-                                        const EdgeInsets.only(bottom: 4),
-                                    child: Text(
-                                        '• id: ${c.id}\n  nome: ${c.name}\n  libri: ${c.bookIds.length}'),
-                                  )),
-                            ],
-                          ),
-                        ),
-                        actions: [
-                          TextButton(
-                            onPressed: () => Navigator.pop(context),
-                            child: const Text('OK'),
-                          ),
-                        ],
-                      ),
-                    );
-                  }
-                }
+                // Il dialog di debug e' stato rimosso
               } catch (e) {
                 if (context.mounted && Navigator.canPop(context)) {
                   Navigator.pop(context);
