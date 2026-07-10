@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
-import 'api_service.dart';
+// import 'api_service.dart';
 import 'models.dart';
 import 'manuscript_screen.dart';
+import 'package_service.dart';
+import 'app_config.dart';
 
 class CollectionScreen extends StatelessWidget {
   const CollectionScreen({super.key});
@@ -23,8 +25,9 @@ class CollectionScreen extends StatelessWidget {
           ],
         ),
       ),
-      body: FutureBuilder<PackageManifest>(
-        future: ApiService().scaricaManifest(),
+      body: FutureBuilder<List<CollectionV2Model>>(
+        // Legge le collezioni dal nuovo pacchetto invece che dal Gist
+        future: PackageService().leggiCollezioniV2(AppConfig.packageId),
         builder: (context, snapshot) {
           // STATO LOADING
           if (snapshot.connectionState == ConnectionState.waiting) {
@@ -34,7 +37,7 @@ class CollectionScreen extends StatelessWidget {
                 children: [
                   CircularProgressIndicator(),
                   SizedBox(height: 16),
-                  Text('Scaricamento collezioni...'),
+                  Text('Caricamento collezioni...'),
                 ],
               ),
             );
@@ -49,6 +52,12 @@ class CollectionScreen extends StatelessWidget {
                   const Icon(Icons.error_outline, size: 48, color: Colors.red),
                   const SizedBox(height: 16),
                   Text('Errore: ${snapshot.error}'),
+                  const SizedBox(height: 8),
+                  const Text(
+                    'Scarica prima il pacchetto dal bottone nuvola',
+                    style: TextStyle(color: Colors.grey),
+                    textAlign: TextAlign.center,
+                  ),
                   const SizedBox(height: 16),
                   ElevatedButton.icon(
                     onPressed: () => Navigator.pushReplacement(
@@ -64,8 +73,36 @@ class CollectionScreen extends StatelessWidget {
             );
           }
 
-          // STATO DATA
-          final manifest = snapshot.data!;
+          // STATO PACCHETTO NON SCARICATO
+          final collezioni = snapshot.data ?? [];
+          if (collezioni.isEmpty) {
+            return Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.cloud_download_outlined,
+                      size: 64,
+                      color: colorScheme.onSurfaceVariant
+                          .withValues(alpha: 0.4)),
+                  const SizedBox(height: 16),
+                  Text(
+                    'Nessuna collezione disponibile',
+                    style: TextStyle(color: colorScheme.onSurfaceVariant),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Scarica il pacchetto premendo\nil bottone nuvola in Home',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                        color: colorScheme.onSurfaceVariant,
+                        fontSize: 13),
+                  ),
+                ],
+              ),
+            );
+          }
+
+          // STATO DATA — mostra le collezioni del pacchetto
           return ListView(
             padding: const EdgeInsets.all(16),
             children: [
@@ -76,25 +113,21 @@ class CollectionScreen extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(manifest.name,
+                      Text('Biblioteca dei Girolamini',
                           style: const TextStyle(
                               fontSize: 18, fontWeight: FontWeight.bold)),
                       const SizedBox(height: 4),
-                      Text('Versione ${manifest.version}',
+                      Text('${collezioni.length} collezioni disponibili',
                           style: TextStyle(
                               color: colorScheme.onSurfaceVariant,
                               fontSize: 13)),
-                      const SizedBox(height: 4),
-                      Text(manifest.description,
-                          style: TextStyle(
-                              color: colorScheme.onSurfaceVariant)),
                     ],
                   ),
                 ),
               ),
               const SizedBox(height: 8),
-              // Lista collezioni — navigazione a ManuscriptScreen
-              ...manifest.collections.map(
+              // Lista collezioni dal nuovo pacchetto
+              ...collezioni.map(
                 (collection) => Card(
                   child: ListTile(
                     contentPadding: const EdgeInsets.symmetric(
@@ -107,21 +140,23 @@ class CollectionScreen extends StatelessWidget {
                     title: Text(collection.name,
                         style: const TextStyle(
                             fontWeight: FontWeight.bold)),
-                    subtitle: Text(collection.description),
+                    subtitle: collection.description.isNotEmpty
+                        ? Text(collection.description)
+                        : null,
                     trailing: Chip(
-                      label: Text('${collection.manuscriptCount} ms'),
+                      label: Text('${collection.bookIds.length} libri'),
                       backgroundColor: colorScheme.primaryContainer,
                       labelStyle: TextStyle(
                           color: colorScheme.onPrimaryContainer,
                           fontSize: 12),
                     ),
                     onTap: () {
-                      // Naviga alla lista manoscritti del pacchetto
+                      // Naviga alla lista libri della collezione
                       Navigator.push(
                         context,
                         MaterialPageRoute(
                           builder: (_) => ManuscriptScreen(
-                            packageId: 'magic_package_v1',
+                            packageId: AppConfig.packageId,
                             collectionId: collection.id,
                             collectionName: collection.name,
                           ),

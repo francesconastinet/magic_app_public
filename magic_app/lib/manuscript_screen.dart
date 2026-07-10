@@ -18,15 +18,10 @@ class ManuscriptScreen extends StatelessWidget {
   /* Vecchia struttura — mantenuta per retrocompatibilita'
   Future<List<ManuscriptModel>> _caricaManoscritti() async {
     final service = PackageService();
-
-    // Legge collection.json per ottenere la lista degli id
     final collectionData =
         await service.leggiCollection(packageId, collectionId);
     if (collectionData == null) throw Exception('Collezione non trovata');
-
     final collection = CollectionModel.fromJson(collectionData);
-
-    // Carica info.json di ogni manoscritto
     final manoscritti = <ManuscriptModel>[];
     for (final msId in collection.manuscriptIds) {
       final info =
@@ -37,7 +32,6 @@ class ManuscriptScreen extends StatelessWidget {
     }
     return manoscritti;
   }
-
   */
 
   // Nuova struttura — legge books.json e collections.json
@@ -120,10 +114,11 @@ class ManuscriptScreen extends StatelessWidget {
                   leading: CircleAvatar(
                     backgroundColor: colorScheme.primaryContainer,
                     child: Text(
-                      book.id.replaceAll('book', ''),
+                      '${index + 1}',
                       style: TextStyle(
                         color: colorScheme.onPrimaryContainer,
                         fontWeight: FontWeight.bold,
+                        fontSize: 12,
                       ),
                     ),
                   ),
@@ -131,23 +126,22 @@ class ManuscriptScreen extends StatelessWidget {
                       style: const TextStyle(
                           fontWeight: FontWeight.bold)),
                   subtitle: Text(book.autore),
-                  trailing: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    crossAxisAlignment: CrossAxisAlignment.end,
-                    children: [
-                      Text(book.anno,
-                          style: TextStyle(
-                              fontSize: 12,
-                              color: colorScheme.onSurfaceVariant)),
-                      const SizedBox(height: 4),
-                      // Icona multimedia se il libro ha contenuti
-                      book.multimedia.isNotEmpty
-                          ? Icon(Icons.play_circle_outline,
-                              size: 14, color: colorScheme.primary)
-                          : Icon(Icons.arrow_forward_ios,
-                              size: 14, color: colorScheme.primary),
-                    ],
-                  ),
+                  // Anno nel trailing con Expanded per evitare overflow
+                  trailing: book.anno.isNotEmpty
+                      ? ConstrainedBox(
+                          constraints: const BoxConstraints(maxWidth: 80),
+                          child: Text(
+                            book.anno,
+                            style: TextStyle(
+                                fontSize: 11,
+                                color: colorScheme.onSurfaceVariant),
+                            textAlign: TextAlign.end,
+                            overflow: TextOverflow.ellipsis,
+                            maxLines: 2,
+                          ),
+                        )
+                      : Icon(Icons.arrow_forward_ios,
+                          size: 14, color: colorScheme.primary),
                   onTap: () {
                     // Naviga al dettaglio libro invece di andare direttamente in AR
                     Navigator.push(

@@ -207,9 +207,9 @@ class PackageService {
         .toList();
   }
 
-  // --- NUOVA STRUTTURA PACCHETTO  ---
+  // --- NUOVA STRUTTURA PACCHETTO ---
 
-  // Legge books.json — lista piatta di tutti i libri
+  // Legge books.json — lista di tutti i libri
   Future<List<BookModel>> leggiLibri(String packageId) async {
     final contenuto = await _storage.leggiFile(packageId, 'books.json');
     if (contenuto == null) return [];
@@ -233,6 +233,8 @@ class PackageService {
     final contenuto =
         await _storage.leggiFile(packageId, 'collections.json');
     if (contenuto == null) return [];
+    // Debug temporaneo — stampa il contenuto raw per vedere la struttura 
+    debugPrint('[PKG] collections.json raw: $contenuto');
     final lista = jsonDecode(contenuto) as List;
     return lista.map((c) => CollectionV2Model.fromJson(c)).toList();
   }

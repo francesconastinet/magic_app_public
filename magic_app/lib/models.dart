@@ -105,7 +105,7 @@ class CollectionModel {
   }
 }
 
-// --- MODELLI NUOVA STRUTTURA PACCHETTO ---
+// --- MODELLI NUOVA STRUTTURA PACCHETTO  ---
 
 // Singolo link multimediale nel books.json
 class MediaItem {
@@ -131,7 +131,7 @@ class MediaItem {
   }
 }
 
-// Libro dalla nuova struttura books.json
+// Libro dalla nuova struttura  books.json
 class BookModel {
   final String id;
   final String titolo;
@@ -160,7 +160,8 @@ class BookModel {
   }
 }
 
-// Collezione dalla nuova struttura collections.json
+// Collezione dalla struttura collections.json della nuova struttura
+// Campi reali: collection_id, nome, libri (lista di oggetti {id, titolo})
 class CollectionV2Model {
   final String id;
   final String name;
@@ -175,13 +176,30 @@ class CollectionV2Model {
   });
 
   factory CollectionV2Model.fromJson(Map<String, dynamic> json) {
+    // La struttura usa "collection_id" invece di "id"
+    // e "nome" invece di "name"
+    // e "libri" invece di "books" — con oggetti {id, titolo} invece di stringhe
+    final id = json['collection_id']?.toString() ??
+        json['id']?.toString() ?? '';
+    final name = json['nome']?.toString() ??
+        json['name']?.toString() ?? '';
+    final description = json['descrizione']?.toString() ??
+        json['description']?.toString() ?? '';
+
+    // Estrae gli id dai libri — supporta sia lista di oggetti che lista di stringhe
+    final libriRaw = json['libri'] as List? ?? json['books'] as List? ?? [];
+    final bookIds = libriRaw.map((e) {
+      if (e is Map) {
+        return e['id']?.toString() ?? '';
+      }
+      return e.toString();
+    }).where((id) => id.isNotEmpty).toList();
+
     return CollectionV2Model(
-      id: json['id']?.toString() ?? '',
-      name: json['name']?.toString() ?? '',
-      description: json['description']?.toString() ?? '',
-      bookIds: (json['books'] as List? ?? [])
-          .map((e) => e.toString())
-          .toList(),
+      id: id,
+      name: name,
+      description: description,
+      bookIds: bookIds,
     );
   }
 }
