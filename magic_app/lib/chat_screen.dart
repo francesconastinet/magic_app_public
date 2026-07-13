@@ -25,11 +25,17 @@ class _ChatScreenState extends State<ChatScreen> {
   // Lista fonti accumulate durante la conversazione
   final List<FonteChat> _fonteTotali = [];
 
+  // Stato context session per modalita' fonti bloccate
+  bool _contextSessionCreata = false;
+  bool _contextSessionInCorso = false;
+
   @override
   void initState() {
     super.initState();
-    // Messaggio di benvenuto contestuale al libro
+    // Messaggio di benvenuto contestuale al libro 
     _aggiungiMessaggioBenvenuto();
+    // Crea context session vincolata al libro corrente
+    _inizializzaContextSession();
   }
 
   @override
@@ -37,6 +43,19 @@ class _ChatScreenState extends State<ChatScreen> {
     _controller.dispose();
     _scrollController.dispose();
     super.dispose();
+  }
+
+  // Crea context session vincolata all'id del libro corrente
+  Future<void> _inizializzaContextSession() async {
+    setState(() => _contextSessionInCorso = true);
+    final successo =
+        await _chatService.creaContextSession([widget.book.id]);
+    setState(() {
+      _contextSessionCreata = successo;
+      _contextSessionInCorso = false;
+    });
+    debugPrint(
+        '[CHAT] Context session inizializzata: $_contextSessionCreata');
   }
 
   // Aggiunge messaggio di benvenuto con contesto del libro
@@ -204,16 +223,14 @@ class _ChatScreenState extends State<ChatScreen> {
                                   Text(fonte.author,
                                       style: TextStyle(
                                           fontSize: 12,
-                                          color:
-                                              colorScheme.onSurfaceVariant)),
+                                          color: colorScheme.onSurfaceVariant)),
                                 ],
                                 if (fonte.date.isNotEmpty) ...[
                                   const SizedBox(height: 2),
                                   Text(fonte.date,
                                       style: TextStyle(
                                           fontSize: 11,
-                                          color:
-                                              colorScheme.onSurfaceVariant)),
+                                          color: colorScheme.onSurfaceVariant)),
                                 ],
                                 if (fonte.rilevanza != null) ...[
                                   const SizedBox(height: 6),
@@ -238,8 +255,7 @@ class _ChatScreenState extends State<ChatScreen> {
                                         '${fonte.chunksCount} estratti',
                                         style: TextStyle(
                                             fontSize: 11,
-                                            color:
-                                                colorScheme.onSurfaceVariant),
+                                            color: colorScheme.onSurfaceVariant),
                                       ),
                                     ],
                                   ),
@@ -316,13 +332,60 @@ class _ChatScreenState extends State<ChatScreen> {
       ),
       body: Column(
         children: [
+          // Tag visibile modalita' fonti bloccate sul libro corrente
+          Container(
+            width: double.infinity,
+            padding:
+                const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+            color: colorScheme.secondaryContainer,
+            child: Row(
+              children: [
+                Icon(Icons.book_outlined,
+                    size: 14,
+                    color: colorScheme.onSecondaryContainer),
+                const SizedBox(width: 6),
+                Expanded(
+                  child: Text(
+                    'Libro: ${widget.book.titolo}',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: colorScheme.onSecondaryContainer,
+                      fontWeight: FontWeight.bold,
+                    ),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+                const SizedBox(width: 6),
+                // Indicatore stato context session
+                if (_contextSessionInCorso)
+                  SizedBox(
+                    width: 12,
+                    height: 12,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: colorScheme.onSecondaryContainer,
+                    ),
+                  )
+                else
+                  Icon(
+                    _contextSessionCreata
+                        ? Icons.lock_outline
+                        : Icons.lock_open_outlined,
+                    size: 14,
+                    color: _contextSessionCreata
+                        ? Colors.green
+                        : Colors.orange,
+                  ),
+              ],
+            ),
+          ),
+
           // Lista messaggi
           Expanded(
             child: ListView.builder(
               controller: _scrollController,
               padding: const EdgeInsets.all(16),
-              itemCount:
-                  _messaggi.length + (_botStaScrivendo ? 1 : 0),
+              itemCount: _messaggi.length + (_botStaScrivendo ? 1 : 0),
               itemBuilder: (context, index) {
                 // Bubble "Bot sta scrivendo..."
                 if (index == _messaggi.length && _botStaScrivendo) {
@@ -447,9 +510,8 @@ class _ChatScreenState extends State<ChatScreen> {
                   padding: const EdgeInsets.only(left: 4, top: 2),
                   child: Text(
                     '• ${fonte.title.isNotEmpty ? fonte.title : fonte.identifier}',
-                    style: TextStyle(
-                        fontSize: 11,
-                        color: colorScheme.primary),
+                    style:
+                        TextStyle(fontSize: 11, color: colorScheme.primary),
                   ),
                 )),
           ],
