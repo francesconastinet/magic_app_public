@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:camera/camera.dart';
 import 'package:provider/provider.dart';
@@ -75,7 +76,13 @@ class _ARScreenState extends State<ARScreen>
     if (cameras.isEmpty) return;
     _controller = CameraController(cameras.first, ResolutionPreset.medium);
     await _controller!.initialize();
-    if (mounted) setState(() => _cameraReady = true);
+
+    if (mounted) {
+      setState(() => _cameraReady = true);
+
+      // TODO: sostituire con la chiamata a RecognitionService
+      if (!_overlayVisibile) _mostraOverlay();
+    }
   }
 
   void _mostraOverlay() {
@@ -111,13 +118,6 @@ class _ARScreenState extends State<ARScreen>
     return Scaffold(
       appBar: AppBar(
         title: Text(opera?.titolo ?? widget.nomeOpera),
-        actions: [
-          if (_overlayVisibile)
-            IconButton(
-              icon: const Icon(Icons.close),
-              onPressed: _nascondiOverlay,
-            ),
-        ],
       ),
       body: _buildBody(opera),
     );
@@ -176,25 +176,112 @@ class _ARScreenState extends State<ARScreen>
             ),
           ),
 
-        // Bottone
+        // Bottoni 'Chiudi info' e 'Chiedi alla chat'
         Positioned(
           bottom: 40,
           left: 0,
           right: 0,
           child: Center(
-            child: ElevatedButton.icon(
-              onPressed: _overlayVisibile ? _nascondiOverlay : _mostraOverlay,
-              icon: Icon(
-                  _overlayVisibile ? Icons.close : Icons.view_in_ar),
-              label: Text(
-                  _overlayVisibile ? 'Nascondi info' : 'Mostra info AR'),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.black87,
-                foregroundColor: Colors.white,
+            child: AnimatedOpacity(
+              duration: const Duration(milliseconds: 300),
+              opacity: _overlayVisibile ? 1.0 : 0.0,
+              child: IgnorePointer(
+                ignoring: !_overlayVisibile,
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    // Tasto per chiudere le info
+                    ElevatedButton.icon(
+                      onPressed: _nascondiOverlay,
+                      icon: const Icon(Icons.close),
+                      label: const Text('Chiudi info'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.black87,
+                        foregroundColor: Colors.white,
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    // Bottone per aprire la chat
+                    ElevatedButton.icon(
+                      onPressed: () {
+                        // TODO: aprire la chat
+                        debugPrint("Apri chat per questa opera");
+                      },
+                      icon: const Icon(Icons.chat_bubble),
+                      label: const Text('Chiedi alla Chat'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.blueAccent,
+                        foregroundColor: Colors.white,
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
           ),
         ),
+
+        // Pulsanti di Debug visibili durante lo sviluppo
+        if (kDebugMode)
+          Positioned(
+            top: 40,
+            left: 10,
+            right: 10,
+            child: Card(
+              color: Colors.black87,
+              child: Padding(
+                padding: const EdgeInsets.all(8.0),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Text(
+                      'MENU DEBUG — Simula Contenuti',
+                      style: TextStyle(color: Colors.white70, fontSize: 11),
+                    ),
+                    Wrap(
+                      spacing: 12,
+                      runSpacing: 6,
+                      alignment: WrapAlignment.center,
+                      children: [
+                        ElevatedButton(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.cyan.shade800,
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 12,
+                              vertical: 8),
+                          ),
+                          onPressed: () {
+                            // TODO: simulare opera con Video e Audio
+                            _mostraOverlay();
+                          },
+                          child: const Text(
+                            'Scenario 1 (Video/Audio)',
+                            style: TextStyle(fontSize: 12)),
+                        ),
+                        ElevatedButton(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.orange.shade800,
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 12,
+                              vertical: 8),
+                          ),
+                          onPressed: () {
+                            // TODO: simulare opera con PDF e Testo
+                            _mostraOverlay();
+                          },
+                          child: const Text(
+                            'Scenario 2 (PDF/Testo)',
+                            style: TextStyle(fontSize: 12)),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
       ],
     );
   }
