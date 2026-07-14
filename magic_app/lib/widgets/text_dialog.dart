@@ -14,6 +14,7 @@ class TextDialog extends StatelessWidget {
     required this.textPath,
   });
 
+  // TODO: rimuovere quando il client sarà collegato al backend
   // Funzione che decide da dove leggere il file
   Future<String?> _leggiTesto(BuildContext context) async {
     try {
