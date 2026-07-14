@@ -19,21 +19,34 @@ class MessaggioChat {
 }
 
 class FonteChat {
+  final String workId;
   final String identifier;
   final String title;
+  final String author;
+  final String date;
   final double? rilevanza;
+  final int chunksCount;
 
   FonteChat({
+    required this.workId,
     required this.identifier,
     required this.title,
+    required this.author,
+    required this.date,
     this.rilevanza,
+    required this.chunksCount,
   });
 
+  // Aggiornato per leggere used_books invece di sources 
   factory FonteChat.fromJson(Map<String, dynamic> json) {
     return FonteChat(
-      identifier: json['identifier'] as String? ?? '',
-      title: json['title'] as String? ?? json['identifier'] as String? ?? '',
+      workId: json['work_id']?.toString() ?? '',
+      identifier: json['identifier']?.toString() ?? '',
+      title: json['title']?.toString() ?? '',
+      author: json['author']?.toString() ?? '',
+      date: json['date']?.toString() ?? '',
       rilevanza: (json['relevance_indicator'] as num?)?.toDouble(),
+      chunksCount: (json['chunks_count'] as num?)?.toInt() ?? 0,
     );
   }
 }
@@ -44,21 +57,61 @@ class ChatService {
     receiveTimeout: const Duration(seconds: 60),
   ));
 
-  // Genera UUID per la sessione 
+  // Genera UUID per la sessione
   final String _sessionId = const Uuid().v4();
 
   // Codice collezione da AppConfig — aggiornare quando disponibile dataset Girolamini
   final String _selectCode = AppConfig.chatSelectCode;
 
-  String get sessionId => _sessionId;
+  // Context session id per modalita' fonti bloccate — null = fonti libere
+  String? _contextSessionId;
 
-  // Invia messaggio al server 
+  String get sessionId => _sessionId;
+  String? get contextSessionId => _contextSessionId;
+
+  // Crea una context session vincolata a uno o piu' libri 
+  // POST /chat/context-sessions con lista book_ids
+  Future<bool> creaContextSession(List<String> bookIds) async {
+    try {
+      final body = {'book_ids': bookIds};
+      debugPrint('[CHAT] POST /chat/context-sessions: $body');
+
+      final response = await _dio.post(
+        '${AppConfig.chatBaseUrl}/chat/context-sessions',
+        data: body,
+      );
+
+      final data = response.data is String
+          ? jsonDecode(response.data)
+          : response.data;
+
+      _contextSessionId = data['context_session_id']?.toString();
+      debugPrint('[CHAT] Context session creata: $_contextSessionId');
+      return _contextSessionId != null;
+    } on DioException catch (e) {
+      debugPrint('[CHAT] Errore context session: ${e.message}');
+      return false;
+    }
+  }
+
+  // Resetta la context session — torna a modalita' fonti libere
+  void resetContextSession() {
+    _contextSessionId = null;
+    debugPrint('[CHAT] Context session resettata — modalita\' fonti libere');
+  }
+
+  // Invia messaggio al server
   // POST /query con question, session_id, select_code
+  // Se _contextSessionId e' impostato → modalita' fonti bloccate su un libro
   Future<MessaggioChat> inviaMessaggio(String domanda) async {
     final body = {
       'question': domanda,
       'session_id': _sessionId,
       'select_code': _selectCode,
+      'top_k': 10,
+      // Aggiunge context_session_id solo se in modalita' fonti bloccate 
+      if (_contextSessionId != null)
+        'context_session_id': _contextSessionId,
     };
 
     debugPrint('[CHAT] POST /query: $body');
@@ -79,13 +132,14 @@ class ChatService {
           data['response'] as String? ??
           'Nessuna risposta ricevuta';
 
-      // Estrae fonti/libri consultati
-      final fontiRaw = data['sources'] as List? ?? [];
-      final fonti = fontiRaw
+      // Legge used_books invece di sources (campo corretto per POST /query)
+      final usedBooksRaw = data['used_books'] as List? ?? [];
+      final fonti = usedBooksRaw
           .map((f) => FonteChat.fromJson(f as Map<String, dynamic>))
           .toList();
 
       debugPrint('[CHAT] Risposta ricevuta: ${testo.substring(0, testo.length.clamp(0, 50))}...');
+      debugPrint('[CHAT] Libri usati: ${fonti.map((f) => f.title).join(', ')}');
 
       return MessaggioChat(
         testo: testo,
@@ -99,7 +153,7 @@ class ChatService {
     }
   }
 
-  // Recupera dettagli libro tramite identifier 
+  // Recupera dettagli libro tramite identifier
   // GET /book/{identifier}
   Future<Map<String, dynamic>?> dettagliLibro(String identifier) async {
     try {

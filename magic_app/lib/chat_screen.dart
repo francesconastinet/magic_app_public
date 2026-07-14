@@ -22,11 +22,20 @@ class _ChatScreenState extends State<ChatScreen> {
   final ScrollController _scrollController = ScrollController();
   bool _botStaScrivendo = false;
 
+  // Lista fonti accumulate durante la conversazione
+  final List<FonteChat> _fonteTotali = [];
+
+  // Stato context session per modalita' fonti bloccate
+  bool _contextSessionCreata = false;
+  bool _contextSessionInCorso = false;
+
   @override
   void initState() {
     super.initState();
     // Messaggio di benvenuto contestuale al libro 
     _aggiungiMessaggioBenvenuto();
+    // Crea context session vincolata al libro corrente
+    _inizializzaContextSession();
   }
 
   @override
@@ -34,6 +43,19 @@ class _ChatScreenState extends State<ChatScreen> {
     _controller.dispose();
     _scrollController.dispose();
     super.dispose();
+  }
+
+  // Crea context session vincolata all'id del libro corrente
+  Future<void> _inizializzaContextSession() async {
+    setState(() => _contextSessionInCorso = true);
+    final successo =
+        await _chatService.creaContextSession([widget.book.id]);
+    setState(() {
+      _contextSessionCreata = successo;
+      _contextSessionInCorso = false;
+    });
+    debugPrint(
+        '[CHAT] Context session inizializzata: $_contextSessionCreata');
   }
 
   // Aggiunge messaggio di benvenuto con contesto del libro
@@ -63,6 +85,17 @@ class _ChatScreenState extends State<ChatScreen> {
     });
   }
 
+  // Aggiunge le nuove fonti alla lista totale evitando duplicati
+  void _aggiorneFonti(List<FonteChat> nuoveFonti) {
+    for (final fonte in nuoveFonti) {
+      final giaPresente = _fonteTotali
+          .any((f) => f.workId == fonte.workId && fonte.workId.isNotEmpty);
+      if (!giaPresente) {
+        _fonteTotali.add(fonte);
+      }
+    }
+  }
+
   Future<void> _invia() async {
     final testo = _controller.text.trim();
     if (testo.isEmpty || _botStaScrivendo) return;
@@ -85,6 +118,8 @@ class _ChatScreenState extends State<ChatScreen> {
       setState(() {
         _messaggi.add(risposta);
         _botStaScrivendo = false;
+        // Aggiorna le fonti totali con quelle della nuova risposta
+        _aggiorneFonti(risposta.fonti);
       });
     } on DioException catch (e) {
       // Errore di connessione — distingue tra rete e server
@@ -115,11 +150,136 @@ class _ChatScreenState extends State<ChatScreen> {
     _scrollaInFondo();
   }
 
+  // Drawer con lista fonti accumulate durante la conversazione
+  Widget _buildDrawerFonti(ColorScheme colorScheme) {
+    return Drawer(
+      child: SafeArea(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Header drawer
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(16),
+              color: colorScheme.primaryContainer,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Fonti consultate',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: colorScheme.onPrimaryContainer,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    '${_fonteTotali.length} libro/i usato/i',
+                    style: TextStyle(
+                      fontSize: 13,
+                      color: colorScheme.onPrimaryContainer
+                          .withValues(alpha: 0.8),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            // Lista fonti
+            Expanded(
+              child: _fonteTotali.isEmpty
+                  ? Center(
+                      child: Padding(
+                        padding: const EdgeInsets.all(24),
+                        child: Text(
+                          'Nessuna fonte ancora.\nFai una domanda per vedere\ni libri consultati.',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                              color: colorScheme.onSurfaceVariant),
+                        ),
+                      ),
+                    )
+                  : ListView.builder(
+                      padding: const EdgeInsets.all(8),
+                      itemCount: _fonteTotali.length,
+                      itemBuilder: (context, index) {
+                        final fonte = _fonteTotali[index];
+                        return Card(
+                          child: Padding(
+                            padding: const EdgeInsets.all(12),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  fonte.title.isNotEmpty
+                                      ? fonte.title
+                                      : fonte.identifier,
+                                  style: const TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 14),
+                                ),
+                                if (fonte.author.isNotEmpty) ...[
+                                  const SizedBox(height: 4),
+                                  Text(fonte.author,
+                                      style: TextStyle(
+                                          fontSize: 12,
+                                          color: colorScheme.onSurfaceVariant)),
+                                ],
+                                if (fonte.date.isNotEmpty) ...[
+                                  const SizedBox(height: 2),
+                                  Text(fonte.date,
+                                      style: TextStyle(
+                                          fontSize: 11,
+                                          color: colorScheme.onSurfaceVariant)),
+                                ],
+                                if (fonte.rilevanza != null) ...[
+                                  const SizedBox(height: 6),
+                                  Row(
+                                    children: [
+                                      Icon(Icons.analytics_outlined,
+                                          size: 12,
+                                          color: colorScheme.primary),
+                                      const SizedBox(width: 4),
+                                      Text(
+                                        'Rilevanza: ${(fonte.rilevanza! * 100).toStringAsFixed(0)}%',
+                                        style: TextStyle(
+                                            fontSize: 11,
+                                            color: colorScheme.primary),
+                                      ),
+                                      const SizedBox(width: 12),
+                                      Icon(Icons.format_quote,
+                                          size: 12,
+                                          color: colorScheme.onSurfaceVariant),
+                                      const SizedBox(width: 4),
+                                      Text(
+                                        '${fonte.chunksCount} estratti',
+                                        style: TextStyle(
+                                            fontSize: 11,
+                                            color: colorScheme.onSurfaceVariant),
+                                      ),
+                                    ],
+                                  ),
+                                ],
+                              ],
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
 
     return Scaffold(
+      // Drawer fonti sul lato destro
+      endDrawer: _buildDrawerFonti(colorScheme),
       appBar: AppBar(
         backgroundColor: colorScheme.primary,
         foregroundColor: colorScheme.onPrimary,
@@ -133,16 +293,99 @@ class _ChatScreenState extends State<ChatScreen> {
                 style: const TextStyle(fontSize: 11)),
           ],
         ),
+        actions: [
+          // Bottone per aprire il drawer fonti
+          Builder(
+            builder: (ctx) => IconButton(
+              icon: Stack(
+                children: [
+                  const Icon(Icons.menu_book),
+                  if (_fonteTotali.isNotEmpty)
+                    Positioned(
+                      right: 0,
+                      top: 0,
+                      child: Container(
+                        padding: const EdgeInsets.all(2),
+                        decoration: BoxDecoration(
+                          color: Colors.orange,
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        constraints: const BoxConstraints(
+                            minWidth: 14, minHeight: 14),
+                        child: Text(
+                          '${_fonteTotali.length}',
+                          style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 9,
+                              fontWeight: FontWeight.bold),
+                          textAlign: TextAlign.center,
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+              tooltip: 'Fonti consultate',
+              onPressed: () => Scaffold.of(ctx).openEndDrawer(),
+            ),
+          ),
+        ],
       ),
       body: Column(
         children: [
+          // Tag visibile modalita' fonti bloccate sul libro corrente
+          Container(
+            width: double.infinity,
+            padding:
+                const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+            color: colorScheme.secondaryContainer,
+            child: Row(
+              children: [
+                Icon(Icons.book_outlined,
+                    size: 14,
+                    color: colorScheme.onSecondaryContainer),
+                const SizedBox(width: 6),
+                Expanded(
+                  child: Text(
+                    'Libro: ${widget.book.titolo}',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: colorScheme.onSecondaryContainer,
+                      fontWeight: FontWeight.bold,
+                    ),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+                const SizedBox(width: 6),
+                // Indicatore stato context session
+                if (_contextSessionInCorso)
+                  SizedBox(
+                    width: 12,
+                    height: 12,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: colorScheme.onSecondaryContainer,
+                    ),
+                  )
+                else
+                  Icon(
+                    _contextSessionCreata
+                        ? Icons.lock_outline
+                        : Icons.lock_open_outlined,
+                    size: 14,
+                    color: _contextSessionCreata
+                        ? Colors.green
+                        : Colors.orange,
+                  ),
+              ],
+            ),
+          ),
+
           // Lista messaggi
           Expanded(
             child: ListView.builder(
               controller: _scrollController,
               padding: const EdgeInsets.all(16),
-              itemCount:
-                  _messaggi.length + (_botStaScrivendo ? 1 : 0),
+              itemCount: _messaggi.length + (_botStaScrivendo ? 1 : 0),
               itemBuilder: (context, index) {
                 // Bubble "Bot sta scrivendo..."
                 if (index == _messaggi.length && _botStaScrivendo) {
@@ -188,6 +431,7 @@ class _ChatScreenState extends State<ChatScreen> {
                 ),
                 const SizedBox(width: 8),
                 FloatingActionButton.small(
+                  heroTag: 'chat_send',
                   onPressed: _botStaScrivendo ? null : _invia,
                   backgroundColor: colorScheme.primary,
                   child: Icon(
@@ -249,7 +493,7 @@ class _ChatScreenState extends State<ChatScreen> {
               ),
             ),
           ),
-          // Fonti libri consultati (solo per messaggi bot)
+          // Fonti libri consultati sotto la bubble bot — solo se presenti
           if (!isUtente && msg.fonti.isNotEmpty) ...[
             const SizedBox(height: 6),
             Padding(
@@ -266,9 +510,8 @@ class _ChatScreenState extends State<ChatScreen> {
                   padding: const EdgeInsets.only(left: 4, top: 2),
                   child: Text(
                     '• ${fonte.title.isNotEmpty ? fonte.title : fonte.identifier}',
-                    style: TextStyle(
-                        fontSize: 11,
-                        color: colorScheme.primary),
+                    style:
+                        TextStyle(fontSize: 11, color: colorScheme.primary),
                   ),
                 )),
           ],
