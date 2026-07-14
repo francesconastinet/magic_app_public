@@ -1,7 +1,10 @@
+import 'package:magic_app/models.dart';
 import 'app_config.dart';
+import 'media_service.dart';
 import 'package_service.dart';
 import 'collection_screen.dart';
 import 'opera_repository.dart';
+import 'package_storage.dart';
 import 'recognition_service.dart';
 import 'ar_screen.dart';
 import 'api_service.dart';
@@ -13,33 +16,34 @@ import 'package:permission_handler/permission_handler.dart';
 import 'package:model_viewer_plus/model_viewer_plus.dart';
 
 // --- MODELLO DATI OPERA ---
-class Opera {
-  final String id;
-  final String titolo;
-  final String autore;
-  final String biblioteca;
-  final String periodo;
-  final String supporto;
-
-  const Opera({
-    required this.id,
-    required this.titolo,
-    required this.autore,
-    required this.biblioteca,
-    required this.periodo,
-    required this.supporto,
-  });
-}
+// Vecchio modello sostituito con BookModel
+// class Opera {
+//   final String id;
+//   final String titolo;
+//   final String autore;
+//   final String biblioteca;
+//   final String periodo;
+//   final String supporto;
+//
+//   const Opera({
+//     required this.id,
+//     required this.titolo,
+//     required this.autore,
+//     required this.biblioteca,
+//     required this.periodo,
+//     required this.supporto,
+//   });
+// }
 
 // --- APP STATE ---
 class AppState extends ChangeNotifier {
   int _opereRiconosciute = 0;
   String? _ultimaOpera;
-  Opera? _operaSelezionata;
+  BookModel? _operaSelezionata;
 
   int get opereRiconosciute => _opereRiconosciute;
   String? get ultimaOpera => _ultimaOpera;
-  Opera? get operaSelezionata => _operaSelezionata;
+  BookModel? get operaSelezionata => _operaSelezionata;
 
   void riconosciOpera(String nomeOpera) {
     _ultimaOpera = nomeOpera;
@@ -47,7 +51,7 @@ class AppState extends ChangeNotifier {
     notifyListeners();
   }
 
-  void selezionaOpera(Opera opera) {
+  void selezionaOpera(BookModel opera) {
     _operaSelezionata = opera;
     notifyListeners();
   }
@@ -88,8 +92,23 @@ final router = GoRouter(
 // --- APP ---
 void main() {
   runApp(
-    ChangeNotifierProvider(
-      create: (context) => AppState(),
+    MultiProvider(
+      providers: [
+        // Stato Globale dell'app
+        // (Usa ChangeNotifierProvider perché la UI deve reagire ai cambiamenti)
+        ChangeNotifierProvider(
+          create: (context) => AppState(),
+        ),
+
+        // Servizi di Logica
+        // (Usano il Provider base perché non hanno uno stato che cambia)
+        Provider(
+          create: (context) => PackageStorage(),
+        ),
+        Provider(
+          create: (context) => MediaService(),
+        ),
+      ],
       child: const MagicApp(),
     ),
   );
@@ -449,11 +468,17 @@ class DettaglioScreen extends StatelessWidget {
                       padding: const EdgeInsets.all(16),
                       child: Column(
                         children: [
-                          _infoRiga(context, 'Biblioteca', opera.biblioteca),
+                          // Vecchia struttura per modello Opera
+                          // _infoRiga(context, 'Biblioteca', opera.biblioteca),
+                          // const Divider(),
+                          // _infoRiga(context, 'Periodo', opera.periodo),
+                          // const Divider(),
+                          // _infoRiga(context, 'Supporto', opera.supporto),
+                          _infoRiga(context, 'Biblioteca', 'Biblioteca dei Girolamini'),
                           const Divider(),
-                          _infoRiga(context, 'Periodo', opera.periodo),
+                          _infoRiga(context, 'Anno', opera.anno),
                           const Divider(),
-                          _infoRiga(context, 'Supporto', opera.supporto),
+                          _infoRiga(context, 'Supporto', 'Carta'),
                         ],
                       ),
                     ),
