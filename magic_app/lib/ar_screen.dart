@@ -7,6 +7,7 @@ import 'media_service.dart';
 import 'models.dart';
 import 'widgets/audio_dialog.dart';
 import 'widgets/image_dialog.dart';
+import 'widgets/pdf_dialog.dart';
 import 'widgets/text_dialog.dart';
 import 'widgets/video_dialog.dart';
 
@@ -347,7 +348,7 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
                                     descrizione: 'Descrizione video'),
                                 MediaItem(
                                     tipo: 'audio',
-                                    titolo: 'Lettura canto I',
+                                    titolo: 'Lettura Canto I',
                                     url: 'assets/media/audio_01.mp3',
                                     descrizione: 'Descrizione audio'),
                                 MediaItem(
@@ -360,11 +361,11 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
                                     titolo: 'Copertina del libro',
                                     url: 'assets/media/immagine_01.png',
                                     descrizione: 'Descrizione immagine'),
-                                // MediaItem(
-                                //     tipo: 'pdf',
-                                //     titolo: 'Pdf di approfondimento',
-                                //     url: 'assets/media/pdf_01.pdf',
-                                //     descrizione: 'Descrizione pdf'),
+                                MediaItem(
+                                    tipo: 'pdf',
+                                    titolo: 'Pdf Canto I',
+                                    url: 'assets/media/pdf_01.pdf',
+                                    descrizione: 'Descrizione pdf'),
                                 // MediaItem(
                                 //     tipo: 'link_esterno',
                                 //     titolo: 'Link web',
@@ -376,7 +377,7 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
                             _mostraOverlay();
                           },
                           child: const Text(
-                            'Scenario 1 (Testo)',
+                            'Divina Commedia',
                             style: TextStyle(fontSize: 12)),
                         ),
                       ],
@@ -585,11 +586,11 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
                                   titolo: item.titolo,
                                   audioPath: item.url,
                                 );
-                              // case 'pdf':
-                              //   return PdfDialog(
-                              //     titolo: item.titolo,
-                              //     pdfPath: item.url,
-                              //   );
+                              case 'pdf':
+                                return PdfDialog(
+                                  titolo: item.titolo,
+                                  pdfPath: item.url,
+                                );
                               default:
                                 return const AlertDialog(
                                   title: Text('Formato non supportato'),
