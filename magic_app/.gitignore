@@ -53,3 +53,5 @@ key.properties
 .gradle/
 
 lib/app_config.dart
+
+devtools_options.yaml

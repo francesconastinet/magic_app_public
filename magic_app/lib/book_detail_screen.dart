@@ -206,15 +206,15 @@ class BookDetailScreen extends StatelessWidget {
               child: ElevatedButton.icon(
                 onPressed: () {
                   // Converte BookModel in Opera e salva in AppState
-                  final opera = Opera(
-                    id: book.id,
-                    titolo: book.titolo,
-                    autore: book.autore,
-                    biblioteca: 'Biblioteca dei Girolamini',
-                    periodo: book.anno,
-                    supporto: '',
-                  );
-                  context.read<AppState>().selezionaOpera(opera);
+                  // final opera = Opera(
+                  //   id: book.id,
+                  //   titolo: book.titolo,
+                  //   autore: book.autore,
+                  //   biblioteca: 'Biblioteca dei Girolamini',
+                  //   periodo: book.anno,
+                  //   supporto: '',
+                  // );
+                  context.read<AppState>().selezionaOpera(book);
                   // Naviga alla schermata AR
                   context.push('/ar/${book.titolo}');
                 },
