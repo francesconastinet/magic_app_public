@@ -7,6 +7,7 @@ import 'media_service.dart';
 import 'models.dart';
 import 'widgets/image_dialog.dart';
 import 'widgets/text_dialog.dart';
+import 'widgets/video_dialog.dart';
 
 class ARScreen extends StatefulWidget {
   final String nomeOpera;
@@ -332,11 +333,11 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
                               autore: 'Autore Fittizio',
                               anno: '0000',
                               multimedia: [
-                                // MediaItem(
-                                //     tipo: 'video',
-                                //     titolo: 'Video Presentazione',
-                                //     url: 'assets/media/video_01.mp4',
-                                //     descrizione: 'Descrizione video'),
+                                MediaItem(
+                                    tipo: 'video',
+                                    titolo: 'Video Presentazione',
+                                    url: 'assets/media/video_01.mp4',
+                                    descrizione: 'Descrizione video'),
                                 // MediaItem(
                                 //     tipo: 'audio',
                                 //     titolo: 'Lettura Testo',
@@ -567,11 +568,11 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
                                   titolo: item.titolo,
                                   imagePath: item.url,
                                 );
-                              // case 'video':
-                              //   return VideoDialog(
-                              //     titolo: item.titolo,
-                              //     videoPath: item.url,
-                              //   );
+                              case 'video':
+                                return VideoDialog(
+                                  titolo: item.titolo,
+                                  videoPath: item.url,
+                                );
                               // case 'audio':
                               //   return AudioDialog(
                               //     titolo: item.titolo,
