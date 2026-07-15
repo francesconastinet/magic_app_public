@@ -14,11 +14,10 @@ class TextDialog extends StatelessWidget {
     required this.textPath,
   });
 
-  // TODO: rimuovere quando il client sarà collegato al backend
-  // Funzione che decide da dove leggere il file
   Future<String?> _leggiTesto(BuildContext context) async {
     try {
       // CASO 1: Modalità Test (File negli asset)
+      // TODO: rimuovere quando il client sarà collegato al backend
       if (textPath.startsWith('assets/')) {
         return await rootBundle.loadString(textPath);
       }
@@ -44,8 +43,6 @@ class TextDialog extends StatelessWidget {
       content: FutureBuilder<String?>(
         future: _leggiTesto(context),
         builder: (context, snapshot) {
-
-          // Stato di caricamento
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const SizedBox(
               height: 100,
@@ -53,7 +50,6 @@ class TextDialog extends StatelessWidget {
             );
           }
 
-          // Gestione errori
           if (snapshot.hasError || !snapshot.hasData || snapshot.data == null) {
             return SingleChildScrollView(
               child: Text(
@@ -63,10 +59,9 @@ class TextDialog extends StatelessWidget {
             );
           }
 
-          // Stampiamo il contenuto del file
           return SingleChildScrollView(
             child: Text(
-              snapshot.data!,
+              snapshot.data!, // Contenuto del testo
               style: const TextStyle(color: Colors.white70, fontSize: 16),
             ),
           );
