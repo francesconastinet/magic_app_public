@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import 'main.dart';
 import 'media_service.dart';
 import 'models.dart';
+import 'widgets/audio_dialog.dart';
 import 'widgets/image_dialog.dart';
 import 'widgets/text_dialog.dart';
 import 'widgets/video_dialog.dart';
@@ -217,32 +218,38 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
                           _buildBubble(
                               Icons.videocam,
                               'Video',
-                              fileMultimediali.where((m) => m.tipo == 'video').toList()
+                              fileMultimediali.where(
+                                      (m) => m.tipo == 'video').toList()
                           ),
                           _buildBubble(
                               Icons.audiotrack,
                               'Audio',
-                              fileMultimediali.where((m) => m.tipo == 'audio').toList()
+                              fileMultimediali.where(
+                                      (m) => m.tipo == 'audio').toList()
                           ),
                           _buildBubble(
                               Icons.image,
                               'Immagini',
-                              fileMultimediali.where((m) => m.tipo == 'immagine').toList()
+                              fileMultimediali.where(
+                                      (m) => m.tipo == 'immagine').toList()
                           ),
                           _buildBubble(
                               Icons.picture_as_pdf,
                               'PDF',
-                              fileMultimediali.where((m) => m.tipo == 'pdf').toList()
+                              fileMultimediali.where(
+                                      (m) => m.tipo == 'pdf').toList()
                           ),
                           _buildBubble(
                               Icons.article,
                               'Testo',
-                              fileMultimediali.where((m) => m.tipo == 'testo').toList()
+                              fileMultimediali.where(
+                                      (m) => m.tipo == 'testo').toList()
                           ),
                           _buildBubble(
                               Icons.link,
                               'Link',
-                              fileMultimediali.where((m) => m.tipo == 'link_esterno').toList()
+                              fileMultimediali.where(
+                                      (m) => m.tipo == 'link_esterno').toList()
                           ),
                         ],
                       );
@@ -329,28 +336,28 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
                           onPressed: () {
                             final operaSimulata = BookModel(
                               id: 'xyz',
-                              titolo: 'Opera Test',
-                              autore: 'Autore Fittizio',
-                              anno: '0000',
+                              titolo: 'Divina Commedia',
+                              autore: 'Dante Alighieri',
+                              anno: '1321',
                               multimedia: [
                                 MediaItem(
                                     tipo: 'video',
-                                    titolo: 'Video Presentazione',
+                                    titolo: 'Spiegazione in 2 minuti',
                                     url: 'assets/media/video_01.mp4',
                                     descrizione: 'Descrizione video'),
-                                // MediaItem(
-                                //     tipo: 'audio',
-                                //     titolo: 'Lettura Testo',
-                                //     url: 'assets/media/audio_01.mp3',
-                                //     descrizione: 'Descrizione audio'),
+                                MediaItem(
+                                    tipo: 'audio',
+                                    titolo: 'Lettura canto I',
+                                    url: 'assets/media/audio_01.mp3',
+                                    descrizione: 'Descrizione audio'),
                                 MediaItem(
                                     tipo: 'testo',
-                                    titolo: 'Testo introduttivo',
+                                    titolo: 'Riassunto trama',
                                     url: 'assets/media/testo_01.txt',
                                     descrizione: 'Descrizione testo'),
                                 MediaItem(
                                     tipo: 'immagine',
-                                    titolo: 'Foto di copertina',
+                                    titolo: 'Copertina del libro',
                                     url: 'assets/media/immagine_01.png',
                                     descrizione: 'Descrizione immagine'),
                                 // MediaItem(
@@ -573,11 +580,11 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
                                   titolo: item.titolo,
                                   videoPath: item.url,
                                 );
-                              // case 'audio':
-                              //   return AudioDialog(
-                              //     titolo: item.titolo,
-                              //     audioPath: item.url,
-                              //   );
+                              case 'audio':
+                                return AudioDialog(
+                                  titolo: item.titolo,
+                                  audioPath: item.url,
+                                );
                               // case 'pdf':
                               //   return PdfDialog(
                               //     titolo: item.titolo,
