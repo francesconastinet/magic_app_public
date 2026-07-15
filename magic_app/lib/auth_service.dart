@@ -3,7 +3,11 @@ import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'app_config.dart';
 
-class AuthService {
+// NUOVO — extends ChangeNotifier per diventare un ChangeNotifierProvider
+// i widget potranno ascoltare isLoggato/accessToken
+// e ridisegnarsi automaticamente quando cambiano, senza bisogno di passare
+// callback manuali in giro.
+class AuthService extends ChangeNotifier {
   final Dio _dio = Dio(BaseOptions(
     connectTimeout: const Duration(seconds: 30),
     receiveTimeout: const Duration(seconds: 30),
@@ -36,6 +40,9 @@ String? _refreshToken;
       _refreshToken = data['refresh'] as String?;
 
       debugPrint('[AUTH] Login riuscito — token ottenuto');
+      // NUOVO — avvisa i widget in ascolto (es. badge "loggato" in UI)
+      // che lo stato di autenticazione e' cambiato
+      notifyListeners();
       return _accessToken != null;
     } on DioException catch (e) {
       debugPrint('[AUTH] Errore login: ${e.message}');
@@ -70,10 +77,49 @@ String? _refreshToken;
     }
   }
 
+  // Controlla se il pacchetto sul server e' cambiato rispetto all'ultima
+  // versione scaricata — GET /api/common/export/package/check/
+  // Risposta attesa dal backend: {"cambiato": true/false}
+  // Restituisce:
+  //   true  -> il pacchetto e' cambiato, va scaricato
+  //   false -> nessun cambiamento, non serve scaricare
+  //   null  -> errore di rete/parsing, esito sconosciuto (il chiamante
+  //            decide come comportarsi in caso di dubbio)
+  Future<bool?> pacchettoCambiato() async {
+    if (_accessToken == null) {
+      debugPrint('[AUTH] Nessun token — fare login prima di controllare');
+      return null;
+    }
+
+    try {
+      final response = await _dio.get(
+        '${AppConfig.apiBaseUrl}/api/common/export/package/check/',
+        options: Options(
+          headers: {
+            'Authorization': 'Bearer $_accessToken',
+          },
+        ),
+      );
+
+      final data = response.data is String
+          ? jsonDecode(response.data)
+          : response.data;
+
+      final cambiato = data['cambiato'] as bool?;
+      debugPrint('[AUTH] Check pacchetto — cambiato: $cambiato');
+      return cambiato;
+    } on DioException catch (e) {
+      debugPrint('[AUTH] Errore check pacchetto: ${e.message}');
+      return null;
+    }
+  }
+
   // Logout — cancella i token
   void logout() {
     _accessToken = null;
     _refreshToken = null;
     debugPrint('[AUTH] Logout effettuato');
+    // NUOVO — anche qui lo stato cambia, quindi notifichiamo
+    notifyListeners();
   }
 }
