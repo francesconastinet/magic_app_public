@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 // import 'api_service.dart';
 import 'models.dart';
 import 'manuscript_screen.dart';
 import 'package_service.dart';
+import 'package_storage.dart';
+import 'auth_service.dart';
 import 'app_config.dart';
 
 class CollectionScreen extends StatelessWidget {
@@ -27,7 +30,11 @@ class CollectionScreen extends StatelessWidget {
       ),
       body: FutureBuilder<List<CollectionV2Model>>(
         // Legge le collezioni dal nuovo pacchetto invece che dal Gist
-        future: PackageService().leggiCollezioniV2(AppConfig.packageId),
+        // MODIFICATO — dipendenze prese dal Provider invece di crearle al volo
+        future: PackageService(
+          storage: context.read<PackageStorage>(),
+          authService: context.read<AuthService>(),
+        ).leggiCollezioniV2(AppConfig.packageId),
         builder: (context, snapshot) {
           // STATO LOADING
           if (snapshot.connectionState == ConnectionState.waiting) {

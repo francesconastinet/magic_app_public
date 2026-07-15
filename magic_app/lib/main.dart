@@ -5,6 +5,8 @@ import 'package_service.dart';
 import 'collection_screen.dart';
 import 'opera_repository.dart';
 import 'package_storage.dart';
+import 'auth_service.dart';
+import 'update_service.dart';
 import 'recognition_service.dart';
 import 'ar_screen.dart';
 import 'api_service.dart';
@@ -100,6 +102,14 @@ void main() {
           create: (context) => AppState(),
         ),
 
+        // NUOVO — AuthService come ChangeNotifierProvider:
+        // notifica i widget in ascolto quando cambia lo stato di
+        // login/logout, ed essendo un provider e' UNA SOLA istanza condivisa
+        // in tutta l'app (niente piu' login ripetuti ad ogni download).
+        ChangeNotifierProvider(
+          create: (context) => AuthService(),
+        ),
+
         // Servizi di Logica
         // (Usano il Provider base perché non hanno uno stato che cambia)
         Provider(
@@ -151,8 +161,85 @@ class MagicApp extends StatelessWidget {
 }
 
 // --- SCHERMATA HOME ---
-class HomeScreen extends StatelessWidget {
+// da StatelessWidget a StatefulWidget per poter lanciare la
+// sync automatica in background dentro initState() all'avvio dell'app.
+class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
+
+  @override
+  State<HomeScreen> createState() => _HomeScreenState();
+}
+
+class _HomeScreenState extends State<HomeScreen> {
+  // true mentre la sync automatica sta scaricando in background
+  bool _syncInCorso = false;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _sincronizzaPacchettoInBackground();
+    });
+  }
+
+  // SYNC AUTOMATICA SILENZIOSA (v2 — check reale via endpoint)
+  // Sostituisce il vecchio bottone nuvola manuale. UpdateService decide
+  // OGNI QUANTO controllare (throttling, 24h); PackageService.sincronizzaSeCambiato
+  // decide SE scaricare davvero, chiamando l'endpoint /check/ .
+  Future<void> _sincronizzaPacchettoInBackground() async {
+    try {
+      final updateService = UpdateService();
+      final necessaria = await updateService
+          .isSincronizzazioneNecessaria(AppConfig.packageId);
+
+      if (!necessaria) {
+        debugPrint('[SYNC] Ultimo controllo recente (<24h) — skip');
+        return;
+      }
+
+      if (mounted) setState(() => _syncInCorso = true);
+      debugPrint('[SYNC] Avvio controllo/sync automatica in background...');
+
+      // NUOVO — dipendenze prese dal Provider invece di crearle al volo
+      final packageService = PackageService(
+        storage: context.read<PackageStorage>(),
+        authService: context.read<AuthService>(),
+      );
+
+      final risultato = await packageService.sincronizzaSeCambiato(
+        packageId: AppConfig.packageId,
+        versione: 'api-latest', // placeholder: non ha ancora un endpoint di versione numerica
+        onStato: (msg) {
+          debugPrint('[SYNC] $msg');
+        },
+      );
+
+      if (risultato.successo) {
+        if (risultato.scaricato) {
+          debugPrint('[SYNC] Sync completata — pacchetto aggiornato');
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Pacchetto aggiornato in background'),
+                duration: Duration(seconds: 2),
+                behavior: SnackBarBehavior.floating,
+              ),
+            );
+          }
+        } else {
+          debugPrint(
+              '[SYNC] Pacchetto gia\' aggiornato — nessun download necessario');
+        }
+      } else {
+        debugPrint(
+            '[SYNC] Sync automatica fallita — verra\' ritentata al prossimo avvio');
+      }
+    } catch (e) {
+      debugPrint('[SYNC] Errore sync automatica: $e');
+    } finally {
+      if (mounted) setState(() => _syncInCorso = false);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -171,85 +258,97 @@ class HomeScreen extends StatelessWidget {
                 style: TextStyle(fontSize: 12)),
           ],
         ),
+        // barra sottile mentre la sync automatica e' in corso
+        bottom: _syncInCorso
+            ? PreferredSize(
+                preferredSize: const Size.fromHeight(3),
+                child: LinearProgressIndicator(
+                  minHeight: 3,
+                  color: colorScheme.onPrimary,
+                  backgroundColor: colorScheme.primary,
+                ),
+              )
+            : null,
         actions: [
-          // BOTTONE DOWNLOAD DA API INTERNA  (solo VPN)
-          IconButton(
-            icon: const Icon(Icons.cloud_download),
-            tooltip: 'Scarica da API (VPN)',
-            onPressed: () async {
-              try {
-                final service = PackageService();
-                String statoMessaggio = 'Connessione...';
-
-                // Mostra dialog con stato
-                showDialog(
-                  context: context,
-                  barrierDismissible: false,
-                  builder: (ctx) => StatefulBuilder(
-                    builder: (ctx, setStateDlg) => AlertDialog(
-                      title: const Text('Download da API...'),
-                      content: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          const CircularProgressIndicator(),
-                          const SizedBox(height: 16),
-                          Text(statoMessaggio),
-                        ],
-                      ),
-                    ),
-                  ),
-                );
-
-                // Scarica il pacchetto dalle API interne
-                final successo = await service.scaricaEEstraiDaApi(
-                  packageId: AppConfig.packageId,
-                  versione: 'api-latest',
-                  onStato: (msg) {
-                    statoMessaggio = msg;
-                  },
-                );
-
-                // Chiude il dialog solo se e' ancora aperto
-                if (context.mounted && Navigator.canPop(context)) {
-                  Navigator.pop(context);
-                }
-
-                // Piccolo delay per permettere al navigator di sbloccarsi
-                await Future.delayed(const Duration(milliseconds: 200));
-
-                // Mostra esito download
-                if (context.mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text(successo
-                          ? 'Pacchetto API installato!'
-                          : 'Errore download API — verifica VPN'),
-                      backgroundColor:
-                          successo ? Colors.green : Colors.red,
-                    ),
-                  );
-                }
-
-                // Il dialog di debug e' stato rimosso
-              } catch (e) {
-                if (context.mounted && Navigator.canPop(context)) {
-                  Navigator.pop(context);
-                }
-                if (context.mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text('Errore: $e')),
-                  );
-                }
-              }
-            },
-          ),
-          // BOTTONE AGGIORNAMENTO PACCHETTO 
+          // --- Vecchia struttura ---
+          // BOTTONE DOWNLOAD DA API INTERNA (solo VPN) — "bottone nuvola"
+          // manuale, sostituito dalla sync automatica silenziosa
+          // (vedi _sincronizzaPacchettoInBackground in initState).
+          // Lasciato commentato per riferimento / rollback rapido.
+          // IconButton(
+          //   icon: const Icon(Icons.cloud_download),
+          //   tooltip: 'Scarica da API (VPN)',
+          //   onPressed: () async {
+          //     try {
+          //       final service = PackageService();
+          //       String statoMessaggio = 'Connessione...';
+          //
+          //       showDialog(
+          //         context: context,
+          //         barrierDismissible: false,
+          //         builder: (ctx) => StatefulBuilder(
+          //           builder: (ctx, setStateDlg) => AlertDialog(
+          //             title: const Text('Download da API...'),
+          //             content: Column(
+          //               mainAxisSize: MainAxisSize.min,
+          //               children: [
+          //                 const CircularProgressIndicator(),
+          //                 const SizedBox(height: 16),
+          //                 Text(statoMessaggio),
+          //               ],
+          //             ),
+          //           ),
+          //         ),
+          //       );
+          //
+          //       final successo = await service.scaricaEEstraiDaApi(
+          //         packageId: AppConfig.packageId,
+          //         versione: 'api-latest',
+          //         onStato: (msg) {
+          //           statoMessaggio = msg;
+          //         },
+          //       );
+          //
+          //       if (context.mounted && Navigator.canPop(context)) {
+          //         Navigator.pop(context);
+          //       }
+          //
+          //       await Future.delayed(const Duration(milliseconds: 200));
+          //
+          //       if (context.mounted) {
+          //         ScaffoldMessenger.of(context).showSnackBar(
+          //           SnackBar(
+          //             content: Text(successo
+          //                 ? 'Pacchetto API installato!'
+          //                 : 'Errore download API — verifica VPN'),
+          //             backgroundColor:
+          //                 successo ? Colors.green : Colors.red,
+          //           ),
+          //         );
+          //       }
+          //     } catch (e) {
+          //       if (context.mounted && Navigator.canPop(context)) {
+          //         Navigator.pop(context);
+          //       }
+          //       if (context.mounted) {
+          //         ScaffoldMessenger.of(context).showSnackBar(
+          //           SnackBar(content: Text('Errore: $e')),
+          //         );
+          //       }
+          //     }
+          //   },
+          // ),
+          // BOTTONE AGGIORNAMENTO PACCHETTO
           IconButton(
             icon: const Icon(Icons.folder_zip),
             tooltip: 'Aggiorna pacchetto',
             onPressed: () async {
               try {
-                final service = PackageService();
+                // NUOVO — dipendenze prese dal Provider invece di crearle al volo
+                final service = PackageService(
+                  storage: context.read<PackageStorage>(),
+                  authService: context.read<AuthService>(),
+                );
 
                 // 1. Scarica manifest per ottenere versione disponibile
                 final manifest = await ApiService().scaricaManifest();
@@ -261,7 +360,6 @@ class HomeScreen extends StatelessWidget {
                         AppConfig.packageId, versioneDisponibile);
 
                 if (!aggiornamentoDisponibile && context.mounted) {
-                  // Pacchetto gia' aggiornato — nessun download necessario
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
                       content: Text(
@@ -298,7 +396,6 @@ class HomeScreen extends StatelessWidget {
 
                 // 4. Scarica ed estrai — passa la versione per salvarla
                 await service.scaricaEEstrai(
-                  // URL e packageId da AppConfig — non hardcodati
                   url: AppConfig.packageUrl,
                   packageId: AppConfig.packageId,
                   versione: versioneDisponibile,
@@ -307,15 +404,12 @@ class HomeScreen extends StatelessWidget {
                   },
                 );
 
-                // Chiude il dialog solo se e' ancora aperto
                 if (context.mounted && Navigator.canPop(context)) {
                   Navigator.pop(context);
                 }
 
-                // Piccolo delay per permettere al navigator di sbloccarsi
                 await Future.delayed(const Duration(milliseconds: 200));
 
-                // 5. Mostra dialog di conferma installazione
                 if (context.mounted) {
                   showDialog(
                     context: context,

@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'package_service.dart';
+import 'package_storage.dart';
+import 'auth_service.dart';
 import 'models.dart';
 import 'book_detail_screen.dart';
 
@@ -35,8 +38,15 @@ class ManuscriptScreen extends StatelessWidget {
   */
 
   // Nuova struttura — legge books.json e collections.json
-  Future<List<BookModel>> _caricaLibri() async {
-    final service = PackageService();
+  // MODIFICATO — prende BuildContext per poter leggere le dipendenze dal
+  // Provider (context.read va chiamato PRIMA di qualsiasi await, quindi
+  // il context va passato come parametro invece di usare quello del widget
+  // in un momento successivo dell'esecuzione async)
+  Future<List<BookModel>> _caricaLibri(BuildContext context) async {
+    final service = PackageService(
+      storage: context.read<PackageStorage>(),
+      authService: context.read<AuthService>(),
+    );
     // Legge i libri della collezione dalla nuova struttura
     final libri = await service.leggiLibriDiCollezione(
         packageId, collectionId);
@@ -63,7 +73,8 @@ class ManuscriptScreen extends StatelessWidget {
         ),
       ),
       body: FutureBuilder<List<BookModel>>(
-        future: _caricaLibri(),
+        // MODIFICATO — passa il context corrente al metodo
+        future: _caricaLibri(context),
         builder: (context, snapshot) {
           // STATO LOADING
           if (snapshot.connectionState == ConnectionState.waiting) {

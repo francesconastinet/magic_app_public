@@ -8,9 +8,31 @@ import 'update_service.dart';
 import 'models.dart';
 import 'auth_service.dart';
 
+// Risultato della sincronizzazione automatica in background.
+// Distingue "ho controllato ma non c'era nulla di nuovo" da "ho scaricato
+// davvero" — serve a HomeScreen per decidere se mostrare un feedback
+// all'utente o restare silenziosa.
+class SyncResult {
+  final bool successo;
+  final bool scaricato;
+  const SyncResult({required this.successo, required this.scaricato});
+}
+
 class PackageService {
-  final PackageStorage _storage = PackageStorage();
+  final PackageStorage _storage;
+  final AuthService _authService;
   final UpdateService _updateService = UpdateService();
+
+  // Dependency injection:
+  // PackageService non crea più le sue dipendenze da solo, le riceve
+  // dall'esterno (in main.dart, via context.read<...>()). Così si riusa
+  // la STESSA istanza di AuthService in tutta l'app, invece di rifare
+  // login ogni volta che serve un download.
+  PackageService({
+    required PackageStorage storage,
+    required AuthService authService,
+  })  : _storage = storage,
+        _authService = authService;
 
   // Carica e decodifica il ZIP dagli asset
   Future<Archive> _caricaArchivio() async {
@@ -125,29 +147,29 @@ class PackageService {
     }
   }
 
-  // Scarica ed estrae il pacchetto dalle API interne (VPN) 
+  // Scarica ed estrae il pacchetto dalle API interne (VPN)
+  // MODIFICATO — usa _authService iniettato invece di crearne uno nuovo.
+  // Se e' gia' loggato (token valido da una chiamata precedente), salta
+  // il login e risparmia una richiesta di rete.
   Future<bool> scaricaEEstraiDaApi({
     required String packageId,
     required String versione,
     void Function(String messaggio)? onStato,
   }) async {
-    final authService = AuthService();
-
-    // 1. Login con credenziali
-    onStato?.call('Autenticazione in corso...');
-    final loginRiuscito = await authService.login(
-      'utente2',
-      'utente2',
-    );
-
-    if (!loginRiuscito) {
-      debugPrint('[PKG] Login fallito');
-      return false;
+    if (!_authService.isLoggato) {
+      onStato?.call('Autenticazione in corso...');
+      final loginRiuscito = await _authService.login('utente2', 'utente2');
+      if (!loginRiuscito) {
+        debugPrint('[PKG] Login fallito');
+        return false;
+      }
+    } else {
+      debugPrint('[PKG] Gia\' loggato — salto il login');
     }
 
     // 2. Scarica il pacchetto ZIP come bytes
     onStato?.call('Download pacchetto in corso...');
-    final bytes = await authService.scaricaPacchetto();
+    final bytes = await _authService.scaricaPacchetto();
 
     if (bytes == null || bytes.isEmpty) {
       debugPrint('[PKG] Pacchetto vuoto o errore download');
@@ -169,6 +191,73 @@ class PackageService {
     debugPrint('[PKG] Pacchetto API installato — versione $versione');
 
     return true;
+  }
+
+  // Controlla con l'endpoint reale (/check/) se il pacchetto sul
+  // server e' cambiato, e lo scarica SOLO in quel caso. Sostituisce il
+  // criterio "a tempo" (24h) usato in precedenza come unico criterio di
+  // verita' — ora le 24h in UpdateService servono solo a decidere OGNI
+  // QUANTO chiamare questo metodo (throttling), non piu' se scaricare.
+  // MODIFICATO — usa _authService iniettato, stesso beneficio del metodo sopra.
+  Future<SyncResult> sincronizzaSeCambiato({
+    required String packageId,
+    required String versione,
+    void Function(String messaggio)? onStato,
+  }) async {
+    if (!_authService.isLoggato) {
+      onStato?.call('Autenticazione in corso...');
+      final loginRiuscito = await _authService.login('utente2', 'utente2');
+      if (!loginRiuscito) {
+        debugPrint('[PKG] Login fallito — impossibile controllare aggiornamenti');
+        return const SyncResult(successo: false, scaricato: false);
+      }
+    } else {
+      debugPrint('[PKG] Gia\' loggato — salto il login');
+    }
+
+    // 2. Controlla se il pacchetto e' cambiato sul server
+    onStato?.call('Controllo aggiornamenti...');
+    final cambiato = await _authService.pacchettoCambiato();
+
+    if (cambiato == false) {
+      debugPrint('[PKG] Pacchetto non cambiato — nessun download necessario');
+      // Aggiorniamo comunque il timestamp di controllo, cosi' UpdateService
+      // sa che abbiamo verificato di recente (throttling, non "verita'")
+      await _updateService.salvaVersioneInstallata(packageId, versione);
+      return const SyncResult(successo: true, scaricato: false);
+    }
+
+    if (cambiato == null) {
+      debugPrint(
+          '[PKG] Check fallito (errore di rete) — provo comunque a scaricare per sicurezza');
+    } else {
+      debugPrint('[PKG] Pacchetto cambiato sul server — scarico');
+    }
+
+    // 3. Scarica il pacchetto ZIP come bytes
+    onStato?.call('Download pacchetto in corso...');
+    final bytes = await _authService.scaricaPacchetto();
+
+    if (bytes == null || bytes.isEmpty) {
+      debugPrint('[PKG] Pacchetto vuoto o errore download');
+      return const SyncResult(successo: false, scaricato: false);
+    }
+
+    // 4. Estrae i file su disco con gestione errori dettagliata
+    onStato?.call('Estrazione in corso...');
+    try {
+      await _estraiBytes(bytes, packageId);
+    } catch (e, stack) {
+      debugPrint('[PKG] ERRORE ESTRAZIONE: $e');
+      debugPrint('[PKG] STACK: $stack');
+      return const SyncResult(successo: false, scaricato: false);
+    }
+
+    // 5. Salva versione installata
+    await _updateService.salvaVersioneInstallata(packageId, versione);
+    debugPrint('[PKG] Pacchetto aggiornato — versione $versione (check reale)');
+
+    return const SyncResult(successo: true, scaricato: true);
   }
 
   // Legge info.json di un manoscritto dal disco (vecchia struttura)
