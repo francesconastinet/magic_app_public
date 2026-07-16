@@ -183,7 +183,6 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
             ),
           ),
 
-        // TODO: questa finestra di info generiche si potrebbe includere nell'overlay
         // Vecchio overlay AR
         // if (_overlayVisibile)
         //   Center(
@@ -196,8 +195,67 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
         //     ),
         //   ),
 
-        // Bubble per contenuti multimediali
-        if (_overlayVisibile)
+        if (_overlayVisibile && opera != null) ...[
+          // Badge informativo dell'opera (Titolo, Autore, Anno)
+          Positioned(
+            top: 24,
+            left: 40,
+            right: 40,
+            child: FadeTransition(
+              opacity: _fadeAnimation,
+              child: Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.black.withValues(alpha: 0.75),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: Colors.white24, width: 1),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    // Titolo con icona
+                    Row(
+                      children: [
+                        const Icon(Icons.menu_book, color: Colors.blueAccent, size: 20),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            opera.titolo,
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 16,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const Padding(
+                      padding: EdgeInsets.symmetric(vertical: 6.0),
+                      child: Divider(color: Colors.white24, height: 1),
+                    ),
+                    // Autore e Anno
+                    Text(
+                      'Autore: ${opera.autore}',
+                      style: const TextStyle(color: Colors.white70, fontSize: 13),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      'Anno: ${opera.anno}',
+                      style: const TextStyle(color: Colors.white70, fontSize: 13),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+
+          // Bubble per contenuti multimediali
           Positioned(
             right: 16,
             top: 0,
@@ -206,110 +264,111 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
               child: FadeTransition(
                 opacity: _fadeAnimation,
                 child: Builder(
-                    builder: (context) {
-                      final fileMultimediali = opera?.multimedia ?? [];
+                  builder: (context) {
+                    final fileMultimediali = opera?.multimedia ?? [];
 
-                      // Se l'opera non ha nessun media non disegniamo niente
-                      if (fileMultimediali.isEmpty) return const SizedBox.shrink();
+                    // Se l'opera non ha nessun media non disegniamo niente
+                    if (fileMultimediali.isEmpty) return const SizedBox.shrink();
 
-                      // Generiamo le bubble filtrando la lista di file
-                      return Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          _buildBubble(
-                              Icons.videocam,
-                              'Video',
-                              fileMultimediali.where(
-                                      (m) => m.tipo == 'video').toList()
-                          ),
-                          _buildBubble(
-                              Icons.audiotrack,
-                              'Audio',
-                              fileMultimediali.where(
-                                      (m) => m.tipo == 'audio').toList()
-                          ),
-                          _buildBubble(
-                              Icons.image,
-                              'Immagini',
-                              fileMultimediali.where(
-                                      (m) => m.tipo == 'immagine').toList()
-                          ),
-                          _buildBubble(
-                              Icons.picture_as_pdf,
-                              'PDF',
-                              fileMultimediali.where(
-                                      (m) => m.tipo == 'pdf').toList()
-                          ),
-                          _buildBubble(
-                              Icons.article,
-                              'Testo',
-                              fileMultimediali.where(
-                                      (m) => m.tipo == 'testo').toList()
-                          ),
-                          _buildBubble(
-                              Icons.link,
-                              'Link',
-                              fileMultimediali.where(
-                                      (m) => m.tipo == 'link_esterno').toList()
-                          ),
-                        ],
-                      );
-                    }
+                    // Generiamo le bubble filtrando la lista di file
+                    return Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        _buildBubble(
+                            Icons.videocam,
+                            'Video',
+                            fileMultimediali.where(
+                                    (m) => m.tipo == 'video').toList()
+                        ),
+                        _buildBubble(
+                            Icons.audiotrack,
+                            'Audio',
+                            fileMultimediali.where(
+                                    (m) => m.tipo == 'audio').toList()
+                        ),
+                        _buildBubble(
+                            Icons.image,
+                            'Immagini',
+                            fileMultimediali.where(
+                                    (m) => m.tipo == 'immagine').toList()
+                        ),
+                        _buildBubble(
+                            Icons.picture_as_pdf,
+                            'PDF',
+                            fileMultimediali.where(
+                                    (m) => m.tipo == 'pdf').toList()
+                        ),
+                        _buildBubble(
+                            Icons.article,
+                            'Testo',
+                            fileMultimediali.where(
+                                    (m) => m.tipo == 'testo').toList()
+                        ),
+                        _buildBubble(
+                            Icons.link,
+                            'Link',
+                            fileMultimediali.where(
+                                    (m) => m.tipo == 'link_esterno').toList()
+                        ),
+                      ],
+                    );
+                  }
                 ),
               ),
             ),
           ),
 
-        // Bottoni 'Chiudi overlay' e 'Chiedi alla chat'
-        Positioned(
-          bottom: 40,
-          left: 0,
-          right: 0,
-          child: Center(
-            child: FadeTransition(
-              opacity: _fadeAnimation,
-              child: IgnorePointer(
-                ignoring: !_overlayVisibile,
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    // Tasto per chiudere l'overlay
-                    ElevatedButton.icon(
-                      onPressed: _nascondiOverlay,
-                      icon: const Icon(Icons.close),
-                      label: const Text('Chiudi overlay'),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.black87,
-                        foregroundColor: Colors.white,
+          // Bottoni 'Chiudi overlay' e 'Chiedi alla chat'
+          Positioned(
+            bottom: 40,
+            left: 0,
+            right: 0,
+            child: Center(
+              child: FadeTransition(
+                opacity: _fadeAnimation,
+                child: IgnorePointer(
+                  ignoring: !_overlayVisibile,
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      // Tasto per chiudere l'overlay
+                      ElevatedButton.icon(
+                        onPressed: _nascondiOverlay,
+                        icon: const Icon(Icons.close),
+                        label: const Text('Chiudi overlay'),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.black87,
+                          foregroundColor: Colors.white,
+                        ),
                       ),
-                    ),
-                    const SizedBox(width: 16),
-                    // Bottone per aprire la chat
-                    ElevatedButton.icon(
-                      onPressed: () {
-                        // TODO: aprire la chat
-                        debugPrint("Apri chat per questa opera");
-                      },
-                      icon: const Icon(Icons.chat_bubble),
-                      label: const Text('Chiedi alla Chat'),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.blueAccent,
-                        foregroundColor: Colors.white,
+                      const SizedBox(width: 16),
+                      // Bottone per aprire la chat
+                      ElevatedButton.icon(
+                        onPressed: () {
+                          // TODO: aprire la chat
+                          debugPrint("Apri chat per questa opera");
+                        },
+                        icon: const Icon(Icons.chat_bubble),
+                        label: const Text('Chiedi alla Chat'),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.blueAccent,
+                          foregroundColor: Colors.white,
+                        ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               ),
             ),
           ),
-        ),
+        ],
 
         // Pulsanti di Debug visibili durante lo sviluppo per simulare opere
         if (kDebugMode)
           Positioned(
-            top: 40,
-            left: 10,
-            right: 10,
+            top: 150,
+            left: 5,
+            right: 260,
             child: Card(
               color: Colors.black87,
               child: Padding(
@@ -318,69 +377,108 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     const Text(
-                      'MENU DEBUG — Simula Contenuti',
+                      'MENU DEBUG',
                       style: TextStyle(color: Colors.white70, fontSize: 11),
                     ),
-                    Wrap(
-                      spacing: 12,
-                      runSpacing: 6,
-                      alignment: WrapAlignment.center,
-                      children: [
-                        ElevatedButton(
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.cyan.shade800,
-                            foregroundColor: Colors.white,
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 12,
-                              vertical: 8),
-                          ),
-                          onPressed: () {
-                            final operaSimulata = BookModel(
-                              id: 'xyz',
-                              titolo: 'Divina Commedia',
-                              autore: 'Dante Alighieri',
-                              anno: '1321',
-                              multimedia: [
-                                MediaItem(
-                                    tipo: 'video',
-                                    titolo: 'Spiegazione in 2 minuti',
-                                    url: 'assets/media/video_01.mp4',
-                                    descrizione: 'Descrizione video'),
-                                MediaItem(
-                                    tipo: 'audio',
-                                    titolo: 'Lettura Canto I',
-                                    url: 'assets/media/audio_01.mp3',
-                                    descrizione: 'Descrizione audio'),
-                                MediaItem(
-                                    tipo: 'testo',
-                                    titolo: 'Riassunto trama',
-                                    url: 'assets/media/testo_01.txt',
-                                    descrizione: 'Descrizione testo'),
-                                MediaItem(
-                                    tipo: 'immagine',
-                                    titolo: 'Copertina del libro',
-                                    url: 'assets/media/immagine_01.png',
-                                    descrizione: 'Descrizione immagine'),
-                                MediaItem(
-                                    tipo: 'pdf',
-                                    titolo: 'Pdf Canto I',
-                                    url: 'assets/media/pdf_01.pdf',
-                                    descrizione: 'Descrizione pdf'),
-                                // MediaItem(
-                                //     tipo: 'link_esterno',
-                                //     titolo: 'Link web',
-                                //     url: 'http://example.com',
-                                //     descrizione: 'Descrizione link'),
-                              ],
-                            );
-                            context.read<AppState>().selezionaOpera(operaSimulata);
-                            _mostraOverlay();
-                          },
-                          child: const Text(
-                            'Divina Commedia',
-                            style: TextStyle(fontSize: 12)),
-                        ),
-                      ],
+                    SizedBox(
+                      height: 10,
+                    ),
+                    ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.cyan.shade800,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 8),
+                      ),
+                      onPressed: () {
+                        final operaSimulata = BookModel(
+                          id: 'xyz',
+                          titolo: 'Divina Commedia',
+                          autore: 'Dante Alighieri',
+                          anno: '1321',
+                          multimedia: [
+                            MediaItem(
+                                tipo: 'video',
+                                titolo: 'Spiegazione in 2 minuti',
+                                url: 'assets/media/video_01.mp4',
+                                descrizione: 'Descrizione video'),
+                            MediaItem(
+                                tipo: 'audio',
+                                titolo: 'Lettura Canto I',
+                                url: 'assets/media/audio_01.mp3',
+                                descrizione: 'Descrizione audio'),
+                            MediaItem(
+                                tipo: 'testo',
+                                titolo: 'Riassunto trama',
+                                url: 'assets/media/testo_01.txt',
+                                descrizione: 'Descrizione testo'),
+                            MediaItem(
+                                tipo: 'immagine',
+                                titolo: 'Copertina del libro',
+                                url: 'assets/media/immagine_01.png',
+                                descrizione: 'Descrizione immagine'),
+                            MediaItem(
+                                tipo: 'pdf',
+                                titolo: 'Pdf Canto I',
+                                url: 'assets/media/pdf_01.pdf',
+                                descrizione: 'Descrizione pdf'),
+                            MediaItem(
+                                tipo: 'link_esterno',
+                                titolo: 'Parafrasi Divina Commedia',
+                                url: 'https://divinacommedia.weebly.com/',
+                                descrizione: 'Descrizione link'),
+                          ],
+                        );
+                        context.read<AppState>().selezionaOpera(operaSimulata);
+                        _mostraOverlay();
+                      },
+                      child: const Text(
+                          'Divina Commedia',
+                          style: TextStyle(fontSize: 12)),
+                    ),
+                    SizedBox(
+                      height: 10,
+                    ),
+                    ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.lime.shade800,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 8),
+                      ),
+                      onPressed: () {
+                        final operaSimulata = BookModel(
+                          id: 'abc',
+                          titolo: 'Promessi Sposi',
+                          autore: 'Alessandro Manzoni',
+                          anno: '1827',
+                          multimedia: [
+                            MediaItem(
+                                tipo: 'audio',
+                                titolo: 'Lettura Canto I',
+                                url: 'assets/media/audio_01.mp3',
+                                descrizione: 'Descrizione audio'),
+                            for (var i = 1; i <= 10; i++)
+                              MediaItem(
+                                  tipo: 'testo',
+                                  titolo: 'Riassunto Inferno',
+                                  url: 'assets/media/testo_01.txt',
+                                  descrizione: 'Descrizione testo'),
+                            MediaItem(
+                                tipo: 'pdf',
+                                titolo: 'Pdf Canto I',
+                                url: 'assets/media/pdf_01.pdf',
+                                descrizione: 'Descrizione pdf'),
+                          ],
+                        );
+                        context.read<AppState>().selezionaOpera(operaSimulata);
+                        _mostraOverlay();
+                      },
+                      child: const Text(
+                          'Promessi Sposi',
+                          style: TextStyle(fontSize: 12)),
                     ),
                   ],
                 ),
@@ -502,7 +600,6 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
 
   void _mostraListaMedia(String titoloTipo, List<MediaItem> mediaList) {
     // La BottomSheet occupa la parte inferiore dello schermo
-    // In questo modo non copre la schermata della camera
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.black87,
@@ -546,7 +643,7 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
                   itemBuilder: (context, index) {
                     final item = mediaList[index];
                     return ListTile(
-                      leading: const Icon(Icons.play_arrow, color: Colors.white70),
+                      leading: const Icon(Icons.arrow_right, color: Colors.white70),
                       title: Text(
                         item.titolo,
                         style: const TextStyle(color: Colors.white),
@@ -565,7 +662,6 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
                           context: context,
                           builder: (context) {
                             switch (item.tipo) {
-                              // TODO: creare widget per visualizzare media
                               case 'testo':
                                 return TextDialog(
                                   titolo: item.titolo,
