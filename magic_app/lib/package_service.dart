@@ -31,8 +31,8 @@ class PackageService {
   PackageService({
     required PackageStorage storage,
     required AuthService authService,
-  })  : _storage = storage,
-        _authService = authService;
+  }) : _storage = storage,
+       _authService = authService;
 
   // Carica e decodifica il ZIP dagli asset
   Future<Archive> _caricaArchivio() async {
@@ -57,11 +57,9 @@ class PackageService {
     // Ha cartella radice se tutti i file hanno lo stesso primo segmento
     bool haCartellaRadice = false;
     if (nomiFile.isNotEmpty) {
-      final primiSegmenti = nomiFile
-          .map((n) => n.split('/').first)
-          .toSet();
-      haCartellaRadice = primiSegmenti.length == 1 &&
-          nomiFile.every((n) => n.contains('/'));
+      final primiSegmenti = nomiFile.map((n) => n.split('/').first).toSet();
+      haCartellaRadice =
+          primiSegmenti.length == 1 && nomiFile.every((n) => n.contains('/'));
     }
 
     debugPrint('[PKG] ZIP con cartella radice: $haCartellaRadice');
@@ -85,7 +83,10 @@ class PackageService {
 
       if (relativePath.isEmpty) continue;
       await _storage.salvaFile(
-          packageId, relativePath, file.content as List<int>);
+        packageId,
+        relativePath,
+        file.content as List<int>,
+      );
       fileEstratti++;
     }
     debugPrint('[PKG] Estratti $fileEstratti file per $packageId');
@@ -107,7 +108,10 @@ class PackageService {
       if (relativePath.isEmpty) continue;
 
       await _storage.salvaFile(
-          packageId, relativePath, file.content as List<int>);
+        packageId,
+        relativePath,
+        file.content as List<int>,
+      );
       fileEstratti++;
     }
 
@@ -208,7 +212,9 @@ class PackageService {
       onStato?.call('Autenticazione in corso...');
       final loginRiuscito = await _authService.login('utente2', 'utente2');
       if (!loginRiuscito) {
-        debugPrint('[PKG] Login fallito — impossibile controllare aggiornamenti');
+        debugPrint(
+          '[PKG] Login fallito — impossibile controllare aggiornamenti',
+        );
         return const SyncResult(successo: false, scaricato: false);
       }
     } else {
@@ -229,7 +235,8 @@ class PackageService {
 
     if (cambiato == null) {
       debugPrint(
-          '[PKG] Check fallito (errore di rete) — provo comunque a scaricare per sicurezza');
+        '[PKG] Check fallito (errore di rete) — provo comunque a scaricare per sicurezza',
+      );
     } else {
       debugPrint('[PKG] Pacchetto cambiato sul server — scarico');
     }
@@ -262,17 +269,23 @@ class PackageService {
 
   // Legge info.json di un manoscritto dal disco (vecchia struttura)
   Future<Map<String, dynamic>?> leggiInfoManoscritto(
-      String packageId, String collectionId, String msId) async {
-    final path =
-        'collections/$collectionId/manuscripts/$msId/info.json';
+    String packageId,
+    String collectionId,
+    String msId,
+  ) async {
+    final path = 'collections/$collectionId/manuscripts/$msId/info.json';
     return await _storage.leggiJson(packageId, path);
   }
 
   // Legge collection.json dal disco (vecchia struttura)
   Future<Map<String, dynamic>?> leggiCollection(
-      String packageId, String collectionId) async {
+    String packageId,
+    String collectionId,
+  ) async {
     return await _storage.leggiJson(
-        packageId, 'collections/$collectionId/collection.json');
+      packageId,
+      'collections/$collectionId/collection.json',
+    );
   }
 
   // Verifica se il pacchetto e' gia' estratto
@@ -282,18 +295,19 @@ class PackageService {
 
   // Controlla se c'e' un aggiornamento disponibile
   Future<bool> isAggiornamentoDisponibile(
-      String packageId, String versioneManifest) async {
+    String packageId,
+    String versioneManifest,
+  ) async {
     return await _updateService.isAggiornamentoDisponibile(
-        packageId, versioneManifest);
+      packageId,
+      versioneManifest,
+    );
   }
 
   // Lista file nel ZIP (per test)
   Future<List<String>> listaFile() async {
     final archive = await _caricaArchivio();
-    return archive.files
-        .where((f) => f.isFile)
-        .map((f) => f.name)
-        .toList();
+    return archive.files.where((f) => f.isFile).map((f) => f.name).toList();
   }
 
   // --- NUOVA STRUTTURA PACCHETTO ---
@@ -317,12 +331,10 @@ class PackageService {
   }
 
   // Legge collections.json — raggruppamento libri in percorsi
-  Future<List<CollectionV2Model>> leggiCollezioniV2(
-      String packageId) async {
-    final contenuto =
-        await _storage.leggiFile(packageId, 'collections.json');
+  Future<List<CollectionV2Model>> leggiCollezioniV2(String packageId) async {
+    final contenuto = await _storage.leggiFile(packageId, 'collections.json');
     if (contenuto == null) return [];
-    // Debug temporaneo — stampa il contenuto raw per vedere la struttura 
+    // Debug temporaneo — stampa il contenuto raw per vedere la struttura
     debugPrint('[PKG] collections.json raw: $contenuto');
     final lista = jsonDecode(contenuto) as List;
     return lista.map((c) => CollectionV2Model.fromJson(c)).toList();
@@ -330,7 +342,9 @@ class PackageService {
 
   // Legge i libri di una specifica collezione
   Future<List<BookModel>> leggiLibriDiCollezione(
-      String packageId, String collectionId) async {
+    String packageId,
+    String collectionId,
+  ) async {
     final collezioni = await leggiCollezioniV2(packageId);
     final collezione = collezioni.where((c) => c.id == collectionId);
     if (collezione.isEmpty) return [];

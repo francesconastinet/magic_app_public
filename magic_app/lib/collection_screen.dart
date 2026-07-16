@@ -21,10 +21,11 @@ class CollectionScreen extends StatelessWidget {
         foregroundColor: colorScheme.onPrimary,
         title: const Column(
           children: [
-            Text('Collezioni',
-                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
-            Text('Seleziona un percorso',
-                style: TextStyle(fontSize: 12)),
+            Text(
+              'Collezioni',
+              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+            ),
+            Text('Seleziona un percorso', style: TextStyle(fontSize: 12)),
           ],
         ),
       ),
@@ -70,7 +71,8 @@ class CollectionScreen extends StatelessWidget {
                     onPressed: () => Navigator.pushReplacement(
                       context,
                       MaterialPageRoute(
-                          builder: (_) => const CollectionScreen()),
+                        builder: (_) => const CollectionScreen(),
+                      ),
                     ),
                     icon: const Icon(Icons.refresh),
                     label: const Text('Riprova'),
@@ -87,10 +89,11 @@ class CollectionScreen extends StatelessWidget {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(Icons.cloud_download_outlined,
-                      size: 64,
-                      color: colorScheme.onSurfaceVariant
-                          .withValues(alpha: 0.4)),
+                  Icon(
+                    Icons.cloud_download_outlined,
+                    size: 64,
+                    color: colorScheme.onSurfaceVariant.withValues(alpha: 0.4),
+                  ),
                   const SizedBox(height: 16),
                   Text(
                     'Nessuna collezione disponibile',
@@ -101,8 +104,9 @@ class CollectionScreen extends StatelessWidget {
                     'Scarica il pacchetto premendo\nil bottone nuvola in Home',
                     textAlign: TextAlign.center,
                     style: TextStyle(
-                        color: colorScheme.onSurfaceVariant,
-                        fontSize: 13),
+                      color: colorScheme.onSurfaceVariant,
+                      fontSize: 13,
+                    ),
                   ),
                 ],
               ),
@@ -120,14 +124,21 @@ class CollectionScreen extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text('Biblioteca dei Girolamini',
-                          style: const TextStyle(
-                              fontSize: 18, fontWeight: FontWeight.bold)),
+                      Text(
+                        'Biblioteca dei Girolamini',
+                        style: const TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
                       const SizedBox(height: 4),
-                      Text('${collezioni.length} collezioni disponibili',
-                          style: TextStyle(
-                              color: colorScheme.onSurfaceVariant,
-                              fontSize: 13)),
+                      Text(
+                        '${collezioni.length} collezioni disponibili',
+                        style: TextStyle(
+                          color: colorScheme.onSurfaceVariant,
+                          fontSize: 13,
+                        ),
+                      ),
                     ],
                   ),
                 ),
@@ -138,15 +149,20 @@ class CollectionScreen extends StatelessWidget {
                 (collection) => Card(
                   child: ListTile(
                     contentPadding: const EdgeInsets.symmetric(
-                        horizontal: 16, vertical: 8),
+                      horizontal: 16,
+                      vertical: 8,
+                    ),
                     leading: CircleAvatar(
                       backgroundColor: colorScheme.primaryContainer,
-                      child: Icon(Icons.collections_bookmark,
-                          color: colorScheme.onPrimaryContainer),
+                      child: Icon(
+                        Icons.collections_bookmark,
+                        color: colorScheme.onPrimaryContainer,
+                      ),
                     ),
-                    title: Text(collection.name,
-                        style: const TextStyle(
-                            fontWeight: FontWeight.bold)),
+                    title: Text(
+                      collection.name,
+                      style: const TextStyle(fontWeight: FontWeight.bold),
+                    ),
                     subtitle: collection.description.isNotEmpty
                         ? Text(collection.description)
                         : null,
@@ -154,8 +170,9 @@ class CollectionScreen extends StatelessWidget {
                       label: Text('${collection.bookIds.length} libri'),
                       backgroundColor: colorScheme.primaryContainer,
                       labelStyle: TextStyle(
-                          color: colorScheme.onPrimaryContainer,
-                          fontSize: 12),
+                        color: colorScheme.onPrimaryContainer,
+                        fontSize: 12,
+                      ),
                     ),
                     onTap: () {
                       // Naviga alla lista libri della collezione

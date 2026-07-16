@@ -11,11 +11,7 @@ class PdfDialog extends StatefulWidget {
   final String titolo;
   final String pdfPath;
 
-  const PdfDialog({
-    super.key,
-    required this.titolo,
-    required this.pdfPath,
-  });
+  const PdfDialog({super.key, required this.titolo, required this.pdfPath});
 
   @override
   State<PdfDialog> createState() => _PdfDialogState();
@@ -42,8 +38,9 @@ class _PdfDialogState extends State<PdfDialog> {
         // Legge i byte dal bundle dell'app
         final byteData = await rootBundle.load(widget.pdfPath);
         final fileBytes = byteData.buffer.asUint8List(
-            byteData.offsetInBytes,
-            byteData.lengthInBytes);
+          byteData.offsetInBytes,
+          byteData.lengthInBytes,
+        );
 
         // Trova la cartella temporanea del dispositivo
         final tempDir = await getTemporaryDirectory();
@@ -62,7 +59,9 @@ class _PdfDialogState extends State<PdfDialog> {
       // CASO 2: File nel sistema (Scaricato dallo ZIP)
       else {
         final storageService = context.read<PackageStorage>();
-        final basePath = await storageService.percorsoPacchetto(AppConfig.packageId);
+        final basePath = await storageService.percorsoPacchetto(
+          AppConfig.packageId,
+        );
 
         if (mounted) {
           setState(() {
@@ -83,7 +82,12 @@ class _PdfDialogState extends State<PdfDialog> {
       child: Column(
         children: [
           Container(
-            padding: const EdgeInsets.only(top: 40, left: 16, right: 16, bottom: 16),
+            padding: const EdgeInsets.only(
+              top: 40,
+              left: 16,
+              right: 16,
+              bottom: 16,
+            ),
             color: Colors.black,
             child: Row(
               children: [
@@ -91,8 +95,10 @@ class _PdfDialogState extends State<PdfDialog> {
                   child: Text(
                     widget.titolo,
                     style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 18, fontWeight: FontWeight.bold),
+                      color: Colors.white,
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                    ),
                     overflow: TextOverflow.ellipsis,
                   ),
                 ),
@@ -109,9 +115,7 @@ class _PdfDialogState extends State<PdfDialog> {
               ],
             ),
           ),
-          Expanded(
-            child: _buildPdfContent(),
-          ),
+          Expanded(child: _buildPdfContent()),
         ],
       ),
     );
@@ -159,10 +163,7 @@ class _PdfDialogState extends State<PdfDialog> {
           },
         ),
 
-        if (!_isReady)
-          const Center(
-            child: CircularProgressIndicator(),
-          ),
+        if (!_isReady) const Center(child: CircularProgressIndicator()),
       ],
     );
   }

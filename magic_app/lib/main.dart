@@ -62,14 +62,8 @@ class AppState extends ChangeNotifier {
 // --- ROUTER ---
 final router = GoRouter(
   routes: [
-    GoRoute(
-      path: '/',
-      builder: (context, state) => const HomeScreen(),
-    ),
-    GoRoute(
-      path: '/camera',
-      builder: (context, state) => const CameraScreen(),
-    ),
+    GoRoute(path: '/', builder: (context, state) => const HomeScreen()),
+    GoRoute(path: '/camera', builder: (context, state) => const CameraScreen()),
     GoRoute(
       path: '/collezioni',
       builder: (context, state) => const CollectionScreen(),
@@ -98,26 +92,18 @@ void main() {
       providers: [
         // Stato Globale dell'app
         // (Usa ChangeNotifierProvider perché la UI deve reagire ai cambiamenti)
-        ChangeNotifierProvider(
-          create: (context) => AppState(),
-        ),
+        ChangeNotifierProvider(create: (context) => AppState()),
 
         // NUOVO — AuthService come ChangeNotifierProvider:
         // notifica i widget in ascolto quando cambia lo stato di
         // login/logout, ed essendo un provider e' UNA SOLA istanza condivisa
         // in tutta l'app (niente piu' login ripetuti ad ogni download).
-        ChangeNotifierProvider(
-          create: (context) => AuthService(),
-        ),
+        ChangeNotifierProvider(create: (context) => AuthService()),
 
         // Servizi di Logica
         // (Usano il Provider base perché non hanno uno stato che cambia)
-        Provider(
-          create: (context) => PackageStorage(),
-        ),
-        Provider(
-          create: (context) => MediaService(),
-        ),
+        Provider(create: (context) => PackageStorage()),
+        Provider(create: (context) => MediaService()),
       ],
       child: const MagicApp(),
     ),
@@ -138,10 +124,7 @@ class MagicApp extends StatelessWidget {
         ),
         useMaterial3: true,
         fontFamily: 'Georgia',
-        appBarTheme: const AppBarTheme(
-          centerTitle: true,
-          elevation: 2,
-        ),
+        appBarTheme: const AppBarTheme(centerTitle: true, elevation: 2),
         cardTheme: const CardThemeData(
           elevation: 3,
           margin: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -189,8 +172,9 @@ class _HomeScreenState extends State<HomeScreen> {
   Future<void> _sincronizzaPacchettoInBackground() async {
     try {
       final updateService = UpdateService();
-      final necessaria = await updateService
-          .isSincronizzazioneNecessaria(AppConfig.packageId);
+      final necessaria = await updateService.isSincronizzazioneNecessaria(
+        AppConfig.packageId,
+      );
 
       if (!necessaria) {
         debugPrint('[SYNC] Ultimo controllo recente (<24h) — skip');
@@ -208,7 +192,8 @@ class _HomeScreenState extends State<HomeScreen> {
 
       final risultato = await packageService.sincronizzaSeCambiato(
         packageId: AppConfig.packageId,
-        versione: 'api-latest', // placeholder: non ha ancora un endpoint di versione numerica
+        versione:
+            'api-latest', // placeholder: non ha ancora un endpoint di versione numerica
         onStato: (msg) {
           debugPrint('[SYNC] $msg');
         },
@@ -228,11 +213,13 @@ class _HomeScreenState extends State<HomeScreen> {
           }
         } else {
           debugPrint(
-              '[SYNC] Pacchetto gia\' aggiornato — nessun download necessario');
+            '[SYNC] Pacchetto gia\' aggiornato — nessun download necessario',
+          );
         }
       } else {
         debugPrint(
-            '[SYNC] Sync automatica fallita — verra\' ritentata al prossimo avvio');
+          '[SYNC] Sync automatica fallita — verra\' ritentata al prossimo avvio',
+        );
       }
     } catch (e) {
       debugPrint('[SYNC] Errore sync automatica: $e');
@@ -252,10 +239,11 @@ class _HomeScreenState extends State<HomeScreen> {
         foregroundColor: colorScheme.onPrimary,
         title: const Column(
           children: [
-            Text('MAGIC',
-                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
-            Text('Biblioteca dei Girolamini',
-                style: TextStyle(fontSize: 12)),
+            Text(
+              'MAGIC',
+              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+            ),
+            Text('Biblioteca dei Girolamini', style: TextStyle(fontSize: 12)),
           ],
         ),
         // barra sottile mentre la sync automatica e' in corso
@@ -355,15 +343,18 @@ class _HomeScreenState extends State<HomeScreen> {
                 final versioneDisponibile = manifest.version;
 
                 // 2. Controlla se c'e' un aggiornamento disponibile
-                final aggiornamentoDisponibile =
-                    await service.isAggiornamentoDisponibile(
-                        AppConfig.packageId, versioneDisponibile);
+                final aggiornamentoDisponibile = await service
+                    .isAggiornamentoDisponibile(
+                      AppConfig.packageId,
+                      versioneDisponibile,
+                    );
 
                 if (!aggiornamentoDisponibile && context.mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
                       content: Text(
-                          'Pacchetto aggiornato — versione $versioneDisponibile'),
+                        'Pacchetto aggiornato — versione $versioneDisponibile',
+                      ),
                       backgroundColor: Colors.green,
                     ),
                   );
@@ -379,15 +370,13 @@ class _HomeScreenState extends State<HomeScreen> {
                   barrierDismissible: false,
                   builder: (ctx) => StatefulBuilder(
                     builder: (ctx, setStateDlg) => AlertDialog(
-                      title: Text(
-                          'Download versione $versioneDisponibile...'),
+                      title: Text('Download versione $versioneDisponibile...'),
                       content: Column(
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           LinearProgressIndicator(value: progresso),
                           const SizedBox(height: 8),
-                          Text(
-                              '${(progresso * 100).toStringAsFixed(0)}%'),
+                          Text('${(progresso * 100).toStringAsFixed(0)}%'),
                         ],
                       ),
                     ),
@@ -414,10 +403,10 @@ class _HomeScreenState extends State<HomeScreen> {
                   showDialog(
                     context: context,
                     builder: (_) => AlertDialog(
-                      title: Text(
-                          'Versione $versioneDisponibile installata!'),
+                      title: Text('Versione $versioneDisponibile installata!'),
                       content: const Text(
-                          'Il pacchetto e\' stato scaricato e installato correttamente.'),
+                        'Il pacchetto e\' stato scaricato e installato correttamente.',
+                      ),
                       actions: [
                         TextButton(
                           onPressed: () => Navigator.pop(context),
@@ -432,9 +421,9 @@ class _HomeScreenState extends State<HomeScreen> {
                   Navigator.pop(context);
                 }
                 if (context.mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text('Errore: $e')),
-                  );
+                  ScaffoldMessenger.of(
+                    context,
+                  ).showSnackBar(SnackBar(content: Text('Errore: $e')));
                 }
               }
             },
@@ -451,7 +440,9 @@ class _HomeScreenState extends State<HomeScreen> {
                 child: Center(
                   child: Container(
                     padding: const EdgeInsets.symmetric(
-                        horizontal: 10, vertical: 4),
+                      horizontal: 10,
+                      vertical: 4,
+                    ),
                     decoration: BoxDecoration(
                       color: colorScheme.onPrimary.withValues(alpha: 0.2),
                       borderRadius: BorderRadius.circular(20),
@@ -479,17 +470,26 @@ class _HomeScreenState extends State<HomeScreen> {
           return Card(
             child: ListTile(
               contentPadding: const EdgeInsets.symmetric(
-                  horizontal: 16, vertical: 8),
+                horizontal: 16,
+                vertical: 8,
+              ),
               leading: CircleAvatar(
                 backgroundColor: colorScheme.primaryContainer,
-                child: Icon(Icons.menu_book,
-                    color: colorScheme.onPrimaryContainer),
+                child: Icon(
+                  Icons.menu_book,
+                  color: colorScheme.onPrimaryContainer,
+                ),
               ),
-              title: Text(opera.titolo,
-                  style: const TextStyle(fontWeight: FontWeight.bold)),
+              title: Text(
+                opera.titolo,
+                style: const TextStyle(fontWeight: FontWeight.bold),
+              ),
               subtitle: Text(opera.autore),
-              trailing: Icon(Icons.arrow_forward_ios,
-                  size: 16, color: colorScheme.primary),
+              trailing: Icon(
+                Icons.arrow_forward_ios,
+                size: 16,
+                color: colorScheme.primary,
+              ),
               onTap: () {
                 context.read<AppState>().selezionaOpera(opera);
                 context.push('/opera/${opera.id}');
@@ -536,8 +536,11 @@ class DettaglioScreen extends StatelessWidget {
                 CircleAvatar(
                   radius: 48,
                   backgroundColor: colorScheme.primaryContainer,
-                  child: Icon(Icons.menu_book,
-                      size: 48, color: colorScheme.onPrimaryContainer),
+                  child: Icon(
+                    Icons.menu_book,
+                    size: 48,
+                    color: colorScheme.onPrimaryContainer,
+                  ),
                 ),
                 const SizedBox(height: 20),
                 Text(
@@ -568,7 +571,11 @@ class DettaglioScreen extends StatelessWidget {
                           // _infoRiga(context, 'Periodo', opera.periodo),
                           // const Divider(),
                           // _infoRiga(context, 'Supporto', opera.supporto),
-                          _infoRiga(context, 'Biblioteca', 'Biblioteca dei Girolamini'),
+                          _infoRiga(
+                            context,
+                            'Biblioteca',
+                            'Biblioteca dei Girolamini',
+                          ),
                           const Divider(),
                           _infoRiga(context, 'Anno', opera.anno),
                           const Divider(),
@@ -587,16 +594,15 @@ class DettaglioScreen extends StatelessWidget {
                       children: [
                         Text(
                           'Modello 3D',
-                          style: Theme.of(context)
-                              .textTheme
-                              .titleMedium
+                          style: Theme.of(context).textTheme.titleMedium
                               ?.copyWith(fontWeight: FontWeight.bold),
                         ),
                         const SizedBox(height: 8),
                         SizedBox(
                           height: 250,
                           child: ModelViewer(
-                            src: 'https://modelviewer.dev/shared-assets/models/Astronaut.glb',
+                            src:
+                                'https://modelviewer.dev/shared-assets/models/Astronaut.glb',
                             alt: 'Modello 3D opera',
                             ar: false,
                             autoRotate: true,
@@ -607,11 +613,11 @@ class DettaglioScreen extends StatelessWidget {
                         const SizedBox(height: 4),
                         Text(
                           'Placeholder — modello 3D definitivo da caricare',
-                          style:
-                              Theme.of(context).textTheme.bodySmall?.copyWith(
-                                    color: colorScheme.onSurfaceVariant,
-                                    fontStyle: FontStyle.italic,
-                                  ),
+                          style: Theme.of(context).textTheme.bodySmall
+                              ?.copyWith(
+                                color: colorScheme.onSurfaceVariant,
+                                fontStyle: FontStyle.italic,
+                              ),
                         ),
                       ],
                     ),
@@ -628,8 +634,7 @@ class DettaglioScreen extends StatelessWidget {
                 SizedBox(
                   width: double.infinity,
                   child: ElevatedButton.icon(
-                    onPressed: () =>
-                        context.push('/ar/${opera?.titolo ?? id}'),
+                    onPressed: () => context.push('/ar/${opera?.titolo ?? id}'),
                     icon: const Icon(Icons.view_in_ar),
                     label: const Text('Avvia Realtà Aumentata'),
                     style: ElevatedButton.styleFrom(
@@ -653,16 +658,16 @@ class DettaglioScreen extends StatelessWidget {
         children: [
           SizedBox(
             width: 90,
-            child: Text(label,
-                style: TextStyle(
-                  color: Theme.of(context).colorScheme.onSurfaceVariant,
-                  fontWeight: FontWeight.bold,
-                  fontSize: 13,
-                )),
+            child: Text(
+              label,
+              style: TextStyle(
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+                fontWeight: FontWeight.bold,
+                fontSize: 13,
+              ),
+            ),
           ),
-          Expanded(
-            child: Text(valore, style: const TextStyle(fontSize: 14)),
-          ),
+          Expanded(child: Text(valore, style: const TextStyle(fontSize: 14))),
         ],
       ),
     );
@@ -726,8 +731,9 @@ class _CameraScreenState extends State<CameraScreen> {
 
       if (risultato != null && risultato.isAffidabile) {
         context.read<AppState>().riconosciOpera(risultato.nomeOpera);
-        final operaTrovata =
-            OperaRepository.trovaPerNomeML(risultato.nomeOpera);
+        final operaTrovata = OperaRepository.trovaPerNomeML(
+          risultato.nomeOpera,
+        );
         context.read<AppState>().selezionaOpera(operaTrovata);
       }
     }
@@ -794,10 +800,7 @@ class _CameraScreenState extends State<CameraScreen> {
                     const SizedBox(height: 8),
                     Text(
                       _risultato!.nomeOpera,
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 18,
-                      ),
+                      style: const TextStyle(color: Colors.white, fontSize: 18),
                     ),
                     Text(
                       'Confidenza: ${(_risultato!.confidenza * 100).toStringAsFixed(1)}%',
@@ -813,8 +816,8 @@ class _CameraScreenState extends State<CameraScreen> {
                       SizedBox(
                         width: double.infinity,
                         child: ElevatedButton.icon(
-                          onPressed: () => context
-                              .push('/ar/${_risultato!.nomeOpera}'),
+                          onPressed: () =>
+                              context.push('/ar/${_risultato!.nomeOpera}'),
                           icon: const Icon(Icons.view_in_ar),
                           label: const Text('Avvia AR'),
                           style: ElevatedButton.styleFrom(

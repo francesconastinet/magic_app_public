@@ -8,11 +8,7 @@ class AudioDialog extends StatefulWidget {
   final String titolo;
   final String audioPath;
 
-  const AudioDialog({
-    super.key,
-    required this.titolo,
-    required this.audioPath,
-  });
+  const AudioDialog({super.key, required this.titolo, required this.audioPath});
 
   @override
   State<AudioDialog> createState() => _AudioDialogState();
@@ -29,17 +25,14 @@ class _AudioDialogState extends State<AudioDialog> {
     super.initState();
     _inizializzaAudio();
 
-    // Ascolta i cambiamenti di stato (Play/Pausa)
     _audioPlayer.onPlayerStateChanged.listen((state) {
       if (mounted) setState(() => _isPlaying = state == PlayerState.playing);
     });
 
-    // Ascolta la durata totale del file
     _audioPlayer.onDurationChanged.listen((newDuration) {
       if (mounted) setState(() => _duration = newDuration);
     });
 
-    // Ascolta la posizione corrente (per far muovere lo slider)
     _audioPlayer.onPositionChanged.listen((newPosition) {
       if (mounted) setState(() => _position = newPosition);
     });
@@ -56,7 +49,9 @@ class _AudioDialogState extends State<AudioDialog> {
       // CASO 2: File nel file system (Scaricato dallo ZIP)
       else {
         final storageService = context.read<PackageStorage>();
-        final basePath = await storageService.percorsoPacchetto(AppConfig.packageId);
+        final basePath = await storageService.percorsoPacchetto(
+          AppConfig.packageId,
+        );
         final percorsoAssoluto = '$basePath/${widget.audioPath}';
 
         await _audioPlayer.setSourceDeviceFile(percorsoAssoluto);
@@ -95,8 +90,9 @@ class _AudioDialogState extends State<AudioDialog> {
             min: 0,
             max: _duration.inSeconds.toDouble(),
             value: _position.inSeconds.toDouble().clamp(
-                0,
-                _duration.inSeconds.toDouble()),
+              0,
+              _duration.inSeconds.toDouble(),
+            ),
             onChanged: (value) async {
               final position = Duration(seconds: value.toInt());
               await _audioPlayer.seek(position);
@@ -106,11 +102,13 @@ class _AudioDialogState extends State<AudioDialog> {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                  _formatDuration(_position),
-                  style: const TextStyle(color: Colors.white54)),
+                _formatDuration(_position),
+                style: const TextStyle(color: Colors.white54),
+              ),
               Text(
-                  _formatDuration(_duration),
-                  style: const TextStyle(color: Colors.white54)),
+                _formatDuration(_duration),
+                style: const TextStyle(color: Colors.white54),
+              ),
             ],
           ),
           const SizedBox(height: 16),
@@ -119,8 +117,10 @@ class _AudioDialogState extends State<AudioDialog> {
             backgroundColor: Colors.blueAccent,
             child: IconButton(
               icon: Icon(
-                  _isPlaying ? Icons.pause : Icons.play_arrow,
-                  color: Colors.white, size: 32),
+                _isPlaying ? Icons.pause : Icons.play_arrow,
+                color: Colors.white,
+                size: 32,
+              ),
               onPressed: () {
                 if (_isPlaying) {
                   _audioPlayer.pause();

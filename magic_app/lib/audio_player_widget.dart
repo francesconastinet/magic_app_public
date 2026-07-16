@@ -5,10 +5,7 @@ import 'models.dart';
 class AudioPlayerWidget extends StatefulWidget {
   final MediaItem media;
 
-  const AudioPlayerWidget({
-    super.key,
-    required this.media,
-  });
+  const AudioPlayerWidget({super.key, required this.media});
 
   @override
   State<AudioPlayerWidget> createState() => _AudioPlayerWidgetState();
@@ -82,24 +79,26 @@ class _AudioPlayerWidgetState extends State<AudioPlayerWidget> {
             Row(
               children: [
                 CircleAvatar(
-                  backgroundColor:
-                      Colors.purple.withValues(alpha: 0.15),
-                  child: const Icon(Icons.headphones,
-                      color: Colors.purple),
+                  backgroundColor: Colors.purple.withValues(alpha: 0.15),
+                  child: const Icon(Icons.headphones, color: Colors.purple),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(widget.media.titolo,
-                          style: const TextStyle(
-                              fontWeight: FontWeight.bold)),
+                      Text(
+                        widget.media.titolo,
+                        style: const TextStyle(fontWeight: FontWeight.bold),
+                      ),
                       if (widget.media.descrizione.isNotEmpty)
-                        Text(widget.media.descrizione,
-                            style: TextStyle(
-                                fontSize: 12,
-                                color: colorScheme.onSurfaceVariant)),
+                        Text(
+                          widget.media.descrizione,
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: colorScheme.onSurfaceVariant,
+                          ),
+                        ),
                     ],
                   ),
                 ),
@@ -110,23 +109,17 @@ class _AudioPlayerWidgetState extends State<AudioPlayerWidget> {
             // Barra di avanzamento
             SliderTheme(
               data: SliderTheme.of(context).copyWith(
-                thumbShape: const RoundSliderThumbShape(
-                    enabledThumbRadius: 6),
-                overlayShape:
-                    const RoundSliderOverlayShape(overlayRadius: 12),
+                thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 6),
+                overlayShape: const RoundSliderOverlayShape(overlayRadius: 12),
               ),
               child: Slider(
                 value: _posizione.inSeconds.toDouble().clamp(
-                    0,
-                    _durata.inSeconds > 0
-                        ? _durata.inSeconds.toDouble()
-                        : 1),
-                max: _durata.inSeconds > 0
-                    ? _durata.inSeconds.toDouble()
-                    : 1,
+                  0,
+                  _durata.inSeconds > 0 ? _durata.inSeconds.toDouble() : 1,
+                ),
+                max: _durata.inSeconds > 0 ? _durata.inSeconds.toDouble() : 1,
                 onChanged: (valore) async {
-                  await _player
-                      .seek(Duration(seconds: valore.toInt()));
+                  await _player.seek(Duration(seconds: valore.toInt()));
                 },
                 activeColor: Colors.purple,
               ),
@@ -136,17 +129,18 @@ class _AudioPlayerWidgetState extends State<AudioPlayerWidget> {
             Row(
               children: [
                 // Tempo corrente
-                Text(_formatDurata(_posizione),
-                    style: TextStyle(
-                        fontSize: 12,
-                        color: colorScheme.onSurfaceVariant)),
+                Text(
+                  _formatDurata(_posizione),
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: colorScheme.onSurfaceVariant,
+                  ),
+                ),
                 const Spacer(),
                 // Bottone Stop
                 IconButton(
                   icon: const Icon(Icons.stop),
-                  onPressed: _stato == PlayerState.stopped
-                      ? null
-                      : _stop,
+                  onPressed: _stato == PlayerState.stopped ? null : _stop,
                   color: colorScheme.onSurfaceVariant,
                   iconSize: 20,
                 ),
@@ -162,10 +156,13 @@ class _AudioPlayerWidgetState extends State<AudioPlayerWidget> {
                 ),
                 const Spacer(),
                 // Durata totale
-                Text(_formatDurata(_durata),
-                    style: TextStyle(
-                        fontSize: 12,
-                        color: colorScheme.onSurfaceVariant)),
+                Text(
+                  _formatDurata(_durata),
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: colorScheme.onSurfaceVariant,
+                  ),
+                ),
               ],
             ),
           ],

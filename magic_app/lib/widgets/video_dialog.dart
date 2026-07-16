@@ -10,11 +10,7 @@ class VideoDialog extends StatefulWidget {
   final String titolo;
   final String videoPath;
 
-  const VideoDialog({
-    super.key,
-    required this.titolo,
-    required this.videoPath,
-  });
+  const VideoDialog({super.key, required this.titolo, required this.videoPath});
 
   @override
   State<VideoDialog> createState() => _VideoDialogState();
@@ -27,7 +23,7 @@ class _VideoDialogState extends State<VideoDialog> {
   bool _mostraControlli = true;
   Timer? _timerNascondiControlli;
 
-  // --- INIZIALIZZAZIONE SCHERMATA ---
+  // --- INIZIALIZZAZIONE ---
 
   @override
   void initState() {
@@ -45,7 +41,9 @@ class _VideoDialogState extends State<VideoDialog> {
       // CASO 2: File nel file system (Scaricato dallo ZIP)
       else {
         final storageService = context.read<PackageStorage>();
-        final basePath = await storageService.percorsoPacchetto(AppConfig.packageId);
+        final basePath = await storageService.percorsoPacchetto(
+          AppConfig.packageId,
+        );
         final percorsoAssoluto = '$basePath/${widget.videoPath}';
 
         _controller = VideoPlayerController.file(File(percorsoAssoluto));
@@ -55,7 +53,7 @@ class _VideoDialogState extends State<VideoDialog> {
 
       if (mounted) {
         setState(() => _isInitialized = true);
-        _controller!.play(); // Autoplay quando è pronto
+        _controller!.play();
         _avviaTimerNascondiControlli();
       }
     } catch (e) {
@@ -69,6 +67,75 @@ class _VideoDialogState extends State<VideoDialog> {
     _timerNascondiControlli?.cancel();
     _controller?.dispose();
     super.dispose();
+  }
+
+  // --- COSTRUZIONE SCHERMATA ---
+
+  @override
+  Widget build(BuildContext context) {
+    return Dialog(
+      backgroundColor: Colors.transparent,
+      insetPadding: const EdgeInsets.all(16),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          VideoDialogHeader(
+            titolo: widget.titolo,
+            onClose: () => Navigator.pop(context),
+          ),
+          Container(
+            decoration: const BoxDecoration(
+              color: Colors.black,
+              borderRadius: BorderRadius.vertical(bottom: Radius.circular(12)),
+            ),
+            child: _buildVideoContent(),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildVideoContent() {
+    if (_hasError) return const VideoErrorState();
+    if (!_isInitialized || _controller == null)
+      return const VideoLoadingState();
+
+    return ClipRRect(
+      borderRadius: const BorderRadius.vertical(bottom: Radius.circular(12)),
+      child: AspectRatio(
+        aspectRatio: _controller!.value.aspectRatio,
+        child: GestureDetector(
+          onTap: _toggleControlli,
+          child: Stack(
+            alignment: Alignment.bottomCenter,
+            children: [
+              VideoPlayer(_controller!),
+              VideoControlOverlay(
+                controller: _controller!,
+                mostraControlli: _mostraControlli,
+                onJump: (secondi) {
+                  _salta(secondi);
+                  _avviaTimerNascondiControlli();
+                },
+                onTogglePlay: () {
+                  setState(() {
+                    if (_controller!.value.isPlaying) {
+                      _controller!.pause();
+                      _timerNascondiControlli?.cancel();
+                    } else {
+                      _controller!.play();
+                      _avviaTimerNascondiControlli();
+                    }
+                  });
+                },
+                onDragStart: () => _timerNascondiControlli?.cancel(),
+                onDragEnd: () => _avviaTimerNascondiControlli(),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 
   // --- LOGICA ---
@@ -109,74 +176,6 @@ class _VideoDialogState extends State<VideoDialog> {
       }
     });
   }
-
-  // --- COSTRUZIONE SCHERMATA ---
-
-  @override
-  Widget build(BuildContext context) {
-    return Dialog(
-      backgroundColor: Colors.transparent,
-      insetPadding: const EdgeInsets.all(16),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          VideoDialogHeader(
-            titolo: widget.titolo,
-            onClose: () => Navigator.pop(context),
-          ),
-          Container(
-            decoration: const BoxDecoration(
-              color: Colors.black,
-              borderRadius: BorderRadius.vertical(bottom: Radius.circular(12)),
-            ),
-            child: _buildVideoContent(),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildVideoContent() {
-    if (_hasError) return const VideoErrorState();
-    if (!_isInitialized || _controller == null) return const VideoLoadingState();
-
-    return ClipRRect(
-      borderRadius: const BorderRadius.vertical(bottom: Radius.circular(12)),
-      child: AspectRatio(
-        aspectRatio: _controller!.value.aspectRatio,
-        child: GestureDetector(
-          onTap: _toggleControlli,
-          child: Stack(
-            alignment: Alignment.bottomCenter,
-            children: [
-              VideoPlayer(_controller!),
-              VideoControlOverlay(
-                controller: _controller!,
-                mostraControlli: _mostraControlli,
-                onJump: (secondi) {
-                  _salta(secondi);
-                  _avviaTimerNascondiControlli();
-                },
-                onTogglePlay: () {
-                  setState(() {
-                    if (_controller!.value.isPlaying) {
-                      _controller!.pause();
-                      _timerNascondiControlli?.cancel();
-                    } else {
-                      _controller!.play();
-                      _avviaTimerNascondiControlli();
-                    }
-                  });
-                },
-                onDragStart: () => _timerNascondiControlli?.cancel(),
-                onDragEnd: () => _avviaTimerNascondiControlli(),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
 }
 
 // --- WIDGET ---
@@ -206,8 +205,9 @@ class VideoDialogHeader extends StatelessWidget {
             child: Text(
               titolo,
               style: const TextStyle(
-                  color: Colors.white,
-                  fontWeight: FontWeight.bold),
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
+              ),
               overflow: TextOverflow.ellipsis,
             ),
           ),
@@ -237,8 +237,9 @@ class VideoErrorState extends StatelessWidget {
             Icon(Icons.error_outline, color: Colors.red, size: 48),
             SizedBox(height: 8),
             Text(
-                'Impossibile riprodurre il video',
-                style: TextStyle(color: Colors.white70)),
+              'Impossibile riprodurre il video',
+              style: TextStyle(color: Colors.white70),
+            ),
           ],
         ),
       ),
@@ -290,10 +291,7 @@ class VideoControlOverlay extends StatelessWidget {
             gradient: LinearGradient(
               begin: Alignment.topCenter,
               end: Alignment.bottomCenter,
-              colors: [
-                Colors.transparent,
-                Colors.black.withValues(alpha: 0.7),
-              ],
+              colors: [Colors.transparent, Colors.black.withValues(alpha: 0.7)],
             ),
           ),
           child: Column(

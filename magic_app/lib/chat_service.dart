@@ -37,7 +37,7 @@ class FonteChat {
     required this.chunksCount,
   });
 
-  // Aggiornato per leggere used_books invece di sources 
+  // Aggiornato per leggere used_books invece di sources
   factory FonteChat.fromJson(Map<String, dynamic> json) {
     return FonteChat(
       workId: json['work_id']?.toString() ?? '',
@@ -52,10 +52,12 @@ class FonteChat {
 }
 
 class ChatService {
-  final Dio _dio = Dio(BaseOptions(
-    connectTimeout: const Duration(seconds: 30),
-    receiveTimeout: const Duration(seconds: 60),
-  ));
+  final Dio _dio = Dio(
+    BaseOptions(
+      connectTimeout: const Duration(seconds: 30),
+      receiveTimeout: const Duration(seconds: 60),
+    ),
+  );
 
   // Genera UUID per la sessione
   final String _sessionId = const Uuid().v4();
@@ -69,7 +71,7 @@ class ChatService {
   String get sessionId => _sessionId;
   String? get contextSessionId => _contextSessionId;
 
-  // Crea una context session vincolata a uno o piu' libri 
+  // Crea una context session vincolata a uno o piu' libri
   // POST /chat/context-sessions con lista book_ids
   Future<bool> creaContextSession(List<String> bookIds) async {
     try {
@@ -109,9 +111,8 @@ class ChatService {
       'session_id': _sessionId,
       'select_code': _selectCode,
       'top_k': 10,
-      // Aggiunge context_session_id solo se in modalita' fonti bloccate 
-      if (_contextSessionId != null)
-        'context_session_id': _contextSessionId,
+      // Aggiunge context_session_id solo se in modalita' fonti bloccate
+      if (_contextSessionId != null) 'context_session_id': _contextSessionId,
     };
 
     debugPrint('[CHAT] POST /query: $body');
@@ -127,7 +128,8 @@ class ChatService {
           : response.data;
 
       // Estrae testo risposta
-      final testo = data['answer'] as String? ??
+      final testo =
+          data['answer'] as String? ??
           data['text'] as String? ??
           data['response'] as String? ??
           'Nessuna risposta ricevuta';
@@ -138,7 +140,9 @@ class ChatService {
           .map((f) => FonteChat.fromJson(f as Map<String, dynamic>))
           .toList();
 
-      debugPrint('[CHAT] Risposta ricevuta: ${testo.substring(0, testo.length.clamp(0, 50))}...');
+      debugPrint(
+        '[CHAT] Risposta ricevuta: ${testo.substring(0, testo.length.clamp(0, 50))}...',
+      );
       debugPrint('[CHAT] Libri usati: ${fonti.map((f) => f.title).join(', ')}');
 
       return MessaggioChat(

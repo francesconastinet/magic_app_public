@@ -95,7 +95,7 @@ class OperaRepository {
   static BookModel trovaPerNomeML(String nomeML) {
     try {
       return _catalogo.firstWhere(
-            (o) => nomeML.contains(o.titolo.split(' ').first),
+        (o) => nomeML.contains(o.titolo.split(' ').first),
       );
     } catch (_) {
       return _catalogo.first; // fallback

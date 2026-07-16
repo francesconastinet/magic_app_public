@@ -7,10 +7,12 @@ class ApiService {
   // URL manifest da AppConfig — non hardcodato
   static const String _manifestUrl = AppConfig.manifestUrl;
 
-  final Dio _dio = Dio(BaseOptions(
-    connectTimeout: const Duration(seconds: 10),
-    receiveTimeout: const Duration(seconds: 10),
-  ));
+  final Dio _dio = Dio(
+    BaseOptions(
+      connectTimeout: const Duration(seconds: 10),
+      receiveTimeout: const Duration(seconds: 10),
+    ),
+  );
 
   Future<PackageManifest> scaricaManifest() async {
     try {

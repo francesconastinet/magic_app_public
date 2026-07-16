@@ -10,10 +10,7 @@ import 'audio_player_widget.dart';
 class BookDetailScreen extends StatelessWidget {
   final BookModel book;
 
-  const BookDetailScreen({
-    super.key,
-    required this.book,
-  });
+  const BookDetailScreen({super.key, required this.book});
 
   // Restituisce l'icona giusta per ogni tipo di multimedia
   IconData _iconaPerTipo(String tipo) {
@@ -54,26 +51,26 @@ class BookDetailScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
-    // MediaService per aprire i link multimediali 
+    // MediaService per aprire i link multimediali
     final mediaService = MediaService();
 
     return Scaffold(
       appBar: AppBar(
         backgroundColor: colorScheme.primary,
         foregroundColor: colorScheme.onPrimary,
-        title: const Text('Dettaglio',
-            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+        title: const Text(
+          'Dettaglio',
+          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+        ),
         actions: [
-          // Bottone Assistente Virtuale 
+          // Bottone Assistente Virtuale
           IconButton(
             icon: const Icon(Icons.chat_bubble_outline),
             tooltip: 'Assistente Virtuale',
             onPressed: () {
               Navigator.push(
                 context,
-                MaterialPageRoute(
-                  builder: (_) => ChatScreen(book: book),
-                ),
+                MaterialPageRoute(builder: (_) => ChatScreen(book: book)),
               );
             },
           ),
@@ -96,28 +93,37 @@ class BookDetailScreen extends StatelessWidget {
                         CircleAvatar(
                           radius: 24,
                           backgroundColor: colorScheme.primaryContainer,
-                          child: Icon(Icons.menu_book,
-                              size: 24,
-                              color: colorScheme.onPrimaryContainer),
+                          child: Icon(
+                            Icons.menu_book,
+                            size: 24,
+                            color: colorScheme.onPrimaryContainer,
+                          ),
                         ),
                         const SizedBox(width: 12),
                         Expanded(
-                          child: Text(book.titolo,
-                              style: const TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.bold)),
+                          child: Text(
+                            book.titolo,
+                            style: const TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
                         ),
                       ],
                     ),
                     const SizedBox(height: 8),
-                    Text(book.autore,
-                        style: TextStyle(
-                            color: colorScheme.onSurfaceVariant)),
+                    Text(
+                      book.autore,
+                      style: TextStyle(color: colorScheme.onSurfaceVariant),
+                    ),
                     const SizedBox(height: 4),
-                    Text(book.anno,
-                        style: TextStyle(
-                            fontSize: 12,
-                            color: colorScheme.onSurfaceVariant)),
+                    Text(
+                      book.anno,
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: colorScheme.onSurfaceVariant,
+                      ),
+                    ),
                   ],
                 ),
               ),
@@ -126,11 +132,12 @@ class BookDetailScreen extends StatelessWidget {
 
             // Sezione multimedia
             if (book.multimedia.isNotEmpty) ...[
-              Text('Contenuti multimediali',
-                  style: Theme.of(context)
-                      .textTheme
-                      .titleMedium
-                      ?.copyWith(fontWeight: FontWeight.bold)),
+              Text(
+                'Contenuti multimediali',
+                style: Theme.of(
+                  context,
+                ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+              ),
               const SizedBox(height: 8),
               ...book.multimedia.map((media) {
                 // Audio riprodotto in-app con AudioPlayerWidget
@@ -144,21 +151,22 @@ class BookDetailScreen extends StatelessWidget {
                 return Card(
                   child: ListTile(
                     leading: CircleAvatar(
-                      backgroundColor:
-                          _colorePerTipo(media.tipo).withValues(alpha: 0.15),
+                      backgroundColor: _colorePerTipo(
+                        media.tipo,
+                      ).withValues(alpha: 0.15),
                       child: Icon(
                         _iconaPerTipo(media.tipo),
                         color: _colorePerTipo(media.tipo),
                       ),
                     ),
-                    title: Text(media.titolo,
-                        style: const TextStyle(
-                            fontWeight: FontWeight.bold)),
+                    title: Text(
+                      media.titolo,
+                      style: const TextStyle(fontWeight: FontWeight.bold),
+                    ),
                     subtitle: media.descrizione.isNotEmpty
                         ? Text(media.descrizione)
                         : null,
-                    trailing: const Icon(Icons.arrow_forward_ios,
-                        size: 14),
+                    trailing: const Icon(Icons.arrow_forward_ios, size: 14),
                     onTap: () async {
                       // Apre il link multimediale con MediaService
                       final aperto = await mediaService.apriMedia(media);
@@ -166,7 +174,8 @@ class BookDetailScreen extends StatelessWidget {
                         ScaffoldMessenger.of(context).showSnackBar(
                           SnackBar(
                             content: Text(
-                                'Impossibile aprire ${mediaService.etichettaTipo(media.tipo)}'),
+                              'Impossibile aprire ${mediaService.etichettaTipo(media.tipo)}',
+                            ),
                             backgroundColor: Colors.red,
                           ),
                         );
@@ -183,14 +192,15 @@ class BookDetailScreen extends StatelessWidget {
                   padding: const EdgeInsets.all(16),
                   child: Row(
                     children: [
-                      Icon(Icons.info_outline,
-                          color: colorScheme.onSurfaceVariant),
+                      Icon(
+                        Icons.info_outline,
+                        color: colorScheme.onSurfaceVariant,
+                      ),
                       const SizedBox(width: 12),
                       Expanded(
                         child: Text(
                           'Nessun contenuto multimediale disponibile',
-                          style: TextStyle(
-                              color: colorScheme.onSurfaceVariant),
+                          style: TextStyle(color: colorScheme.onSurfaceVariant),
                         ),
                       ),
                     ],

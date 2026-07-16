@@ -5,16 +5,16 @@ import 'package:flutter/foundation.dart';
 
 class UpdateService {
   // Salva la versione installata su disco dopo il download
-  Future<void> salvaVersioneInstallata(
-      String packageId, String version) async {
+  Future<void> salvaVersioneInstallata(String packageId, String version) async {
     final docs = await getApplicationDocumentsDirectory();
-    final file = File(
-        '${docs.path}/magic_packages/$packageId/installed.json');
+    final file = File('${docs.path}/magic_packages/$packageId/installed.json');
     await file.parent.create(recursive: true);
-    await file.writeAsString(jsonEncode({
-      'version': version,
-      'installedAt': DateTime.now().toIso8601String(),
-    }));
+    await file.writeAsString(
+      jsonEncode({
+        'version': version,
+        'installedAt': DateTime.now().toIso8601String(),
+      }),
+    );
     debugPrint('Versione $version salvata per $packageId');
   }
 
@@ -23,7 +23,8 @@ class UpdateService {
     try {
       final docs = await getApplicationDocumentsDirectory();
       final file = File(
-          '${docs.path}/magic_packages/$packageId/installed.json');
+        '${docs.path}/magic_packages/$packageId/installed.json',
+      );
       if (!await file.exists()) return null;
       final json = jsonDecode(await file.readAsString());
       return json['version'] as String?;
@@ -35,7 +36,9 @@ class UpdateService {
   // Confronta versione locale con quella del manifest
   // Restituisce true se c'e' un aggiornamento disponibile
   Future<bool> isAggiornamentoDisponibile(
-      String packageId, String versioneManifest) async {
+    String packageId,
+    String versioneManifest,
+  ) async {
     final versioneInstallata = await leggiVersioneInstallata(packageId);
     if (versioneInstallata == null) return true; // mai installato
     return versioneInstallata != versioneManifest;
@@ -55,11 +58,13 @@ class UpdateService {
     try {
       final docs = await getApplicationDocumentsDirectory();
       final file = File(
-          '${docs.path}/magic_packages/$packageId/installed.json');
+        '${docs.path}/magic_packages/$packageId/installed.json',
+      );
 
       if (!await file.exists()) {
         debugPrint(
-            '[SYNC] Nessun pacchetto installato per $packageId — sync necessaria');
+          '[SYNC] Nessun pacchetto installato per $packageId — sync necessaria',
+        );
         return true; // mai installato -> serve scaricare
       }
 
@@ -76,13 +81,16 @@ class UpdateService {
       final necessaria = oreTrascorse >= oreLimite;
 
       debugPrint(
-          '[SYNC] Ultimo download $oreTrascorse ore fa (limite $oreLimite h) -> sync ${necessaria ? "necessaria" : "non necessaria"}');
+        '[SYNC] Ultimo download $oreTrascorse ore fa (limite $oreLimite h) -> sync ${necessaria ? "necessaria" : "non necessaria"}',
+      );
 
       return necessaria;
     } catch (e) {
       // In caso di dubbio (file corrotto, errore di parsing) meglio
       // riprovare il download piuttosto che restare con dati vecchi
-      debugPrint('[SYNC] Errore lettura installed.json: $e — sync necessaria per sicurezza');
+      debugPrint(
+        '[SYNC] Errore lettura installed.json: $e — sync necessaria per sicurezza',
+      );
       return true;
     }
   }

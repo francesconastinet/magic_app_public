@@ -18,8 +18,11 @@ class PackageStorage {
   }
 
   // Salva un file nel pacchetto
-  Future<void> salvaFile(String packageId, String relativePath,
-      List<int> bytes) async {
+  Future<void> salvaFile(
+    String packageId,
+    String relativePath,
+    List<int> bytes,
+  ) async {
     final base = await _baseDir;
     final file = File('${base.path}/$packageId/$relativePath');
     await file.parent.create(recursive: true);
@@ -36,7 +39,9 @@ class PackageStorage {
 
   // Legge un file come JSON
   Future<Map<String, dynamic>?> leggiJson(
-      String packageId, String relativePath) async {
+    String packageId,
+    String relativePath,
+  ) async {
     final contenuto = await leggiFile(packageId, relativePath);
     if (contenuto == null) return null;
     return jsonDecode(contenuto) as Map<String, dynamic>;

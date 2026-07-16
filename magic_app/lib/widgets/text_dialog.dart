@@ -8,11 +8,7 @@ class TextDialog extends StatelessWidget {
   final String titolo;
   final String textPath;
 
-  const TextDialog({
-    super.key,
-    required this.titolo,
-    required this.textPath,
-  });
+  const TextDialog({super.key, required this.titolo, required this.textPath});
 
   Future<String?> _leggiTesto(BuildContext context) async {
     try {
@@ -21,7 +17,6 @@ class TextDialog extends StatelessWidget {
       if (textPath.startsWith('assets/')) {
         return await rootBundle.loadString(textPath);
       }
-
       // CASO 2: Modalità Produzione (File estratti su disco dallo ZIP)
       else {
         final storageService = context.read<PackageStorage>();
@@ -54,7 +49,10 @@ class TextDialog extends StatelessWidget {
             return SingleChildScrollView(
               child: Text(
                 'Impossibile caricare il testo.\nPercorso cercato: $textPath',
-                style: const TextStyle(color: Colors.orangeAccent, fontSize: 16),
+                style: const TextStyle(
+                  color: Colors.orangeAccent,
+                  fontSize: 16,
+                ),
               ),
             );
           }
@@ -70,7 +68,10 @@ class TextDialog extends StatelessWidget {
       actions: [
         TextButton(
           onPressed: () => Navigator.pop(context),
-          child: const Text('Chiudi', style: TextStyle(color: Colors.blueAccent)),
+          child: const Text(
+            'Chiudi',
+            style: TextStyle(color: Colors.blueAccent),
+          ),
         ),
       ],
     );

@@ -179,21 +179,25 @@ class CollectionV2Model {
     // La struttura usa "collection_id" invece di "id"
     // e "nome" invece di "name"
     // e "libri" invece di "books" — con oggetti {id, titolo} invece di stringhe
-    final id = json['collection_id']?.toString() ??
-        json['id']?.toString() ?? '';
-    final name = json['nome']?.toString() ??
-        json['name']?.toString() ?? '';
-    final description = json['descrizione']?.toString() ??
-        json['description']?.toString() ?? '';
+    final id =
+        json['collection_id']?.toString() ?? json['id']?.toString() ?? '';
+    final name = json['nome']?.toString() ?? json['name']?.toString() ?? '';
+    final description =
+        json['descrizione']?.toString() ??
+        json['description']?.toString() ??
+        '';
 
     // Estrae gli id dai libri — supporta sia lista di oggetti che lista di stringhe
     final libriRaw = json['libri'] as List? ?? json['books'] as List? ?? [];
-    final bookIds = libriRaw.map((e) {
-      if (e is Map) {
-        return e['id']?.toString() ?? '';
-      }
-      return e.toString();
-    }).where((id) => id.isNotEmpty).toList();
+    final bookIds = libriRaw
+        .map((e) {
+          if (e is Map) {
+            return e['id']?.toString() ?? '';
+          }
+          return e.toString();
+        })
+        .where((id) => id.isNotEmpty)
+        .toList();
 
     return CollectionV2Model(
       id: id,

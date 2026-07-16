@@ -48,8 +48,7 @@ class ManuscriptScreen extends StatelessWidget {
       authService: context.read<AuthService>(),
     );
     // Legge i libri della collezione dalla nuova struttura
-    final libri = await service.leggiLibriDiCollezione(
-        packageId, collectionId);
+    final libri = await service.leggiLibriDiCollezione(packageId, collectionId);
     if (libri.isEmpty) throw Exception('Nessun libro trovato');
     return libri;
   }
@@ -64,11 +63,11 @@ class ManuscriptScreen extends StatelessWidget {
         foregroundColor: colorScheme.onPrimary,
         title: Column(
           children: [
-            Text(collectionName,
-                style: const TextStyle(
-                    fontSize: 18, fontWeight: FontWeight.bold)),
-            const Text('Libri',
-                style: TextStyle(fontSize: 12)),
+            Text(
+              collectionName,
+              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            ),
+            const Text('Libri', style: TextStyle(fontSize: 12)),
           ],
         ),
       ),
@@ -96,8 +95,7 @@ class ManuscriptScreen extends StatelessWidget {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  const Icon(Icons.error_outline,
-                      size: 48, color: Colors.red),
+                  const Icon(Icons.error_outline, size: 48, color: Colors.red),
                   const SizedBox(height: 16),
                   Text('${snapshot.error}'),
                   const SizedBox(height: 8),
@@ -121,7 +119,9 @@ class ManuscriptScreen extends StatelessWidget {
               return Card(
                 child: ListTile(
                   contentPadding: const EdgeInsets.symmetric(
-                      horizontal: 16, vertical: 8),
+                    horizontal: 16,
+                    vertical: 8,
+                  ),
                   leading: CircleAvatar(
                     backgroundColor: colorScheme.primaryContainer,
                     child: Text(
@@ -133,9 +133,10 @@ class ManuscriptScreen extends StatelessWidget {
                       ),
                     ),
                   ),
-                  title: Text(book.titolo,
-                      style: const TextStyle(
-                          fontWeight: FontWeight.bold)),
+                  title: Text(
+                    book.titolo,
+                    style: const TextStyle(fontWeight: FontWeight.bold),
+                  ),
                   subtitle: Text(book.autore),
                   // Anno nel trailing con Expanded per evitare overflow
                   trailing: book.anno.isNotEmpty
@@ -144,15 +145,19 @@ class ManuscriptScreen extends StatelessWidget {
                           child: Text(
                             book.anno,
                             style: TextStyle(
-                                fontSize: 11,
-                                color: colorScheme.onSurfaceVariant),
+                              fontSize: 11,
+                              color: colorScheme.onSurfaceVariant,
+                            ),
                             textAlign: TextAlign.end,
                             overflow: TextOverflow.ellipsis,
                             maxLines: 2,
                           ),
                         )
-                      : Icon(Icons.arrow_forward_ios,
-                          size: 14, color: colorScheme.primary),
+                      : Icon(
+                          Icons.arrow_forward_ios,
+                          size: 14,
+                          color: colorScheme.primary,
+                        ),
                   onTap: () {
                     // Naviga al dettaglio libro invece di andare direttamente in AR
                     Navigator.push(

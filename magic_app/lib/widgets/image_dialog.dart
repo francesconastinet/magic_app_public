@@ -8,11 +8,7 @@ class ImageDialog extends StatelessWidget {
   final String titolo;
   final String imagePath;
 
-  const ImageDialog({
-    super.key,
-    required this.titolo,
-    required this.imagePath,
-  });
+  const ImageDialog({super.key, required this.titolo, required this.imagePath});
 
   Widget _buildImage(BuildContext context) {
     // CASO 1: File negli asset (Modalità Mock/Test)
@@ -21,13 +17,10 @@ class ImageDialog extends StatelessWidget {
       return Image.asset(
         imagePath,
         fit: BoxFit.contain,
-        errorBuilder: (context, error, stackTrace) => const Icon(
-            Icons.broken_image,
-            color: Colors.white,
-            size: 50),
+        errorBuilder: (context, error, stackTrace) =>
+            const Icon(Icons.broken_image, color: Colors.white, size: 50),
       );
     }
-
     // CASO 2: File nel sistema (Scaricato dallo ZIP)
     else {
       final storageService = context.read<PackageStorage>();
@@ -51,10 +44,8 @@ class ImageDialog extends StatelessWidget {
           return Image.file(
             File(percorsoAssoluto),
             fit: BoxFit.contain,
-            errorBuilder: (context, error, stackTrace) => const Icon(
-                Icons.broken_image,
-                color: Colors.white,
-                size: 50),
+            errorBuilder: (context, error, stackTrace) =>
+                const Icon(Icons.broken_image, color: Colors.white, size: 50),
           );
         },
       );
@@ -81,8 +72,9 @@ class ImageDialog extends StatelessWidget {
                   child: Text(
                     titolo,
                     style: const TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.bold),
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                    ),
                     overflow: TextOverflow.ellipsis,
                   ),
                 ),

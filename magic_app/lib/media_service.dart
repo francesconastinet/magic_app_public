@@ -21,19 +21,13 @@ class MediaService {
       // poi fallback al browser
       if (tipo == 'video' || tipo == 'audio') {
         if (await canLaunchUrl(uri)) {
-          return await launchUrl(
-            uri,
-            mode: LaunchMode.externalApplication,
-          );
+          return await launchUrl(uri, mode: LaunchMode.externalApplication);
         }
       }
 
       // pdf, immagine, link_esterno — apre nel browser interno
       if (await canLaunchUrl(uri)) {
-        return await launchUrl(
-          uri,
-          mode: LaunchMode.inAppBrowserView,
-        );
+        return await launchUrl(uri, mode: LaunchMode.inAppBrowserView);
       }
 
       debugPrint('Impossibile aprire URL: $uri');
@@ -47,12 +41,18 @@ class MediaService {
   // Restituisce etichetta leggibile per il tipo
   String etichettaTipo(String tipo) {
     switch (tipo) {
-      case 'video': return 'Video';
-      case 'audio': return 'Audio';
-      case 'immagine': return 'Immagine';
-      case 'pdf': return 'PDF';
-      case 'link_esterno': return 'Link esterno';
-      default: return 'Contenuto';
+      case 'video':
+        return 'Video';
+      case 'audio':
+        return 'Audio';
+      case 'immagine':
+        return 'Immagine';
+      case 'pdf':
+        return 'PDF';
+      case 'link_esterno':
+        return 'Link esterno';
+      default:
+        return 'Contenuto';
     }
   }
 }

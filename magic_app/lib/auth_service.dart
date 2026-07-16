@@ -8,15 +8,17 @@ import 'app_config.dart';
 // e ridisegnarsi automaticamente quando cambiano, senza bisogno di passare
 // callback manuali in giro.
 class AuthService extends ChangeNotifier {
-  final Dio _dio = Dio(BaseOptions(
-    connectTimeout: const Duration(seconds: 30),
-    receiveTimeout: const Duration(seconds: 30),
-  ));
+  final Dio _dio = Dio(
+    BaseOptions(
+      connectTimeout: const Duration(seconds: 30),
+      receiveTimeout: const Duration(seconds: 30),
+    ),
+  );
 
   String? _accessToken;
-// Token di refresh — da usare in futuro per rinnovare l'access token senza rifare il login
-// ignore: unused_field
-String? _refreshToken;
+  // Token di refresh — da usare in futuro per rinnovare l'access token senza rifare il login
+  // ignore: unused_field
+  String? _refreshToken;
 
   String? get accessToken => _accessToken;
   bool get isLoggato => _accessToken != null;
@@ -26,10 +28,7 @@ String? _refreshToken;
     try {
       final response = await _dio.post(
         '${AppConfig.apiBaseUrl}/api/auth/token/',
-        data: {
-          'username': username,
-          'password': password,
-        },
+        data: {'username': username, 'password': password},
       );
 
       final data = response.data is String
@@ -61,9 +60,7 @@ String? _refreshToken;
       final response = await _dio.post(
         '${AppConfig.apiBaseUrl}/api/common/export/package/',
         options: Options(
-          headers: {
-            'Authorization': 'Bearer $_accessToken',
-          },
+          headers: {'Authorization': 'Bearer $_accessToken'},
           // Risposta come bytes binari
           responseType: ResponseType.bytes,
         ),
@@ -94,11 +91,7 @@ String? _refreshToken;
     try {
       final response = await _dio.get(
         '${AppConfig.apiBaseUrl}/api/common/export/package/check/',
-        options: Options(
-          headers: {
-            'Authorization': 'Bearer $_accessToken',
-          },
-        ),
+        options: Options(headers: {'Authorization': 'Bearer $_accessToken'}),
       );
 
       final data = response.data is String

@@ -6,10 +6,7 @@ import 'models.dart';
 class ChatScreen extends StatefulWidget {
   final BookModel book;
 
-  const ChatScreen({
-    super.key,
-    required this.book,
-  });
+  const ChatScreen({super.key, required this.book});
 
   @override
   State<ChatScreen> createState() => _ChatScreenState();
@@ -32,7 +29,7 @@ class _ChatScreenState extends State<ChatScreen> {
   @override
   void initState() {
     super.initState();
-    // Messaggio di benvenuto contestuale al libro 
+    // Messaggio di benvenuto contestuale al libro
     _aggiungiMessaggioBenvenuto();
     // Crea context session vincolata al libro corrente
     _inizializzaContextSession();
@@ -48,27 +45,28 @@ class _ChatScreenState extends State<ChatScreen> {
   // Crea context session vincolata all'id del libro corrente
   Future<void> _inizializzaContextSession() async {
     setState(() => _contextSessionInCorso = true);
-    final successo =
-        await _chatService.creaContextSession([widget.book.id]);
+    final successo = await _chatService.creaContextSession([widget.book.id]);
     setState(() {
       _contextSessionCreata = successo;
       _contextSessionInCorso = false;
     });
-    debugPrint(
-        '[CHAT] Context session inizializzata: $_contextSessionCreata');
+    debugPrint('[CHAT] Context session inizializzata: $_contextSessionCreata');
   }
 
   // Aggiunge messaggio di benvenuto con contesto del libro
   void _aggiungiMessaggioBenvenuto() {
     setState(() {
-      _messaggi.add(MessaggioChat(
-        testo: 'Ciao! Sono il tuo assistente virtuale per '
-            '"${widget.book.titolo}" di ${widget.book.autore}. '
-            'Puoi farmi domande su questo libro o sulla collezione '
-            'dei Girolamini. Come posso aiutarti?',
-        isUtente: false,
-        timestamp: DateTime.now(),
-      ));
+      _messaggi.add(
+        MessaggioChat(
+          testo:
+              'Ciao! Sono il tuo assistente virtuale per '
+              '"${widget.book.titolo}" di ${widget.book.autore}. '
+              'Puoi farmi domande su questo libro o sulla collezione '
+              'dei Girolamini. Come posso aiutarti?',
+          isUtente: false,
+          timestamp: DateTime.now(),
+        ),
+      );
     });
   }
 
@@ -88,8 +86,9 @@ class _ChatScreenState extends State<ChatScreen> {
   // Aggiunge le nuove fonti alla lista totale evitando duplicati
   void _aggiorneFonti(List<FonteChat> nuoveFonti) {
     for (final fonte in nuoveFonti) {
-      final giaPresente = _fonteTotali
-          .any((f) => f.workId == fonte.workId && fonte.workId.isNotEmpty);
+      final giaPresente = _fonteTotali.any(
+        (f) => f.workId == fonte.workId && fonte.workId.isNotEmpty,
+      );
       if (!giaPresente) {
         _fonteTotali.add(fonte);
       }
@@ -102,11 +101,9 @@ class _ChatScreenState extends State<ChatScreen> {
 
     // Aggiunge messaggio utente
     setState(() {
-      _messaggi.add(MessaggioChat(
-        testo: testo,
-        isUtente: true,
-        timestamp: DateTime.now(),
-      ));
+      _messaggi.add(
+        MessaggioChat(testo: testo, isUtente: true, timestamp: DateTime.now()),
+      );
       _botStaScrivendo = true;
       _controller.clear();
     });
@@ -123,27 +120,32 @@ class _ChatScreenState extends State<ChatScreen> {
       });
     } on DioException catch (e) {
       // Errore di connessione — distingue tra rete e server
-      final messaggioErrore = e.type == DioExceptionType.connectionTimeout ||
+      final messaggioErrore =
+          e.type == DioExceptionType.connectionTimeout ||
               e.type == DioExceptionType.receiveTimeout ||
               e.type == DioExceptionType.connectionError
           ? 'Errore di connessione — verifica la rete e riprova'
           : 'Errore del server — riprova tra qualche istante';
 
       setState(() {
-        _messaggi.add(MessaggioChat(
-          testo: messaggioErrore,
-          isUtente: false,
-          timestamp: DateTime.now(),
-        ));
+        _messaggi.add(
+          MessaggioChat(
+            testo: messaggioErrore,
+            isUtente: false,
+            timestamp: DateTime.now(),
+          ),
+        );
         _botStaScrivendo = false;
       });
     } catch (e) {
       setState(() {
-        _messaggi.add(MessaggioChat(
-          testo: 'Errore imprevisto — riprova',
-          isUtente: false,
-          timestamp: DateTime.now(),
-        ));
+        _messaggi.add(
+          MessaggioChat(
+            testo: 'Errore imprevisto — riprova',
+            isUtente: false,
+            timestamp: DateTime.now(),
+          ),
+        );
         _botStaScrivendo = false;
       });
     }
@@ -178,8 +180,9 @@ class _ChatScreenState extends State<ChatScreen> {
                     '${_fonteTotali.length} libro/i usato/i',
                     style: TextStyle(
                       fontSize: 13,
-                      color: colorScheme.onPrimaryContainer
-                          .withValues(alpha: 0.8),
+                      color: colorScheme.onPrimaryContainer.withValues(
+                        alpha: 0.8,
+                      ),
                     ),
                   ),
                 ],
@@ -194,8 +197,7 @@ class _ChatScreenState extends State<ChatScreen> {
                         child: Text(
                           'Nessuna fonte ancora.\nFai una domanda per vedere\ni libri consultati.',
                           textAlign: TextAlign.center,
-                          style: TextStyle(
-                              color: colorScheme.onSurfaceVariant),
+                          style: TextStyle(color: colorScheme.onSurfaceVariant),
                         ),
                       ),
                     )
@@ -215,47 +217,60 @@ class _ChatScreenState extends State<ChatScreen> {
                                       ? fonte.title
                                       : fonte.identifier,
                                   style: const TextStyle(
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 14),
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 14,
+                                  ),
                                 ),
                                 if (fonte.author.isNotEmpty) ...[
                                   const SizedBox(height: 4),
-                                  Text(fonte.author,
-                                      style: TextStyle(
-                                          fontSize: 12,
-                                          color: colorScheme.onSurfaceVariant)),
+                                  Text(
+                                    fonte.author,
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      color: colorScheme.onSurfaceVariant,
+                                    ),
+                                  ),
                                 ],
                                 if (fonte.date.isNotEmpty) ...[
                                   const SizedBox(height: 2),
-                                  Text(fonte.date,
-                                      style: TextStyle(
-                                          fontSize: 11,
-                                          color: colorScheme.onSurfaceVariant)),
+                                  Text(
+                                    fonte.date,
+                                    style: TextStyle(
+                                      fontSize: 11,
+                                      color: colorScheme.onSurfaceVariant,
+                                    ),
+                                  ),
                                 ],
                                 if (fonte.rilevanza != null) ...[
                                   const SizedBox(height: 6),
                                   Row(
                                     children: [
-                                      Icon(Icons.analytics_outlined,
-                                          size: 12,
-                                          color: colorScheme.primary),
+                                      Icon(
+                                        Icons.analytics_outlined,
+                                        size: 12,
+                                        color: colorScheme.primary,
+                                      ),
                                       const SizedBox(width: 4),
                                       Text(
                                         'Rilevanza: ${(fonte.rilevanza! * 100).toStringAsFixed(0)}%',
                                         style: TextStyle(
-                                            fontSize: 11,
-                                            color: colorScheme.primary),
+                                          fontSize: 11,
+                                          color: colorScheme.primary,
+                                        ),
                                       ),
                                       const SizedBox(width: 12),
-                                      Icon(Icons.format_quote,
-                                          size: 12,
-                                          color: colorScheme.onSurfaceVariant),
+                                      Icon(
+                                        Icons.format_quote,
+                                        size: 12,
+                                        color: colorScheme.onSurfaceVariant,
+                                      ),
                                       const SizedBox(width: 4),
                                       Text(
                                         '${fonte.chunksCount} estratti',
                                         style: TextStyle(
-                                            fontSize: 11,
-                                            color: colorScheme.onSurfaceVariant),
+                                          fontSize: 11,
+                                          color: colorScheme.onSurfaceVariant,
+                                        ),
                                       ),
                                     ],
                                   ),
@@ -286,11 +301,11 @@ class _ChatScreenState extends State<ChatScreen> {
         title: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('Assistente Virtuale',
-                style: TextStyle(
-                    fontSize: 16, fontWeight: FontWeight.bold)),
-            Text(widget.book.titolo,
-                style: const TextStyle(fontSize: 11)),
+            const Text(
+              'Assistente Virtuale',
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+            ),
+            Text(widget.book.titolo, style: const TextStyle(fontSize: 11)),
           ],
         ),
         actions: [
@@ -311,13 +326,16 @@ class _ChatScreenState extends State<ChatScreen> {
                           borderRadius: BorderRadius.circular(6),
                         ),
                         constraints: const BoxConstraints(
-                            minWidth: 14, minHeight: 14),
+                          minWidth: 14,
+                          minHeight: 14,
+                        ),
                         child: Text(
                           '${_fonteTotali.length}',
                           style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 9,
-                              fontWeight: FontWeight.bold),
+                            color: Colors.white,
+                            fontSize: 9,
+                            fontWeight: FontWeight.bold,
+                          ),
                           textAlign: TextAlign.center,
                         ),
                       ),
@@ -335,14 +353,15 @@ class _ChatScreenState extends State<ChatScreen> {
           // Tag visibile modalita' fonti bloccate sul libro corrente
           Container(
             width: double.infinity,
-            padding:
-                const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
             color: colorScheme.secondaryContainer,
             child: Row(
               children: [
-                Icon(Icons.book_outlined,
-                    size: 14,
-                    color: colorScheme.onSecondaryContainer),
+                Icon(
+                  Icons.book_outlined,
+                  size: 14,
+                  color: colorScheme.onSecondaryContainer,
+                ),
                 const SizedBox(width: 6),
                 Expanded(
                   child: Text(
@@ -372,9 +391,7 @@ class _ChatScreenState extends State<ChatScreen> {
                         ? Icons.lock_outline
                         : Icons.lock_open_outlined,
                     size: 14,
-                    color: _contextSessionCreata
-                        ? Colors.green
-                        : Colors.orange,
+                    color: _contextSessionCreata ? Colors.green : Colors.orange,
                   ),
               ],
             ),
@@ -406,7 +423,7 @@ class _ChatScreenState extends State<ChatScreen> {
                   color: Colors.black.withValues(alpha: 0.05),
                   blurRadius: 4,
                   offset: const Offset(0, -2),
-                )
+                ),
               ],
             ),
             child: Row(
@@ -423,7 +440,9 @@ class _ChatScreenState extends State<ChatScreen> {
                       filled: true,
                       fillColor: colorScheme.surfaceContainerHighest,
                       contentPadding: const EdgeInsets.symmetric(
-                          horizontal: 16, vertical: 10),
+                        horizontal: 16,
+                        vertical: 10,
+                      ),
                     ),
                     onSubmitted: (_) => _invia(),
                     enabled: !_botStaScrivendo,
@@ -434,10 +453,7 @@ class _ChatScreenState extends State<ChatScreen> {
                   heroTag: 'chat_send',
                   onPressed: _botStaScrivendo ? null : _invia,
                   backgroundColor: colorScheme.primary,
-                  child: Icon(
-                    Icons.send,
-                    color: colorScheme.onPrimary,
-                  ),
+                  child: Icon(Icons.send, color: colorScheme.onPrimary),
                 ),
               ],
             ),
@@ -453,8 +469,9 @@ class _ChatScreenState extends State<ChatScreen> {
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
       child: Column(
-        crossAxisAlignment:
-            isUtente ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+        crossAxisAlignment: isUtente
+            ? CrossAxisAlignment.end
+            : CrossAxisAlignment.start,
         children: [
           // Etichetta mittente
           Padding(
@@ -462,17 +479,18 @@ class _ChatScreenState extends State<ChatScreen> {
             child: Text(
               isUtente ? 'Tu' : 'V.A.',
               style: TextStyle(
-                  fontSize: 11,
-                  color: colorScheme.onSurfaceVariant,
-                  fontWeight: FontWeight.bold),
+                fontSize: 11,
+                color: colorScheme.onSurfaceVariant,
+                fontWeight: FontWeight.bold,
+              ),
             ),
           ),
           // Bubble testo
           Container(
             constraints: BoxConstraints(
-                maxWidth: MediaQuery.of(context).size.width * 0.75),
-            padding:
-                const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+              maxWidth: MediaQuery.of(context).size.width * 0.75,
+            ),
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
             decoration: BoxDecoration(
               color: isUtente
                   ? colorScheme.primary
@@ -487,9 +505,7 @@ class _ChatScreenState extends State<ChatScreen> {
             child: Text(
               msg.testo,
               style: TextStyle(
-                color: isUtente
-                    ? colorScheme.onPrimary
-                    : colorScheme.onSurface,
+                color: isUtente ? colorScheme.onPrimary : colorScheme.onSurface,
               ),
             ),
           ),
@@ -501,19 +517,21 @@ class _ChatScreenState extends State<ChatScreen> {
               child: Text(
                 'Libri consultati:',
                 style: TextStyle(
-                    fontSize: 11,
-                    color: colorScheme.onSurfaceVariant,
-                    fontStyle: FontStyle.italic),
+                  fontSize: 11,
+                  color: colorScheme.onSurfaceVariant,
+                  fontStyle: FontStyle.italic,
+                ),
               ),
             ),
-            ...msg.fonti.map((fonte) => Padding(
-                  padding: const EdgeInsets.only(left: 4, top: 2),
-                  child: Text(
-                    '• ${fonte.title.isNotEmpty ? fonte.title : fonte.identifier}',
-                    style:
-                        TextStyle(fontSize: 11, color: colorScheme.primary),
-                  ),
-                )),
+            ...msg.fonti.map(
+              (fonte) => Padding(
+                padding: const EdgeInsets.only(left: 4, top: 2),
+                child: Text(
+                  '• ${fonte.title.isNotEmpty ? fonte.title : fonte.identifier}',
+                  style: TextStyle(fontSize: 11, color: colorScheme.primary),
+                ),
+              ),
+            ),
           ],
           // Timestamp
           Padding(
@@ -522,7 +540,9 @@ class _ChatScreenState extends State<ChatScreen> {
               '${msg.timestamp.hour.toString().padLeft(2, '0')}:'
               '${msg.timestamp.minute.toString().padLeft(2, '0')}',
               style: TextStyle(
-                  fontSize: 10, color: colorScheme.onSurfaceVariant),
+                fontSize: 10,
+                color: colorScheme.onSurfaceVariant,
+              ),
             ),
           ),
         ],
@@ -539,15 +559,17 @@ class _ChatScreenState extends State<ChatScreen> {
         children: [
           Padding(
             padding: const EdgeInsets.only(bottom: 4, left: 4),
-            child: Text('V.A.',
-                style: TextStyle(
-                    fontSize: 11,
-                    color: colorScheme.onSurfaceVariant,
-                    fontWeight: FontWeight.bold)),
+            child: Text(
+              'V.A.',
+              style: TextStyle(
+                fontSize: 11,
+                color: colorScheme.onSurfaceVariant,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
           ),
           Container(
-            padding:
-                const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
             decoration: BoxDecoration(
               color: colorScheme.surfaceContainerHighest,
               borderRadius: const BorderRadius.only(
@@ -569,10 +591,13 @@ class _ChatScreenState extends State<ChatScreen> {
                   ),
                 ),
                 const SizedBox(width: 8),
-                Text('Sto elaborando...',
-                    style: TextStyle(
-                        color: colorScheme.onSurfaceVariant,
-                        fontStyle: FontStyle.italic)),
+                Text(
+                  'Sto elaborando...',
+                  style: TextStyle(
+                    color: colorScheme.onSurfaceVariant,
+                    fontStyle: FontStyle.italic,
+                  ),
+                ),
               ],
             ),
           ),
