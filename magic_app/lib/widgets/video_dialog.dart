@@ -97,8 +97,9 @@ class _VideoDialogState extends State<VideoDialog> {
 
   Widget _buildVideoContent() {
     if (_hasError) return const VideoErrorState();
-    if (!_isInitialized || _controller == null)
+    if (!_isInitialized || _controller == null) {
       return const VideoLoadingState();
+    }
 
     return ClipRRect(
       borderRadius: const BorderRadius.vertical(bottom: Radius.circular(12)),
