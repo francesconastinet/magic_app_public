@@ -8,9 +8,13 @@ class TextDialog extends StatelessWidget {
   final String titolo;
   final String textPath;
 
-  const TextDialog({super.key, required this.titolo, required this.textPath});
+  const TextDialog({
+    super.key,
+    required this.titolo,
+    required this.textPath,
+  });
 
-  Future<String?> _leggiTesto(BuildContext context) async {
+  Future<String?> _leggiTestoSmart(BuildContext context) async {
     try {
       // CASO 1: Modalità Test (File negli asset)
       // TODO: rimuovere quando il client sarà collegato al backend
@@ -33,11 +37,33 @@ class TextDialog extends StatelessWidget {
     return AlertDialog(
       backgroundColor: Colors.black87,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      title: Text(titolo, style: const TextStyle(color: Colors.white)),
+
+      title: Row(
+        children: [
+          Expanded(
+            child: Text(
+              titolo,
+              style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold
+              ),
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+          IconButton(
+            icon: const Icon(Icons.close, color: Colors.white),
+            onPressed: () => Navigator.pop(context),
+            padding: EdgeInsets.zero,
+            constraints: const BoxConstraints(),
+          ),
+        ],
+      ),
 
       content: FutureBuilder<String?>(
-        future: _leggiTesto(context),
+        future: _leggiTestoSmart(context),
         builder: (context, snapshot) {
+
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const SizedBox(
               height: 100,
@@ -49,31 +75,19 @@ class TextDialog extends StatelessWidget {
             return SingleChildScrollView(
               child: Text(
                 'Impossibile caricare il testo.\nPercorso cercato: $textPath',
-                style: const TextStyle(
-                  color: Colors.orangeAccent,
-                  fontSize: 16,
-                ),
+                style: const TextStyle(color: Colors.orangeAccent, fontSize: 16),
               ),
             );
           }
 
           return SingleChildScrollView(
             child: Text(
-              snapshot.data!, // Contenuto del testo
+              snapshot.data!, // Contenuto del file
               style: const TextStyle(color: Colors.white70, fontSize: 16),
             ),
           );
         },
       ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.pop(context),
-          child: const Text(
-            'Chiudi',
-            style: TextStyle(color: Colors.blueAccent),
-          ),
-        ),
-      ],
     );
   }
 }
