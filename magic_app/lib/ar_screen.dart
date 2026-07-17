@@ -5,7 +5,7 @@ import 'package:provider/provider.dart';
 import 'main.dart';
 import 'media_service.dart';
 import 'models.dart';
-import 'widgets/audio_dialog.dart';
+import 'widgets/audio_player_widget.dart';
 import 'widgets/image_dialog.dart';
 import 'widgets/pdf_dialog.dart';
 import 'widgets/text_dialog.dart';
@@ -20,9 +20,11 @@ class ARScreen extends StatefulWidget {
 }
 
 class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
+  bool _overlayVisibile = false;
   CameraController? _controller;
   bool _cameraReady = false;
-  bool _overlayVisibile = false;
+  MediaItem? _audioInEsecuzione;
+  bool _audioMinimizzato = false;
 
   // Animazioni
   late AnimationController _fadeController;
@@ -81,6 +83,7 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
     _fadeController.reverse().then((_) {
       if (mounted) {
         setState(() => _overlayVisibile = false);
+        setState(() => _audioInEsecuzione = null);
         _scanController.repeat(reverse: true);
       }
     });
@@ -114,18 +117,27 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
     return Stack(
       fit: StackFit.expand,
       children: [
-        // 1. Fotocamera
+        // Fotocamera
         Center(child: CameraPreview(_controller!)),
 
-        // 2. Mirino
+        // Mirino
         if (!_overlayVisibile)
           ARCameraViewfinder(scanAnimation: _scanAnimation),
 
-        // 3. Elementi in sovraimpressione
+        // Menu di Debug
+        if (kDebugMode)
+          ARDebugMenu(
+            onSimulate: () {
+              setState(() {
+                _audioInEsecuzione = null;
+              });
+              _mostraOverlay();
+            },
+          ),
+
+        // Elementi in sovraimpressione
         if (_overlayVisibile && opera != null) ...[
           AROperaInfoPanel(opera: opera, fadeAnimation: _fadeAnimation),
-
-          ARMediaBubblesPanel(opera: opera, fadeAnimation: _fadeAnimation),
 
           ARChatButton(
             overlayVisibile: _overlayVisibile,
@@ -137,10 +149,36 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
             fadeAnimation: _fadeAnimation,
             onClose: _nascondiOverlay,
           ),
-        ],
 
-        // 4. Menu di Debug
-        if (kDebugMode) ARDebugMenu(onSimulate: _mostraOverlay),
+          ARMediaBubblesPanel(
+            opera: opera,
+            fadeAnimation: _fadeAnimation,
+            onPlayAudio: (item) {
+              setState(() {
+                _audioInEsecuzione = item;
+                _audioMinimizzato = false;
+              });
+            },
+          ),
+
+          // Riproduttore Audio (Espanso o Mini-Player)
+          if (_audioInEsecuzione != null)
+            AudioPlayerWidget(
+              titolo: _audioInEsecuzione!.titolo,
+              audioPath: _audioInEsecuzione!.url,
+              isMinimized: _audioMinimizzato,
+              onMinimizeToggle: () {
+                setState(() {
+                  _audioMinimizzato = !_audioMinimizzato;
+                });
+              },
+              onClose: () {
+                setState(() {
+                  _audioInEsecuzione = null;
+                });
+              },
+            ),
+        ],
       ],
     );
   }
@@ -268,11 +306,13 @@ class AROperaInfoPanel extends StatelessWidget {
 class ARMediaBubblesPanel extends StatelessWidget {
   final BookModel opera;
   final Animation<double> fadeAnimation;
+  final void Function(MediaItem) onPlayAudio;
 
   const ARMediaBubblesPanel({
     super.key,
     required this.opera,
     required this.fadeAnimation,
+    required this.onPlayAudio,
   });
 
   @override
@@ -419,6 +459,10 @@ class ARMediaBubblesPanel extends StatelessWidget {
                       ),
                       onTap: () {
                         Navigator.pop(ctx);
+                        if (item.tipo == 'audio') {
+                          onPlayAudio(item);
+                          return;
+                        }
                         if (item.tipo == 'link_esterno') {
                           context.read<MediaService>().apriUrl(item.url);
                           return;
@@ -441,11 +485,6 @@ class ARMediaBubblesPanel extends StatelessWidget {
                                 return VideoDialog(
                                   titolo: item.titolo,
                                   videoPath: item.url,
-                                );
-                              case 'audio':
-                                return AudioDialog(
-                                  titolo: item.titolo,
-                                  audioPath: item.url,
                                 );
                               case 'pdf':
                                 return PdfDialog(
@@ -564,7 +603,7 @@ class ARDebugMenu extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Positioned(
-      top: 160,
+      top: 200,
       left: 4,
       right: 260,
       child: Card(
