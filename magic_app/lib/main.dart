@@ -3,13 +3,14 @@ import 'app_config.dart';
 import 'media_service.dart';
 import 'package_service.dart';
 import 'collection_screen.dart';
+import 'manuscript_screen.dart';
 import 'opera_repository.dart';
 import 'package_storage.dart';
 import 'auth_service.dart';
 import 'update_service.dart';
 import 'recognition_service.dart';
 import 'ar_screen.dart';
-import 'api_service.dart';
+// import 'api_service.dart'; // usato solo dal bottone folder_zip
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
@@ -157,15 +158,34 @@ class _HomeScreenState extends State<HomeScreen> {
   // true mentre la sync automatica sta scaricando in background
   bool _syncInCorso = false;
 
+  // NUOVO — Future delle collezioni, calcolata UNA SOLA VOLTA in initState.
+  // Se la mettessimo dentro build(), ogni volta che _syncInCorso cambia
+  // (quindi build() viene richiamato) verrebbe creata una Future nuova,
+  // e il FutureBuilder sotto tornerebbe a mostrare "Caricamento..." anche
+  // se le collezioni erano gia' state lette.
+  late Future<List<CollectionV2Model>> _collezioniFuture;
+
   @override
   void initState() {
     super.initState();
+    _collezioniFuture = _caricaCollezioni(context);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _sincronizzaPacchettoInBackground();
     });
   }
 
-  // SYNC AUTOMATICA SILENZIOSA (v2 — check reale via endpoint)
+  // NUOVO — legge le collezioni dal pacchetto per
+  // mostrarle in cima alla lista principale: 
+
+  Future<List<CollectionV2Model>> _caricaCollezioni(BuildContext context) {
+    final service = PackageService(
+      storage: context.read<PackageStorage>(),
+      authService: context.read<AuthService>(),
+    );
+    return service.leggiCollezioniV2(AppConfig.packageId);
+  }
+
+  // SYNC AUTOMATICA SILENZIOSA (check reale via endpoint)
   // Sostituisce il vecchio bottone nuvola manuale. UpdateService decide
   // OGNI QUANTO controllare (throttling, 24h); PackageService.sincronizzaSeCambiato
   // decide SE scaricare davvero, chiamando l'endpoint /check/ .
@@ -228,6 +248,92 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
+  // NUOVO — sezione collezioni in cima alla lista, con divisore prima dei
+  // singoli volumi. Se non ci sono collezioni (pacchetto non ancora
+  // scaricato, o errore), non mostra nulla, la lista libri sotto resta
+  // comunque visibile e funzionante.
+  Widget _buildSezioneCollezioni(BuildContext context, ColorScheme colorScheme) {
+    return FutureBuilder<List<CollectionV2Model>>(
+      future: _collezioniFuture,
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Padding(
+            padding: EdgeInsets.symmetric(vertical: 16),
+            child: Center(child: CircularProgressIndicator()),
+          );
+        }
+
+        final collezioni = snapshot.data ?? [];
+        if (collezioni.isEmpty) {
+          // Nessuna collezione (pacchetto non ancora scaricato o vuoto) —
+          // niente da mostrare qui, la lista libri prosegue normalmente
+          return const SizedBox.shrink();
+        }
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+              child: Text(
+                'Collezioni',
+                style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                  fontWeight: FontWeight.bold,
+                  color: colorScheme.onSurfaceVariant,
+                ),
+              ),
+            ),
+            ...collezioni.map(
+              (collection) => Card(
+                child: ListTile(
+                  contentPadding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 8,
+                  ),
+                  leading: CircleAvatar(
+                    backgroundColor: colorScheme.primaryContainer,
+                    child: Icon(
+                      Icons.collections_bookmark,
+                      color: colorScheme.onPrimaryContainer,
+                    ),
+                  ),
+                  title: Text(
+                    collection.name,
+                    style: const TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                  subtitle: collection.description.isNotEmpty
+                      ? Text(collection.description)
+                      : null,
+                  trailing: Chip(
+                    label: Text('${collection.bookIds.length} libri'),
+                    backgroundColor: colorScheme.primaryContainer,
+                    labelStyle: TextStyle(
+                      color: colorScheme.onPrimaryContainer,
+                      fontSize: 12,
+                    ),
+                  ),
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => ManuscriptScreen(
+                          packageId: AppConfig.packageId,
+                          collectionId: collection.id,
+                          collectionName: collection.name,
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              ),
+            ),
+            const Divider(thickness: 1, height: 24),
+          ],
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final opere = OperaRepository.tutteLeOpere();
@@ -237,14 +343,32 @@ class _HomeScreenState extends State<HomeScreen> {
       appBar: AppBar(
         backgroundColor: colorScheme.primary,
         foregroundColor: colorScheme.onPrimary,
-        title: const Column(
-          children: [
-            Text(
-              'MAGIC',
-              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-            ),
-            Text('Biblioteca dei Girolamini', style: TextStyle(fontSize: 12)),
-          ],
+        // il titolo non e' piu' nello slot 'title' (che si
+        // centra solo nello spazio libero tra leading e actions, quindi
+        // appariva spostato a sinistra a causa delle icone a destra), ma
+        // dentro 'flexibleSpace', che copre l'intera larghezza dell'AppBar
+        // e quindi si centra davvero rispetto allo schermo.
+        title: null,
+        flexibleSpace: Align(
+          alignment: Alignment.center,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Text(
+                'MAGIC',
+                style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                  color: colorScheme.onPrimary,
+                ),
+              ),
+              Text(
+                'Biblioteca dei Girolamini',
+                style: TextStyle(fontSize: 12, color: colorScheme.onPrimary),
+              ),
+            ],
+          ),
         ),
         // barra sottile mentre la sync automatica e' in corso
         bottom: _syncInCorso
@@ -326,177 +450,186 @@ class _HomeScreenState extends State<HomeScreen> {
           //     }
           //   },
           // ),
-          // BOTTONE AGGIORNAMENTO PACCHETTO
-          IconButton(
-            icon: const Icon(Icons.folder_zip),
-            tooltip: 'Aggiorna pacchetto',
-            onPressed: () async {
-              try {
-                // NUOVO — dipendenze prese dal Provider invece di crearle al volo
-                final service = PackageService(
-                  storage: context.read<PackageStorage>(),
-                  authService: context.read<AuthService>(),
-                );
+          // BOTTONE AGGIORNAMENTO PACCHETTO — flusso ZIP mock/manifest
+          // (GitHub Releases + Gist), ormai sostituito dalla sync
+          // automatica reale con l'endpoint /check/.
 
-                // 1. Scarica manifest per ottenere versione disponibile
-                final manifest = await ApiService().scaricaManifest();
-                final versioneDisponibile = manifest.version;
-
-                // 2. Controlla se c'e' un aggiornamento disponibile
-                final aggiornamentoDisponibile = await service
-                    .isAggiornamentoDisponibile(
-                      AppConfig.packageId,
-                      versioneDisponibile,
-                    );
-
-                if (!aggiornamentoDisponibile && context.mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text(
-                        'Pacchetto aggiornato — versione $versioneDisponibile',
-                      ),
-                      backgroundColor: Colors.green,
-                    ),
-                  );
-                  return;
-                }
-
-                if (!context.mounted) return;
-                double progresso = 0;
-
-                // 3. Mostra dialog con progress bar
-                showDialog(
-                  context: context,
-                  barrierDismissible: false,
-                  builder: (ctx) => StatefulBuilder(
-                    builder: (ctx, setStateDlg) => AlertDialog(
-                      title: Text('Download versione $versioneDisponibile...'),
-                      content: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          LinearProgressIndicator(value: progresso),
-                          const SizedBox(height: 8),
-                          Text('${(progresso * 100).toStringAsFixed(0)}%'),
-                        ],
-                      ),
-                    ),
-                  ),
-                );
-
-                // 4. Scarica ed estrai — passa la versione per salvarla
-                await service.scaricaEEstrai(
-                  url: AppConfig.packageUrl,
-                  packageId: AppConfig.packageId,
-                  versione: versioneDisponibile,
-                  onProgress: (received, total) {
-                    progresso = received / total;
-                  },
-                );
-
-                if (context.mounted && Navigator.canPop(context)) {
-                  Navigator.pop(context);
-                }
-
-                await Future.delayed(const Duration(milliseconds: 200));
-
-                if (context.mounted) {
-                  showDialog(
-                    context: context,
-                    builder: (_) => AlertDialog(
-                      title: Text('Versione $versioneDisponibile installata!'),
-                      content: const Text(
-                        'Il pacchetto e\' stato scaricato e installato correttamente.',
-                      ),
-                      actions: [
-                        TextButton(
-                          onPressed: () => Navigator.pop(context),
-                          child: const Text('OK'),
-                        ),
-                      ],
-                    ),
-                  );
-                }
-              } catch (e) {
-                if (context.mounted && Navigator.canPop(context)) {
-                  Navigator.pop(context);
-                }
-                if (context.mounted) {
-                  ScaffoldMessenger.of(
-                    context,
-                  ).showSnackBar(SnackBar(content: Text('Errore: $e')));
-                }
-              }
-            },
-          ),
-          IconButton(
-            icon: const Icon(Icons.collections_bookmark),
-            tooltip: 'Collezioni',
-            onPressed: () => context.push('/collezioni'),
-          ),
-          Consumer<AppState>(
-            builder: (context, appState, child) {
-              return Padding(
-                padding: const EdgeInsets.only(right: 16),
-                child: Center(
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 10,
-                      vertical: 4,
-                    ),
-                    decoration: BoxDecoration(
-                      color: colorScheme.onPrimary.withValues(alpha: 0.2),
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    child: Text(
-                      'Viste: ${appState.opereRiconosciute}',
-                      style: TextStyle(
-                        color: colorScheme.onPrimary,
-                        fontSize: 14,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ),
-                ),
-              );
-            },
-          ),
+          // IconButton(
+          //   icon: const Icon(Icons.folder_zip),
+          //   tooltip: 'Aggiorna pacchetto',
+          //   onPressed: () async {
+          //     try {
+          //       final service = PackageService(
+          //         storage: context.read<PackageStorage>(),
+          //         authService: context.read<AuthService>(),
+          //       );
+          //
+          //       final manifest = await ApiService().scaricaManifest();
+          //       final versioneDisponibile = manifest.version;
+          //
+          //       final aggiornamentoDisponibile = await service
+          //           .isAggiornamentoDisponibile(
+          //             AppConfig.packageId,
+          //             versioneDisponibile,
+          //           );
+          //
+          //       if (!aggiornamentoDisponibile && context.mounted) {
+          //         ScaffoldMessenger.of(context).showSnackBar(
+          //           SnackBar(
+          //             content: Text(
+          //               'Pacchetto aggiornato — versione $versioneDisponibile',
+          //             ),
+          //             backgroundColor: Colors.green,
+          //           ),
+          //         );
+          //         return;
+          //       }
+          //
+          //       if (!context.mounted) return;
+          //       double progresso = 0;
+          //
+          //       showDialog(
+          //         context: context,
+          //         barrierDismissible: false,
+          //         builder: (ctx) => StatefulBuilder(
+          //           builder: (ctx, setStateDlg) => AlertDialog(
+          //             title: Text('Download versione $versioneDisponibile...'),
+          //             content: Column(
+          //               mainAxisSize: MainAxisSize.min,
+          //               children: [
+          //                 LinearProgressIndicator(value: progresso),
+          //                 const SizedBox(height: 8),
+          //                 Text('${(progresso * 100).toStringAsFixed(0)}%'),
+          //               ],
+          //             ),
+          //           ),
+          //         ),
+          //       );
+          //
+          //       await service.scaricaEEstrai(
+          //         url: AppConfig.packageUrl,
+          //         packageId: AppConfig.packageId,
+          //         versione: versioneDisponibile,
+          //         onProgress: (received, total) {
+          //           progresso = received / total;
+          //         },
+          //       );
+          //
+          //       if (context.mounted && Navigator.canPop(context)) {
+          //         Navigator.pop(context);
+          //       }
+          //
+          //       await Future.delayed(const Duration(milliseconds: 200));
+          //
+          //       if (context.mounted) {
+          //         showDialog(
+          //           context: context,
+          //           builder: (_) => AlertDialog(
+          //             title: Text('Versione $versioneDisponibile installata!'),
+          //             content: const Text(
+          //               'Il pacchetto e\' stato scaricato e installato correttamente.',
+          //             ),
+          //             actions: [
+          //               TextButton(
+          //                 onPressed: () => Navigator.pop(context),
+          //                 child: const Text('OK'),
+          //               ),
+          //             ],
+          //           ),
+          //         );
+          //       }
+          //     } catch (e) {
+          //       if (context.mounted && Navigator.canPop(context)) {
+          //         Navigator.pop(context);
+          //       }
+          //       if (context.mounted) {
+          //         ScaffoldMessenger.of(
+          //           context,
+          //         ).showSnackBar(SnackBar(content: Text('Errore: $e')));
+          //       }
+          //     }
+          //   },
+          // ),
+          // BOTTONE COLLEZIONI — rimosso dall'AppBar
+      
+          // IconButton(
+          //   icon: const Icon(Icons.collections_bookmark),
+          //   tooltip: 'Collezioni',
+          //   onPressed: () => context.push('/collezioni'),
+          // ),
+          // Badge "Viste: X" — contatore libri riconosciuti
+          // dalla camera. La logica di
+          // conteggio in AppState (opereRiconosciute) resta attiva e
+          // funzionante, cosi' il dato non si perde se si vuole
+          // ripristinare il badge in futuro.
+          // Consumer<AppState>(
+          //   builder: (context, appState, child) {
+          //     return Padding(
+          //       padding: const EdgeInsets.only(right: 16),
+          //       child: Center(
+          //         child: Container(
+          //           padding: const EdgeInsets.symmetric(
+          //             horizontal: 10,
+          //             vertical: 4,
+          //           ),
+          //           decoration: BoxDecoration(
+          //             color: colorScheme.onPrimary.withValues(alpha: 0.2),
+          //             borderRadius: BorderRadius.circular(20),
+          //           ),
+          //           child: Text(
+          //             'Viste: ${appState.opereRiconosciute}',
+          //             style: TextStyle(
+          //               color: colorScheme.onPrimary,
+          //               fontSize: 14,
+          //               fontWeight: FontWeight.bold,
+          //             ),
+          //           ),
+          //         ),
+          //       ),
+          //     );
+          //   },
+          // ),
         ],
       ),
-      body: ListView.builder(
+      // MODIFICATO — da ListView.builder (solo libri) a ListView con
+      // children misti: sezione collezioni in cima, poi i singoli volumi sotto.
+    
+      body: ListView(
         padding: const EdgeInsets.only(top: 8),
-        itemCount: opere.length,
-        itemBuilder: (context, index) {
-          final opera = opere[index];
-          return Card(
-            child: ListTile(
-              contentPadding: const EdgeInsets.symmetric(
-                horizontal: 16,
-                vertical: 8,
-              ),
-              leading: CircleAvatar(
-                backgroundColor: colorScheme.primaryContainer,
-                child: Icon(
-                  Icons.menu_book,
-                  color: colorScheme.onPrimaryContainer,
+        children: [
+          _buildSezioneCollezioni(context, colorScheme),
+          ...opere.map(
+            (opera) => Card(
+              child: ListTile(
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 8,
                 ),
+                leading: CircleAvatar(
+                  backgroundColor: colorScheme.primaryContainer,
+                  child: Icon(
+                    Icons.menu_book,
+                    color: colorScheme.onPrimaryContainer,
+                  ),
+                ),
+                title: Text(
+                  opera.titolo,
+                  style: const TextStyle(fontWeight: FontWeight.bold),
+                ),
+                subtitle: Text(opera.autore),
+                trailing: Icon(
+                  Icons.arrow_forward_ios,
+                  size: 16,
+                  color: colorScheme.primary,
+                ),
+                onTap: () {
+                  context.read<AppState>().selezionaOpera(opera);
+                  context.push('/opera/${opera.id}');
+                },
               ),
-              title: Text(
-                opera.titolo,
-                style: const TextStyle(fontWeight: FontWeight.bold),
-              ),
-              subtitle: Text(opera.autore),
-              trailing: Icon(
-                Icons.arrow_forward_ios,
-                size: 16,
-                color: colorScheme.primary,
-              ),
-              onTap: () {
-                context.read<AppState>().selezionaOpera(opera);
-                context.push('/opera/${opera.id}');
-              },
             ),
-          );
-        },
+          ),
+        ],
       ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () => context.push('/camera'),
