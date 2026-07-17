@@ -478,8 +478,8 @@ class ARMediaBubblesPanel extends StatelessWidget {
                                 );
                               case 'immagine':
                                 return ImageDialog(
-                                  titolo: item.titolo,
-                                  imagePath: item.url,
+                                  immagini: mediaList,
+                                  initialIndex: index,
                                 );
                               case 'video':
                                 return VideoDialog(
@@ -653,6 +653,12 @@ class ARDebugMenu extends StatelessWidget {
                       descrizione: '',
                     ),
                     MediaItem(
+                      tipo: 'immagine',
+                      titolo: 'Struttura Inferno',
+                      url: 'assets/media/immagine_02.png',
+                      descrizione: '',
+                    ),
+                    MediaItem(
                       tipo: 'pdf',
                       titolo: 'Pdf Canto I',
                       url: 'assets/media/pdf_01.pdf',
@@ -680,7 +686,7 @@ class ARDebugMenu extends StatelessWidget {
                   multimedia: [
                     MediaItem(
                       tipo: 'audio',
-                      titolo: 'Lettura Canto I',
+                      titolo: 'Lettura Capitolo 1',
                       url: 'assets/media/audio_01.mp3',
                       descrizione: '',
                     ),
@@ -693,7 +699,7 @@ class ARDebugMenu extends StatelessWidget {
                       ),
                     MediaItem(
                       tipo: 'pdf',
-                      titolo: 'Pdf Canto I',
+                      titolo: 'Pdf Capitolo 1',
                       url: 'assets/media/pdf_01.pdf',
                       descrizione: '',
                     ),
