@@ -4,6 +4,10 @@ import 'package:provider/provider.dart';
 import '../app_config.dart';
 import '../package_storage.dart';
 
+// ==========================================
+// SCHERMATA PLAYER
+// ==========================================
+
 class AudioWidget extends StatefulWidget {
   final String titolo;
   final String audioPath;
@@ -31,7 +35,6 @@ class _AudioWidgetState extends State<AudioWidget> {
   Duration _position = Duration.zero;
 
   // --- INIZIALIZZAZIONE ---
-
   @override
   void initState() {
     super.initState();
@@ -79,18 +82,11 @@ class _AudioWidgetState extends State<AudioWidget> {
     super.dispose();
   }
 
-  // --- COSTRUZIONE SCHERMATA ---
-
+  // --- RENDERING ---
   @override
   Widget build(BuildContext context) {
     if (widget.isMinimized) {
-      return MiniAudioPlayer(
-        titolo: widget.titolo,
-        isPlaying: _isPlaying,
-        onTogglePlay: _togglePlayPause,
-        onExpand: widget.onMinimizeToggle,
-        onClose: widget.onClose,
-      );
+      return const SizedBox.shrink();
     }
 
     return ExpandedAudioPlayer(
@@ -109,7 +105,6 @@ class _AudioWidgetState extends State<AudioWidget> {
   }
 
   // --- LOGICA ---
-
   void _togglePlayPause() {
     if (_isPlaying) {
       _audioPlayer.pause();
@@ -119,86 +114,89 @@ class _AudioWidgetState extends State<AudioWidget> {
   }
 }
 
-// --- WIDGET ---
+// ==========================================
+// WIDGET
+// ==========================================
 
-// Player minimizzato
-class MiniAudioPlayer extends StatelessWidget {
-  final String titolo;
-  final bool isPlaying;
-  final VoidCallback onTogglePlay;
-  final VoidCallback onExpand;
-  final VoidCallback onClose;
+// --- PLAYER MINIMIZZATO ---
+// *** RIMOSSO ***
+// class MiniAudioPlayer extends StatelessWidget {
+//   final String titolo;
+//   final bool isPlaying;
+//   final VoidCallback onTogglePlay;
+//   final VoidCallback onExpand;
+//   final VoidCallback onClose;
+//
+//   const MiniAudioPlayer({
+//     super.key,
+//     required this.titolo,
+//     required this.isPlaying,
+//     required this.onTogglePlay,
+//     required this.onExpand,
+//     required this.onClose,
+//   });
+//
+//   @override
+//   Widget build(BuildContext context) {
+//     return Positioned(
+//       top: 124,
+//       left: 60,
+//       right: 60,
+//       child: Card(
+//         color: Colors.black.withValues(alpha: 0.75),
+//         shape: RoundedRectangleBorder(
+//           borderRadius: BorderRadius.circular(12),
+//         ),
+//         elevation: 6,
+//         child: Padding(
+//           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+//           child: Row(
+//             children: [
+//               const Icon(Icons.audiotrack, color: Colors.blueAccent),
+//               const SizedBox(width: 8),
+//               Expanded(
+//                 child: Text(
+//                   titolo,
+//                   style: const TextStyle(
+//                     color: Colors.white,
+//                     fontWeight: FontWeight.bold,
+//                   ),
+//                   maxLines: 1,
+//                   overflow: TextOverflow.ellipsis,
+//                 ),
+//               ),
+//               IconButton(
+//                 icon: Icon(
+//                   isPlaying ? Icons.pause : Icons.play_arrow,
+//                   color: Colors.white,
+//                 ),
+//                 onPressed: onTogglePlay,
+//               ),
+//               IconButton(
+//                 icon: const Icon(
+//                   Icons.open_in_full,
+//                   color: Colors.white,
+//                   size: 20,
+//                 ),
+//                 onPressed: onExpand,
+//               ),
+//               IconButton(
+//                 icon: const Icon(
+//                   Icons.close,
+//                   color: Colors.redAccent,
+//                   size: 20,
+//                 ),
+//                 onPressed: onClose,
+//               ),
+//             ],
+//           ),
+//         ),
+//       ),
+//     );
+//   }
+// }
 
-  const MiniAudioPlayer({
-    super.key,
-    required this.titolo,
-    required this.isPlaying,
-    required this.onTogglePlay,
-    required this.onExpand,
-    required this.onClose,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Positioned(
-      top: 124,
-      left: 60,
-      right: 60,
-      child: Card(
-        color: Colors.black.withValues(alpha: 0.75),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
-        ),
-        elevation: 6,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-          child: Row(
-            children: [
-              const Icon(Icons.audiotrack, color: Colors.blueAccent),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Text(
-                  titolo,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.bold,
-                  ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ),
-              IconButton(
-                icon: Icon(
-                  isPlaying ? Icons.pause : Icons.play_arrow,
-                  color: Colors.white,
-                ),
-                onPressed: onTogglePlay,
-              ),
-              IconButton(
-                icon: const Icon(
-                  Icons.open_in_full,
-                  color: Colors.white,
-                  size: 20,
-                ),
-                onPressed: onExpand,
-              ),
-              IconButton(
-                icon: const Icon(
-                  Icons.close,
-                  color: Colors.redAccent,
-                  size: 20,
-                ),
-                onPressed: onClose,
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-// Player espanso
+// --- PLAYER ESPANSO ---
 class ExpandedAudioPlayer extends StatelessWidget {
   final String titolo;
   final bool isPlaying;
@@ -223,50 +221,64 @@ class ExpandedAudioPlayer extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final screenSize = MediaQuery.sizeOf(context);
+    final isLandscape = MediaQuery.orientationOf(context) == Orientation.landscape;
+
+    final double containerWidth = isLandscape
+        ? (screenSize.width * 0.6).clamp(300.0, 500.0)
+        : (screenSize.width * 0.85).clamp(300.0, 500.0);
+    final double verticalSpacing = screenSize.height * 0.02;
+    final double padding = screenSize.width * 0.05;
+    final double iconSize = (screenSize.height * 0.15).clamp(30.0, 64.0);
+
     return Positioned.fill(
       child: Container(
         color: Colors.black54,
         child: Center(
-          child: Container(
-            margin: const EdgeInsets.symmetric(horizontal: 40),
-            padding: const EdgeInsets.only(
-              top: 12,
-              bottom: 12,
-              left: 24,
-              right: 24,
+          child: ConstrainedBox(
+            constraints: BoxConstraints(
+              maxWidth: containerWidth,
+              maxHeight: screenSize.height * 0.9,
             ),
-            decoration: BoxDecoration(
-              color: Colors.black87,
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: Colors.white24, width: 1),
-            ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                ExpandedPlayerHeader(
-                  onMinimize: onMinimize,
-                  onClose: onClose,
+            child: Container(
+              padding: EdgeInsets.symmetric(
+                vertical: verticalSpacing,
+                horizontal: padding.clamp(16.0, 32.0),
+              ),
+              decoration: BoxDecoration(
+                color: Colors.black87,
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: Colors.white24, width: 1),
+              ),
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    ExpandedPlayerHeader(
+                      onMinimize: onMinimize,
+                      onClose: onClose,
+                    ),
+                    ExpandedPlayerTitle(titolo: titolo),
+                    SizedBox(height: verticalSpacing),
+                    Icon(
+                      Icons.audiotrack,
+                      size: iconSize,
+                      color: Colors.blueAccent,
+                    ),
+                    SizedBox(height: verticalSpacing),
+                    AudioProgressBar(
+                      duration: duration,
+                      position: position,
+                      onSeek: onSeek,
+                    ),
+                    SizedBox(height: verticalSpacing),
+                    AudioPlayPauseButton(
+                      isPlaying: isPlaying,
+                      onTogglePlay: onTogglePlay,
+                    ),
+                  ],
                 ),
-                ExpandedPlayerTitle(titolo: titolo),
-                const SizedBox(height: 16),
-                const Icon(
-                  Icons.audiotrack,
-                  size: 64,
-                  color: Colors.blueAccent,
-                ),
-                const SizedBox(height: 16),
-                AudioProgressBar(
-                  duration: duration,
-                  position: position,
-                  onSeek: onSeek,
-                ),
-                const SizedBox(height: 16),
-                AudioPlayPauseButton(
-                  isPlaying: isPlaying,
-                  onTogglePlay: onTogglePlay,
-                ),
-                const SizedBox(height: 24),
-              ],
+              ),
             ),
           ),
         ),
@@ -275,7 +287,7 @@ class ExpandedAudioPlayer extends StatelessWidget {
   }
 }
 
-// Header del player espanso
+// --- HEADER ---
 class ExpandedPlayerHeader extends StatelessWidget {
   final VoidCallback onMinimize;
   final VoidCallback onClose;
@@ -311,7 +323,7 @@ class ExpandedPlayerHeader extends StatelessWidget {
   }
 }
 
-// Titolo dell'audio
+// --- TITOLO ---
 class ExpandedPlayerTitle extends StatelessWidget {
   final String titolo;
 
@@ -336,7 +348,7 @@ class ExpandedPlayerTitle extends StatelessWidget {
   }
 }
 
-// Barra di scorrimento e minutaggio
+// --- BARRA PROGRESSIONE ---
 class AudioProgressBar extends StatelessWidget {
   final Duration duration;
   final Duration position;
@@ -389,7 +401,7 @@ class AudioProgressBar extends StatelessWidget {
   }
 }
 
-// Pulsante Play/Pausa
+// --- PULSANTE PLAY/PAUSA ---
 class AudioPlayPauseButton extends StatelessWidget {
   final bool isPlaying;
   final VoidCallback onTogglePlay;

@@ -84,7 +84,7 @@ class ARLayout {
   double get closeIconSize => isTablet ? 32.0 : 24.0;
 
   // --- MENU DEBUG ---
-  double get debugTop => safePadding.top + 100.0;
+  double get debugTop => safePadding.top + 160.0;
   double get debugLeft => 120.0;
   double get debugWidth => (screenSize.width * 0.5).clamp(180.0, 300.0);
 }
@@ -242,9 +242,15 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
             opera: opera,
             fadeAnimation: _fadeAnimation,
             layout: layout,
+            audioInEsecuzione: _audioInEsecuzione,
             onPlayAudio: (item) {
               setState(() {
                 _audioInEsecuzione = item;
+                _audioMinimizzato = false;
+              });
+            },
+            onReopenAudio: () {
+              setState(() {
                 _audioMinimizzato = false;
               });
             },
@@ -257,7 +263,7 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
               isMinimized: _audioMinimizzato,
               onMinimizeToggle: () {
                 setState(() {
-                  _audioMinimizzato = !_audioMinimizzato;
+                  _audioMinimizzato = true;
                 });
               },
               onClose: () {
@@ -454,14 +460,18 @@ class ARMediaBubblesPanel extends StatelessWidget {
   final BookModel opera;
   final Animation<double> fadeAnimation;
   final ARLayout layout;
+  final MediaItem? audioInEsecuzione;
   final void Function(MediaItem) onPlayAudio;
+  final VoidCallback onReopenAudio;
 
   const ARMediaBubblesPanel({
     super.key,
     required this.opera,
     required this.fadeAnimation,
     required this.layout,
+    required this.audioInEsecuzione,
     required this.onPlayAudio,
+    required this.onReopenAudio,
   });
 
   @override
@@ -471,14 +481,10 @@ class ARMediaBubblesPanel extends StatelessWidget {
 
     final videoList = fileMultimediali.where((m) => m.tipo == 'video').toList();
     final audioList = fileMultimediali.where((m) => m.tipo == 'audio').toList();
-    final immaginiList = fileMultimediali
-        .where((m) => m.tipo == 'immagine')
-        .toList();
+    final immaginiList = fileMultimediali.where((m) => m.tipo == 'immagine').toList();
     final pdfList = fileMultimediali.where((m) => m.tipo == 'pdf').toList();
     final testoList = fileMultimediali.where((m) => m.tipo == 'testo').toList();
-    final linkList = fileMultimediali
-        .where((m) => m.tipo == 'link_esterno')
-        .toList();
+    final linkList = fileMultimediali.where((m) => m.tipo == 'link_esterno').toList();
 
     return Positioned(
       right: layout.bubblesRight,
@@ -518,11 +524,11 @@ class ARMediaBubblesPanel extends StatelessWidget {
   }
 
   Widget _buildBubble(
-    BuildContext context,
-    IconData icona,
-    String tipo,
-    List<MediaItem> mediaList,
-  ) {
+      BuildContext context,
+      IconData icona,
+      String tipo,
+      List<MediaItem> mediaList,
+      ) {
     if (mediaList.isEmpty) return const SizedBox.shrink();
 
     return SizedBox(
@@ -537,7 +543,13 @@ class ARMediaBubblesPanel extends StatelessWidget {
           borderRadius: BorderRadius.circular(16),
           side: const BorderSide(color: Colors.white24, width: 1),
         ),
-        onPressed: () => _mostraListaMedia(context, tipo, mediaList),
+        onPressed: () {
+          if (tipo == 'Audio' && audioInEsecuzione != null) {
+            onReopenAudio();
+          } else {
+            _mostraListaMedia(context, tipo, mediaList);
+          }
+        },
         child: Icon(icona, size: layout.bubblesIconSize),
       ),
     );
