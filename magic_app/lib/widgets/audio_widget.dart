@@ -4,14 +4,14 @@ import 'package:provider/provider.dart';
 import '../app_config.dart';
 import '../package_storage.dart';
 
-class AudioPlayerWidget extends StatefulWidget {
+class AudioWidget extends StatefulWidget {
   final String titolo;
   final String audioPath;
   final bool isMinimized;
   final VoidCallback onMinimizeToggle;
   final VoidCallback onClose;
 
-  const AudioPlayerWidget({
+  const AudioWidget({
     super.key,
     required this.titolo,
     required this.audioPath,
@@ -21,10 +21,10 @@ class AudioPlayerWidget extends StatefulWidget {
   });
 
   @override
-  State<AudioPlayerWidget> createState() => _AudioPlayerWidgetState();
+  State<AudioWidget> createState() => _AudioWidgetState();
 }
 
-class _AudioPlayerWidgetState extends State<AudioPlayerWidget> {
+class _AudioWidgetState extends State<AudioWidget> {
   final AudioPlayer _audioPlayer = AudioPlayer();
   bool _isPlaying = false;
   Duration _duration = Duration.zero;

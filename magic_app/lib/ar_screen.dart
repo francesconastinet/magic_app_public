@@ -5,11 +5,87 @@ import 'package:provider/provider.dart';
 import 'main.dart';
 import 'media_service.dart';
 import 'models.dart';
-import 'widgets/audio_player_widget.dart';
+import 'widgets/audio_widget.dart';
 import 'widgets/image_dialog.dart';
 import 'widgets/pdf_dialog.dart';
 import 'widgets/text_dialog.dart';
 import 'widgets/video_dialog.dart';
+
+// ==========================================
+// CONFIGURAZIONE LAYOUT
+// ==========================================
+
+class ARLayout {
+  final Size screenSize;
+  final EdgeInsets safePadding;
+  final bool isLandscape;
+  final bool isTablet;
+
+  ARLayout(BuildContext context)
+    : screenSize = MediaQuery.sizeOf(context),
+      safePadding = MediaQuery.paddingOf(context),
+      isLandscape = MediaQuery.orientationOf(context) == Orientation.landscape,
+      isTablet = MediaQuery.sizeOf(context).shortestSide >= 600;
+
+  // --- MIRINO FOTOCAMERA ---
+  double get viewfinderWidth => (screenSize.width * 0.6).clamp(150.0, 300.0);
+  double get viewfinderHeight => (screenSize.height * 0.4).clamp(200.0, 400.0);
+
+  // --- PANNELLO INFO OPERA ---
+  Alignment get infoAlignment {
+    if (isLandscape) {
+      return isTablet ? Alignment.topRight : Alignment.topLeft;
+    }
+    return Alignment.topCenter;
+  }
+
+  double get infoTop => safePadding.top;
+  double get infoLeft => safePadding.left + 16.0;
+  double get infoRight => safePadding.right + 16.0;
+  double get infoMaxWidth =>
+      isLandscape ? (isTablet ? 320.0 : 220.0) : (isTablet ? 550.0 : 400.0);
+  double get infoTitleFontSize => isTablet ? 20.0 : 16.0;
+  double get infoTextFontSize => isTablet ? 14.0 : 13.0;
+  double get infoIconSize => isTablet ? 26.0 : 20.0;
+  double get infoPadding => isTablet ? 14.0 : 12.0;
+
+  // --- PANNELLO BOLLE MULTIMEDIALI ---
+  double get bubblesTop {
+    if (isLandscape) {
+      return safePadding.top + (isTablet ? 170.0 : 16.0);
+    }
+    return safePadding.top + (isTablet ? 160.0 : 140.0);
+  }
+
+  double get bubblesBottom => safePadding.bottom + (isTablet ? 120.0 : 100.0);
+  double get bubblesRight => safePadding.right + (isTablet ? 0.0 : 16.0);
+  double get bubblesPanelWidth =>
+      isLandscape ? (isTablet ? 170.0 : 130.0) : (isTablet ? 85.0 : 60.0);
+  double get bubblesSize => isTablet ? 60.0 : 56.0;
+  double get bubblesIconSize => isTablet ? 32.0 : 24.0;
+
+  // --- BOTTONE CHAT ---
+  double get chatBottom => safePadding.bottom;
+  double get chatRight => safePadding.right + (isTablet ? 12.0 : 16.0);
+  double get chatSize => isTablet ? 60.0 : 56.0;
+  double get chatIconSize => isTablet ? 32.0 : 24.0;
+
+  // --- BOTTONE CHIUDI ---
+  double get closeBottom => safePadding.bottom;
+  double get closeLeft => 0.0;
+  double get closeRight => 0.0;
+  double get closeSize => isTablet ? 60.0 : 56.0;
+  double get closeIconSize => isTablet ? 32.0 : 24.0;
+
+  // --- MENU DEBUG ---
+  double get debugTop => safePadding.top + 100.0;
+  double get debugLeft => 120.0;
+  double get debugWidth => (screenSize.width * 0.5).clamp(180.0, 300.0);
+}
+
+// ==========================================
+// SCHERMATA PRINCIPALE
+// ==========================================
 
 class ARScreen extends StatefulWidget {
   final String nomeOpera;
@@ -21,19 +97,17 @@ class ARScreen extends StatefulWidget {
 
 class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
   bool _overlayVisibile = false;
-  CameraController? _controller;
+  CameraController? _camController;
   bool _cameraReady = false;
   MediaItem? _audioInEsecuzione;
   bool _audioMinimizzato = false;
 
-  // Animazioni
   late AnimationController _fadeController;
   late Animation<double> _fadeAnimation;
   late AnimationController _scanController;
   late Animation<double> _scanAnimation;
 
   // --- INIZIALIZZAZIONE ---
-
   @override
   void initState() {
     super.initState();
@@ -63,12 +137,12 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
   Future<void> _inizializzaCamera() async {
     final cameras = await availableCameras();
     if (cameras.isEmpty) return;
-    _controller = CameraController(cameras.first, ResolutionPreset.medium);
-    await _controller!.initialize();
+    _camController = CameraController(cameras.first, ResolutionPreset.medium);
+    await _camController!.initialize();
 
     if (mounted) {
       setState(() => _cameraReady = true);
-      // TODO: collegare a RecognitionService
+      // TODO: colleagre al modello ML
       if (!_overlayVisibile) _mostraOverlay();
     }
   }
@@ -91,14 +165,13 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
 
   @override
   void dispose() {
-    _controller?.dispose();
+    _camController?.dispose();
     _fadeController.dispose();
     _scanController.dispose();
     super.dispose();
   }
 
-  // --- COSTRUZIONE SCHERMATA ---
-
+  // --- RENDERING ---
   @override
   Widget build(BuildContext context) {
     final opera = context.watch<AppState>().operaSelezionata;
@@ -114,19 +187,22 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
       return const Center(child: CircularProgressIndicator());
     }
 
+    final layout = ARLayout(context);
+
     return Stack(
       fit: StackFit.expand,
       children: [
-        // Fotocamera
-        Center(child: CameraPreview(_controller!)),
+        // 1. Fotocamera
+        ARCameraFeed(controller: _camController!, layout: layout),
 
-        // Mirino
+        // 2. Mirino della fotocamera
         if (!_overlayVisibile)
-          ARCameraViewfinder(scanAnimation: _scanAnimation),
+          ARCameraViewfinder(scanAnimation: _scanAnimation, layout: layout),
 
-        // Menu di Debug
+        // 3. Menu di Debug
         if (kDebugMode)
           ARDebugMenu(
+            layout: layout,
             onSimulate: () {
               setState(() {
                 _audioInEsecuzione = null;
@@ -135,24 +211,31 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
             },
           ),
 
-        // Elementi in sovraimpressione
+        // 4. Elementi in sovraimpressione
         if (_overlayVisibile && opera != null) ...[
-          AROperaInfoPanel(opera: opera, fadeAnimation: _fadeAnimation),
+          AROperaInfoPanel(
+            opera: opera,
+            fadeAnimation: _fadeAnimation,
+            layout: layout,
+          ),
 
           ARChatButton(
             overlayVisibile: _overlayVisibile,
             fadeAnimation: _fadeAnimation,
+            layout: layout,
           ),
 
           ARCloseButton(
             overlayVisibile: _overlayVisibile,
             fadeAnimation: _fadeAnimation,
+            layout: layout,
             onClose: _nascondiOverlay,
           ),
 
           ARMediaBubblesPanel(
             opera: opera,
             fadeAnimation: _fadeAnimation,
+            layout: layout,
             onPlayAudio: (item) {
               setState(() {
                 _audioInEsecuzione = item;
@@ -161,9 +244,8 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
             },
           ),
 
-          // Riproduttore Audio (Espanso o Mini-Player)
           if (_audioInEsecuzione != null)
-            AudioPlayerWidget(
+            AudioWidget(
               titolo: _audioInEsecuzione!.titolo,
               audioPath: _audioInEsecuzione!.url,
               isMinimized: _audioMinimizzato,
@@ -184,13 +266,50 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
   }
 }
 
-// --- WIDGET ---
+// ==========================================
+// WIDGET
+// ==========================================
 
-// Mirino animato della fotocamera
+// --- FLUSSO VIDEO FOTOCAMERA ---
+class ARCameraFeed extends StatelessWidget {
+  final CameraController controller;
+  final ARLayout layout;
+
+  const ARCameraFeed({
+    super.key,
+    required this.controller,
+    required this.layout,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final previewSize = controller.value.previewSize;
+    final fallbackWidth = layout.screenSize.width;
+    final fallbackHeight = layout.screenSize.height;
+
+    return SizedBox.expand(
+      child: FittedBox(
+        fit: BoxFit.cover,
+        child: SizedBox(
+          width: previewSize?.height ?? fallbackWidth,
+          height: previewSize?.width ?? fallbackHeight,
+          child: CameraPreview(controller),
+        ),
+      ),
+    );
+  }
+}
+
+// --- MIRINO FOTOCAMERA ---
 class ARCameraViewfinder extends StatelessWidget {
   final Animation<double> scanAnimation;
+  final ARLayout layout;
 
-  const ARCameraViewfinder({super.key, required this.scanAnimation});
+  const ARCameraViewfinder({
+    super.key,
+    required this.scanAnimation,
+    required this.layout,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -199,8 +318,8 @@ class ARCameraViewfinder extends StatelessWidget {
         animation: scanAnimation,
         builder: (context, child) {
           return Container(
-            width: 200,
-            height: 280,
+            width: layout.viewfinderWidth,
+            height: layout.viewfinderHeight,
             decoration: BoxDecoration(
               border: Border.all(
                 color: Colors.white.withValues(
@@ -208,7 +327,7 @@ class ARCameraViewfinder extends StatelessWidget {
                 ),
                 width: 2,
               ),
-              borderRadius: BorderRadius.circular(8),
+              borderRadius: BorderRadius.circular(12),
             ),
             child: Center(
               child: Opacity(
@@ -227,91 +346,115 @@ class ARCameraViewfinder extends StatelessWidget {
   }
 }
 
-// Pannello con i dettagli dell'opera
+// --- PANNELLO INFO OPERA ---
 class AROperaInfoPanel extends StatelessWidget {
   final BookModel opera;
   final Animation<double> fadeAnimation;
+  final ARLayout layout;
 
   const AROperaInfoPanel({
     super.key,
     required this.opera,
     required this.fadeAnimation,
+    required this.layout,
   });
 
   @override
   Widget build(BuildContext context) {
     return Positioned(
-      top: 24,
-      left: 40,
-      right: 40,
-      child: FadeTransition(
-        opacity: fadeAnimation,
-        child: Container(
-          padding: const EdgeInsets.all(12),
-          decoration: BoxDecoration(
-            color: Colors.black.withValues(alpha: 0.75),
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: Colors.white24, width: 1),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Row(
-                children: [
-                  const Icon(
+      top: layout.infoTop,
+      left: layout.infoLeft,
+      right: layout.infoRight,
+      child: Align(
+        alignment: layout.infoAlignment,
+        child: ConstrainedBox(
+          constraints: BoxConstraints(maxWidth: layout.infoMaxWidth),
+          child: _buildPanel(),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPanel() {
+    return FadeTransition(
+      opacity: fadeAnimation,
+      child: Container(
+        padding: EdgeInsets.all(layout.infoPadding),
+        decoration: BoxDecoration(
+          color: Colors.black.withValues(alpha: 0.75),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: Colors.white24, width: 1),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 2.0, right: 8.0),
+                  child: Icon(
                     Icons.menu_book,
                     color: Colors.blueAccent,
-                    size: 20,
+                    size: layout.infoIconSize,
                   ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      opera.titolo,
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 16,
-                      ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
+                ),
+                Expanded(
+                  child: Text(
+                    opera.titolo,
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                      fontSize: layout.infoTitleFontSize,
+                      height: 1.2,
                     ),
+                    maxLines: 3,
+                    overflow: TextOverflow.ellipsis,
                   ),
-                ],
+                ),
+              ],
+            ),
+            const Padding(
+              padding: EdgeInsets.symmetric(vertical: 6.0),
+              child: Divider(color: Colors.white24, height: 1),
+            ),
+            Text(
+              'Autore: ${opera.autore}',
+              style: TextStyle(
+                color: Colors.white70,
+                fontSize: layout.infoTextFontSize,
               ),
-              const Padding(
-                padding: EdgeInsets.symmetric(vertical: 6.0),
-                child: Divider(color: Colors.white24, height: 1),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+            const SizedBox(height: 2),
+            Text(
+              'Anno: ${opera.anno}',
+              style: TextStyle(
+                color: Colors.white70,
+                fontSize: layout.infoTextFontSize,
               ),
-              Text(
-                'Autore: ${opera.autore}',
-                style: const TextStyle(color: Colors.white70, fontSize: 13),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-              ),
-              const SizedBox(height: 2),
-              Text(
-                'Anno: ${opera.anno}',
-                style: const TextStyle(color: Colors.white70, fontSize: 13),
-              ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );
   }
 }
 
-// Pannello con le bubbles multimediali
+// --- PANNELLO BOLLE MULTIMEDIALI ---
 class ARMediaBubblesPanel extends StatelessWidget {
   final BookModel opera;
   final Animation<double> fadeAnimation;
+  final ARLayout layout;
   final void Function(MediaItem) onPlayAudio;
 
   const ARMediaBubblesPanel({
     super.key,
     required this.opera,
     required this.fadeAnimation,
+    required this.layout,
     required this.onPlayAudio,
   });
 
@@ -320,57 +463,46 @@ class ARMediaBubblesPanel extends StatelessWidget {
     final fileMultimediali = opera.multimedia;
     if (fileMultimediali.isEmpty) return const SizedBox.shrink();
 
+    final videoList = fileMultimediali.where((m) => m.tipo == 'video').toList();
+    final audioList = fileMultimediali.where((m) => m.tipo == 'audio').toList();
+    final immaginiList = fileMultimediali
+        .where((m) => m.tipo == 'immagine')
+        .toList();
+    final pdfList = fileMultimediali.where((m) => m.tipo == 'pdf').toList();
+    final testoList = fileMultimediali.where((m) => m.tipo == 'testo').toList();
+    final linkList = fileMultimediali
+        .where((m) => m.tipo == 'link_esterno')
+        .toList();
+
     return Positioned(
-      right: 8,
-      top: 0,
-      bottom: 0,
-      child: SizedBox(
-        width: 75,
-        child: Center(
-          child: FadeTransition(
-            opacity: fadeAnimation,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.center,
+      right: layout.bubblesRight,
+      top: layout.bubblesTop,
+      bottom: layout.bubblesBottom,
+      child: FadeTransition(
+        opacity: fadeAnimation,
+        child: FittedBox(
+          fit: BoxFit.scaleDown,
+          alignment: Alignment.center,
+          child: SizedBox(
+            width: layout.bubblesPanelWidth,
+            child: Wrap(
+              alignment: WrapAlignment.center,
+              runAlignment: WrapAlignment.center,
+              spacing: 10,
+              runSpacing: 12,
               children: [
-                _buildBubble(
-                  context,
-                  Icons.videocam,
-                  'Video',
-                  fileMultimediali.where((m) => m.tipo == 'video').toList(),
-                ),
-                _buildBubble(
-                  context,
-                  Icons.audiotrack,
-                  'Audio',
-                  fileMultimediali.where((m) => m.tipo == 'audio').toList(),
-                ),
-                _buildBubble(
-                  context,
-                  Icons.image,
-                  'Immagini',
-                  fileMultimediali.where((m) => m.tipo == 'immagine').toList(),
-                ),
-                _buildBubble(
-                  context,
-                  Icons.picture_as_pdf,
-                  'PDF',
-                  fileMultimediali.where((m) => m.tipo == 'pdf').toList(),
-                ),
-                _buildBubble(
-                  context,
-                  Icons.article,
-                  'Testo',
-                  fileMultimediali.where((m) => m.tipo == 'testo').toList(),
-                ),
-                _buildBubble(
-                  context,
-                  Icons.link,
-                  'Link',
-                  fileMultimediali
-                      .where((m) => m.tipo == 'link_esterno')
-                      .toList(),
-                ),
+                if (videoList.isNotEmpty)
+                  _buildBubble(context, Icons.videocam, 'Video', videoList),
+                if (audioList.isNotEmpty)
+                  _buildBubble(context, Icons.audiotrack, 'Audio', audioList),
+                if (immaginiList.isNotEmpty)
+                  _buildBubble(context, Icons.image, 'Immagini', immaginiList),
+                if (pdfList.isNotEmpty)
+                  _buildBubble(context, Icons.picture_as_pdf, 'PDF', pdfList),
+                if (testoList.isNotEmpty)
+                  _buildBubble(context, Icons.article, 'Testo', testoList),
+                if (linkList.isNotEmpty)
+                  _buildBubble(context, Icons.link, 'Link', linkList),
               ],
             ),
           ),
@@ -387,8 +519,9 @@ class ARMediaBubblesPanel extends StatelessWidget {
   ) {
     if (mediaList.isEmpty) return const SizedBox.shrink();
 
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 16.0),
+    return SizedBox(
+      width: layout.bubblesSize,
+      height: layout.bubblesSize,
       child: FloatingActionButton(
         heroTag: 'bubble_$tipo',
         backgroundColor: Colors.black.withValues(alpha: 0.75),
@@ -399,7 +532,7 @@ class ARMediaBubblesPanel extends StatelessWidget {
           side: const BorderSide(color: Colors.white24, width: 1),
         ),
         onPressed: () => _mostraListaMedia(context, tipo, mediaList),
-        child: Icon(icona),
+        child: Icon(icona, size: layout.bubblesIconSize),
       ),
     );
   }
@@ -511,29 +644,31 @@ class ARMediaBubblesPanel extends StatelessWidget {
   }
 }
 
-// Pulsante per aprire la chat contestuale
+// --- PULSANTE CHAT ---
 class ARChatButton extends StatelessWidget {
   final bool overlayVisibile;
   final Animation<double> fadeAnimation;
+  final ARLayout layout;
 
   const ARChatButton({
     super.key,
     required this.overlayVisibile,
     required this.fadeAnimation,
+    required this.layout,
   });
 
   @override
   Widget build(BuildContext context) {
     return Positioned(
-      bottom: 116,
-      right: 8,
+      bottom: layout.chatBottom,
+      right: layout.chatRight,
       child: FadeTransition(
         opacity: fadeAnimation,
         child: IgnorePointer(
           ignoring: !overlayVisibile,
           child: SizedBox(
-            width: 75,
-            height: 75,
+            width: layout.chatSize,
+            height: layout.chatSize,
             child: FloatingActionButton(
               heroTag: 'btn_chat',
               backgroundColor: Colors.blueAccent,
@@ -541,9 +676,9 @@ class ARChatButton extends StatelessWidget {
               elevation: 4,
               shape: const CircleBorder(),
               onPressed: () {
-                // TODO: aprire la Chat
+                // TODO: collegare alla Chat
               },
-              child: const Icon(Icons.chat_bubble, size: 34),
+              child: Icon(Icons.chat_bubble, size: layout.chatIconSize),
             ),
           ),
         ),
@@ -552,40 +687,46 @@ class ARChatButton extends StatelessWidget {
   }
 }
 
-// Pulsante per chiudere l'overlay
+// --- PULSANTE CHIUDI ---
 class ARCloseButton extends StatelessWidget {
   final bool overlayVisibile;
   final Animation<double> fadeAnimation;
+  final ARLayout layout;
   final VoidCallback onClose;
 
   const ARCloseButton({
     super.key,
     required this.overlayVisibile,
     required this.fadeAnimation,
+    required this.layout,
     required this.onClose,
   });
 
   @override
   Widget build(BuildContext context) {
     return Positioned(
-      bottom: 40,
-      left: 0,
-      right: 0,
+      bottom: layout.closeBottom,
+      left: layout.closeLeft,
+      right: layout.closeRight,
       child: Center(
         child: FadeTransition(
           opacity: fadeAnimation,
           child: IgnorePointer(
             ignoring: !overlayVisibile,
-            child: FloatingActionButton(
-              heroTag: 'btn_chiudi',
-              backgroundColor: Colors.black87,
-              foregroundColor: Colors.white,
-              elevation: 0,
-              shape: const CircleBorder(
-                side: BorderSide(color: Colors.white24, width: 1),
+            child: SizedBox(
+              width: layout.closeSize,
+              height: layout.closeSize,
+              child: FloatingActionButton(
+                heroTag: 'btn_chiudi',
+                backgroundColor: Colors.black87,
+                foregroundColor: Colors.white,
+                elevation: 0,
+                shape: const CircleBorder(
+                  side: BorderSide(color: Colors.white24, width: 1),
+                ),
+                onPressed: onClose,
+                child: Icon(Icons.close, size: layout.closeIconSize),
               ),
-              onPressed: onClose,
-              child: const Icon(Icons.close, size: 28),
             ),
           ),
         ),
@@ -594,18 +735,23 @@ class ARCloseButton extends StatelessWidget {
   }
 }
 
-// Menu di debug (visibile solo in fase di sviluppo)
+// --- MENU DEBUG ---
 class ARDebugMenu extends StatelessWidget {
   final VoidCallback onSimulate;
+  final ARLayout layout;
 
-  const ARDebugMenu({super.key, required this.onSimulate});
+  const ARDebugMenu({
+    super.key,
+    required this.onSimulate,
+    required this.layout,
+  });
 
   @override
   Widget build(BuildContext context) {
     return Positioned(
-      top: 200,
-      left: 4,
-      right: 260,
+      top: layout.debugTop,
+      left: layout.debugLeft,
+      width: layout.debugWidth,
       child: Card(
         color: Colors.black87,
         child: Padding(
@@ -618,7 +764,7 @@ class ARDebugMenu extends StatelessWidget {
                 style: TextStyle(color: Colors.white70, fontSize: 11),
               ),
               const SizedBox(height: 10),
-              _buildDebugButton(
+              _buildButton(
                 context: context,
                 color: Colors.cyan.shade800,
                 label: 'Divina Commedia',
@@ -674,7 +820,7 @@ class ARDebugMenu extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 8),
-              _buildDebugButton(
+              _buildButton(
                 context: context,
                 color: Colors.lime.shade800,
                 label: 'Promessi Sposi',
@@ -707,7 +853,7 @@ class ARDebugMenu extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 8),
-              _buildDebugButton(
+              _buildButton(
                 context: context,
                 color: Colors.pink.shade800,
                 label: 'Antifonario',
@@ -726,23 +872,30 @@ class ARDebugMenu extends StatelessWidget {
     );
   }
 
-  Widget _buildDebugButton({
+  Widget _buildButton({
     required BuildContext context,
     required Color color,
     required String label,
     required BookModel book,
   }) {
-    return ElevatedButton(
-      style: ElevatedButton.styleFrom(
-        backgroundColor: color,
-        foregroundColor: Colors.white,
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+    return SizedBox(
+      width: double.infinity,
+      child: ElevatedButton(
+        style: ElevatedButton.styleFrom(
+          backgroundColor: color,
+          foregroundColor: Colors.white,
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        ),
+        onPressed: () {
+          context.read<AppState>().selezionaOpera(book);
+          onSimulate();
+        },
+        child: Text(
+          label,
+          style: const TextStyle(fontSize: 12),
+          overflow: TextOverflow.ellipsis,
+        ),
       ),
-      onPressed: () {
-        context.read<AppState>().selezionaOpera(book);
-        onSimulate();
-      },
-      child: Text(label, style: const TextStyle(fontSize: 12)),
     );
   }
 }
