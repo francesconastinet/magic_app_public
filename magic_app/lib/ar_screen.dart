@@ -39,11 +39,17 @@ class ARLayout {
     return Alignment.topCenter;
   }
 
+  double get infoMaxWidth {
+    if (isLandscape) {
+      return (screenSize.width * (isTablet ? 0.3 : 0.2)).clamp(220.0, 450.0);
+    } else {
+      return (screenSize.width * (isTablet ? 0.75 : 0.9)).clamp(300.0, 600.0);
+    }
+  }
+
   double get infoTop => safePadding.top;
   double get infoLeft => safePadding.left + 16.0;
   double get infoRight => safePadding.right + 16.0;
-  double get infoMaxWidth =>
-      isLandscape ? (isTablet ? 320.0 : 220.0) : (isTablet ? 550.0 : 400.0);
   double get infoTitleFontSize => isTablet ? 20.0 : 16.0;
   double get infoTextFontSize => isTablet ? 14.0 : 13.0;
   double get infoIconSize => isTablet ? 26.0 : 20.0;
@@ -57,10 +63,10 @@ class ARLayout {
     return safePadding.top + (isTablet ? 160.0 : 140.0);
   }
 
-  double get bubblesBottom => safePadding.bottom + (isTablet ? 120.0 : 100.0);
-  double get bubblesRight => safePadding.right + (isTablet ? 0.0 : 16.0);
   double get bubblesPanelWidth =>
       isLandscape ? (isTablet ? 170.0 : 130.0) : (isTablet ? 85.0 : 60.0);
+  double get bubblesBottom => safePadding.bottom + (isTablet ? 120.0 : 100.0);
+  double get bubblesRight => safePadding.right + (isTablet ? 0.0 : 16.0);
   double get bubblesSize => isTablet ? 60.0 : 56.0;
   double get bubblesIconSize => isTablet ? 32.0 : 24.0;
 

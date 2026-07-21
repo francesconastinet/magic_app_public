@@ -5,6 +5,10 @@ import '../app_config.dart';
 import '../package_storage.dart';
 import '../models.dart';
 
+// ==========================================
+// FINESTRA DI DIALOGO
+// ==========================================
+
 class ImageDialog extends StatefulWidget {
   final List<MediaItem> immagini;
   final int initialIndex;
@@ -24,7 +28,6 @@ class _ImageDialogState extends State<ImageDialog> {
   late int _currentIndex;
 
   // --- INIZIALIZZAZIONE ---
-
   @override
   void initState() {
     super.initState();
@@ -38,40 +41,51 @@ class _ImageDialogState extends State<ImageDialog> {
     super.dispose();
   }
 
-  // --- COSTRUZIONE SCHERMATA ---
-
+  // --- RENDERING ---
   @override
   Widget build(BuildContext context) {
     final currentImage = widget.immagini[_currentIndex];
     final totalCount = widget.immagini.length;
 
+    final screenSize = MediaQuery.sizeOf(context);
+    final isTablet = screenSize.shortestSide >= 600;
+    final isLandscape =
+        MediaQuery.orientationOf(context) == Orientation.landscape;
+
+    final double adaptiveMaxWidth = isTablet
+        ? screenSize.width * 0.8
+        : (isLandscape ? screenSize.width * 0.7 : screenSize.width * 0.9);
+
     return Dialog(
       backgroundColor: Colors.transparent,
       insetPadding: const EdgeInsets.all(16),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          ImageDialogHeader(
-            currentImage: currentImage,
-            currentIndex: _currentIndex,
-            totalCount: totalCount,
-          ),
-          ImageCarousel(
-            pageController: _pageController,
-            immagini: widget.immagini,
-            onPageChanged: (index) {
-              setState(() {
-                _currentIndex = index;
-              });
-            },
-            imageBuilder: _buildImage,
-          ),
-          if (totalCount > 1)
-            ImageDotsIndicator(
+      child: ConstrainedBox(
+        constraints: BoxConstraints(maxWidth: adaptiveMaxWidth),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ImageDialogHeader(
+              currentImage: currentImage,
               currentIndex: _currentIndex,
               totalCount: totalCount,
             ),
-        ],
+            ImageCarousel(
+              pageController: _pageController,
+              immagini: widget.immagini,
+              onPageChanged: (index) {
+                setState(() {
+                  _currentIndex = index;
+                });
+              },
+              imageBuilder: _buildImage,
+            ),
+            if (totalCount > 1)
+              ImageDotsIndicator(
+                currentIndex: _currentIndex,
+                totalCount: totalCount,
+              ),
+          ],
+        ),
       ),
     );
   }
@@ -84,7 +98,7 @@ class _ImageDialogState extends State<ImageDialog> {
         imagePath,
         fit: BoxFit.contain,
         errorBuilder: (context, error, stackTrace) =>
-        const Icon(Icons.broken_image, color: Colors.white, size: 50),
+            const Icon(Icons.broken_image, color: Colors.white, size: 50),
       );
     }
     // CASO 2: File nel sistema (Scaricato dallo ZIP)
@@ -108,7 +122,7 @@ class _ImageDialogState extends State<ImageDialog> {
             File(percorsoAssoluto),
             fit: BoxFit.contain,
             errorBuilder: (context, error, stackTrace) =>
-            const Icon(Icons.broken_image, color: Colors.white, size: 50),
+                const Icon(Icons.broken_image, color: Colors.white, size: 50),
           );
         },
       );
@@ -116,9 +130,11 @@ class _ImageDialogState extends State<ImageDialog> {
   }
 }
 
-// --- WIDGET ---
+// ==========================================
+// WIDGET
+// ==========================================
 
-// Header del carosello
+// --- HEADER ---
 class ImageDialogHeader extends StatelessWidget {
   final MediaItem currentImage;
   final int currentIndex;
@@ -164,7 +180,7 @@ class ImageDialogHeader extends StatelessWidget {
   }
 }
 
-// Carosello per scorrere le immagini
+// --- CAROSELLO ---
 class ImageCarousel extends StatelessWidget {
   final PageController pageController;
   final List<MediaItem> immagini;
@@ -182,12 +198,10 @@ class ImageCarousel extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Flexible(
-      child: Container(
-        color: Colors.black,
-        child: ClipRRect(
-          borderRadius: const BorderRadius.vertical(
-            bottom: Radius.circular(12),
-          ),
+      child: ClipRRect(
+        borderRadius: const BorderRadius.vertical(bottom: Radius.circular(12)),
+        child: Container(
+          color: Colors.black,
           child: PageView.builder(
             controller: pageController,
             itemCount: immagini.length,
@@ -204,7 +218,7 @@ class ImageCarousel extends StatelessWidget {
   }
 }
 
-// Indicatori (pallini) per la posizione nel carosello
+// --- INDICATORI SCORRIMENTO ---
 class ImageDotsIndicator extends StatelessWidget {
   final int currentIndex;
   final int totalCount;
@@ -223,7 +237,7 @@ class ImageDotsIndicator extends StatelessWidget {
         mainAxisAlignment: MainAxisAlignment.center,
         children: List.generate(
           totalCount,
-              (index) => Container(
+          (index) => Container(
             margin: const EdgeInsets.symmetric(horizontal: 4),
             width: 8,
             height: 8,
