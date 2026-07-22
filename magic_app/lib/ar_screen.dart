@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import 'main.dart';
 import 'media_service.dart';
 import 'models.dart';
+import 'chat_screen.dart';
 import 'widgets/audio_widget.dart';
 import 'widgets/image_dialog.dart';
 import 'widgets/pdf_dialog.dart';
@@ -704,7 +705,14 @@ class ARChatButton extends StatelessWidget {
               elevation: 4,
               shape: const CircleBorder(),
               onPressed: () {
-                // TODO: collegare alla Chat
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => ChatScreen(
+                      book: context.watch<AppState>().operaSelezionata!,
+                    ),
+                  ),
+                );
               },
               child: Icon(Icons.chat_bubble, size: layout.chatIconSize),
             ),

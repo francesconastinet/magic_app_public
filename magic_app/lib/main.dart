@@ -1,16 +1,15 @@
 import 'package:magic_app/models.dart';
 import 'app_config.dart';
+import 'chat_service.dart';
 import 'media_service.dart';
 import 'package_service.dart';
 import 'collection_screen.dart';
-import 'manuscript_screen.dart';
 import 'opera_repository.dart';
 import 'package_storage.dart';
 import 'auth_service.dart';
 import 'update_service.dart';
 import 'recognition_service.dart';
 import 'ar_screen.dart';
-// import 'api_service.dart'; // usato solo dal bottone folder_zip
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
@@ -155,15 +154,22 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  // true mentre la sync automatica sta scaricando in background
+  // --- STATO PACCHETTI ---
   bool _syncInCorso = false;
-
-  // NUOVO — Future delle collezioni, calcolata UNA SOLA VOLTA in initState.
-  // Se la mettessimo dentro build(), ogni volta che _syncInCorso cambia
-  // (quindi build() viene richiamato) verrebbe creata una Future nuova,
-  // e il FutureBuilder sotto tornerebbe a mostrare "Caricamento..." anche
-  // se le collezioni erano gia' state lette.
   late Future<List<CollectionV2Model>> _collezioniFuture;
+
+  // --- STATO CHAT INTEGRATA ---
+  final ChatService _chatService = ChatService();
+  final List<MessaggioChat> _messaggi = [];
+  final TextEditingController _controller = TextEditingController();
+  final ScrollController _scrollController = ScrollController();
+  bool _botStaScrivendo = false;
+  final List<FonteChat> _fonteTotali = [];
+  bool _contextSessionCreata = false;
+  bool _contextSessionInCorso = false;
+
+  // Traccia se la chat è limitata a un libro o a una collezione
+  String? _contestoAttivoNome;
 
   @override
   void initState() {
@@ -171,12 +177,18 @@ class _HomeScreenState extends State<HomeScreen> {
     _collezioniFuture = _caricaCollezioni(context);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _sincronizzaPacchettoInBackground();
+      _aggiungiMessaggioBenvenutoGenerico();
     });
   }
 
-  // NUOVO — legge le collezioni dal pacchetto per
-  // mostrarle in cima alla lista principale: 
+  @override
+  void dispose() {
+    _controller.dispose();
+    _scrollController.dispose();
+    super.dispose();
+  }
 
+  // --- METODI GESTIONE PACCHETTO ---
   Future<List<CollectionV2Model>> _caricaCollezioni(BuildContext context) {
     final service = PackageService(
       storage: context.read<PackageStorage>(),
@@ -185,26 +197,15 @@ class _HomeScreenState extends State<HomeScreen> {
     return service.leggiCollezioniV2(AppConfig.packageId);
   }
 
-  // SYNC AUTOMATICA SILENZIOSA (check reale via endpoint)
-  // Sostituisce il vecchio bottone nuvola manuale. UpdateService decide
-  // OGNI QUANTO controllare (throttling, 24h); PackageService.sincronizzaSeCambiato
-  // decide SE scaricare davvero, chiamando l'endpoint /check/ .
   Future<void> _sincronizzaPacchettoInBackground() async {
     try {
       final updateService = UpdateService();
       final necessaria = await updateService.isSincronizzazioneNecessaria(
         AppConfig.packageId,
       );
-
-      if (!necessaria) {
-        debugPrint('[SYNC] Ultimo controllo recente (<24h) — skip');
-        return;
-      }
+      if (!necessaria) return;
 
       if (mounted) setState(() => _syncInCorso = true);
-      debugPrint('[SYNC] Avvio controllo/sync automatica in background...');
-
-      // NUOVO — dipendenze prese dal Provider invece di crearle al volo
       final packageService = PackageService(
         storage: context.read<PackageStorage>(),
         authService: context.read<AuthService>(),
@@ -212,33 +213,16 @@ class _HomeScreenState extends State<HomeScreen> {
 
       final risultato = await packageService.sincronizzaSeCambiato(
         packageId: AppConfig.packageId,
-        versione:
-            'api-latest', // placeholder: non ha ancora un endpoint di versione numerica
-        onStato: (msg) {
-          debugPrint('[SYNC] $msg');
-        },
+        versione: 'api-latest',
+        onStato: (msg) => debugPrint('[SYNC] $msg'),
       );
 
-      if (risultato.successo) {
-        if (risultato.scaricato) {
-          debugPrint('[SYNC] Sync completata — pacchetto aggiornato');
-          if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('Pacchetto aggiornato in background'),
-                duration: Duration(seconds: 2),
-                behavior: SnackBarBehavior.floating,
-              ),
-            );
-          }
-        } else {
-          debugPrint(
-            '[SYNC] Pacchetto gia\' aggiornato — nessun download necessario',
-          );
-        }
-      } else {
-        debugPrint(
-          '[SYNC] Sync automatica fallita — verra\' ritentata al prossimo avvio',
+      if (risultato.successo && risultato.scaricato && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Pacchetto aggiornato in background'),
+            duration: Duration(seconds: 2),
+          ),
         );
       }
     } catch (e) {
@@ -248,89 +232,197 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
-  // NUOVO — sezione collezioni in cima alla lista, con divisore prima dei
-  // singoli volumi. Se non ci sono collezioni (pacchetto non ancora
-  // scaricato, o errore), non mostra nulla, la lista libri sotto resta
-  // comunque visibile e funzionante.
-  Widget _buildSezioneCollezioni(BuildContext context, ColorScheme colorScheme) {
+  // --- LOGICA CHAT ---
+  void _aggiungiMessaggioBenvenutoGenerico() {
+    setState(() {
+      _messaggi.add(
+        MessaggioChat(
+          testo:
+              'Ciao! Sono il tuo assistente virtuale per la Biblioteca dei Girolamini. '
+              'Puoi farmi domande sull\'archivio, oppure aprire il menu a sinistra (☰) per selezionare '
+              'una collezione o un libro specifico e usarlo come fonte.',
+          isUtente: false,
+          timestamp: DateTime.now(),
+        ),
+      );
+    });
+  }
+
+  void _scrollaInFondo() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (_scrollController.hasClients) {
+        _scrollController.animateTo(
+          _scrollController.position.maxScrollExtent,
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.easeOut,
+        );
+      }
+    });
+  }
+
+  Future<void> _impostaContestoChat(
+    String nomeContesto,
+    List<String> bookIds,
+  ) async {
+    if (_contestoAttivoNome == nomeContesto) return; // Già attivo
+
+    setState(() {
+      _contestoAttivoNome = nomeContesto;
+      _contextSessionInCorso = true;
+      _messaggi.add(
+        MessaggioChat(
+          testo:
+              'Hai selezionato "$nomeContesto". Sto aggiornando le mie fonti...',
+          isUtente: false,
+          timestamp: DateTime.now(),
+        ),
+      );
+    });
+    _scrollaInFondo();
+
+    final successo = await _chatService.creaContextSession(bookIds);
+    setState(() {
+      _contextSessionCreata = successo;
+      _contextSessionInCorso = false;
+      _messaggi.add(
+        MessaggioChat(
+          testo: successo
+              ? 'Fonti bloccate con successo! Ora risponderò basandomi esclusivamente su "$nomeContesto".'
+              : 'Si è verificato un problema, ma proverò comunque ad aiutarti.',
+          isUtente: false,
+          timestamp: DateTime.now(),
+        ),
+      );
+    });
+    _scrollaInFondo();
+  }
+
+  Future<void> _invia() async {
+    final testo = _controller.text.trim();
+    if (testo.isEmpty || _botStaScrivendo) return;
+
+    setState(() {
+      _messaggi.add(
+        MessaggioChat(testo: testo, isUtente: true, timestamp: DateTime.now()),
+      );
+      _botStaScrivendo = true;
+      _controller.clear();
+    });
+    _scrollaInFondo();
+
+    try {
+      final risposta = await _chatService.inviaMessaggio(testo);
+      setState(() {
+        _messaggi.add(risposta);
+        _botStaScrivendo = false;
+        // Aggiorna fonti totali
+        for (final fonte in risposta.fonti) {
+          if (!_fonteTotali.any(
+            (f) => f.workId == fonte.workId && fonte.workId.isNotEmpty,
+          )) {
+            _fonteTotali.add(fonte);
+          }
+        }
+      });
+    } catch (e) {
+      setState(() {
+        _messaggi.add(
+          MessaggioChat(
+            testo: 'Errore durante la comunicazione col server. Riprova.',
+            isUtente: false,
+            timestamp: DateTime.now(),
+          ),
+        );
+        _botStaScrivendo = false;
+      });
+    }
+    _scrollaInFondo();
+  }
+
+  // --- WIDGET UI ---
+  Widget _buildSezioneCollezioni(
+    BuildContext context,
+    ColorScheme colorScheme,
+  ) {
     return FutureBuilder<List<CollectionV2Model>>(
       future: _collezioniFuture,
       builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Padding(
-            padding: EdgeInsets.symmetric(vertical: 16),
-            child: Center(child: CircularProgressIndicator()),
-          );
-        }
-
-        final collezioni = snapshot.data ?? [];
-        if (collezioni.isEmpty) {
-          // Nessuna collezione (pacchetto non ancora scaricato o vuoto) —
-          // niente da mostrare qui, la lista libri prosegue normalmente
+        if (snapshot.connectionState == ConnectionState.waiting)
           return const SizedBox.shrink();
-        }
+        final collezioni = snapshot.data ?? [];
+        if (collezioni.isEmpty) return const SizedBox.shrink();
 
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
               child: Text(
                 'Collezioni',
-                style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                style: TextStyle(
                   fontWeight: FontWeight.bold,
-                  color: colorScheme.onSurfaceVariant,
+                  color: colorScheme.primary,
                 ),
               ),
             ),
             ...collezioni.map(
-              (collection) => Card(
-                child: ListTile(
-                  contentPadding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 8,
-                  ),
-                  leading: CircleAvatar(
-                    backgroundColor: colorScheme.primaryContainer,
-                    child: Icon(
-                      Icons.collections_bookmark,
-                      color: colorScheme.onPrimaryContainer,
-                    ),
-                  ),
-                  title: Text(
-                    collection.name,
-                    style: const TextStyle(fontWeight: FontWeight.bold),
-                  ),
-                  subtitle: collection.description.isNotEmpty
-                      ? Text(collection.description)
-                      : null,
-                  trailing: Chip(
-                    label: Text('${collection.bookIds.length} libri'),
-                    backgroundColor: colorScheme.primaryContainer,
-                    labelStyle: TextStyle(
-                      color: colorScheme.onPrimaryContainer,
-                      fontSize: 12,
-                    ),
-                  ),
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) => ManuscriptScreen(
-                          packageId: AppConfig.packageId,
-                          collectionId: collection.id,
-                          collectionName: collection.name,
-                        ),
-                      ),
-                    );
-                  },
+              (collection) => ListTile(
+                leading: const Icon(Icons.collections_bookmark),
+                title: Text(
+                  collection.name,
+                  style: const TextStyle(fontSize: 14),
                 ),
+                trailing: Text(
+                  '${collection.bookIds.length} vol.',
+                  style: const TextStyle(fontSize: 12, color: Colors.grey),
+                ),
+                onTap: () {
+                  Navigator.pop(context); // Chiudi il menu laterale
+                  _impostaContestoChat(collection.name, collection.bookIds);
+                },
               ),
             ),
-            const Divider(thickness: 1, height: 24),
+            const Divider(),
           ],
         );
       },
+    );
+  }
+
+  Widget _buildBubble(MessaggioChat msg, ColorScheme colorScheme) {
+    final isUtente = msg.isUtente;
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Column(
+        crossAxisAlignment: isUtente
+            ? CrossAxisAlignment.end
+            : CrossAxisAlignment.start,
+        children: [
+          Container(
+            constraints: BoxConstraints(
+              maxWidth: MediaQuery.of(context).size.width * 0.75,
+            ),
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+            decoration: BoxDecoration(
+              color: isUtente
+                  ? colorScheme.primary
+                  : colorScheme.surfaceContainerHighest,
+              borderRadius: BorderRadius.only(
+                topLeft: const Radius.circular(16),
+                topRight: const Radius.circular(16),
+                bottomLeft: Radius.circular(isUtente ? 16 : 4),
+                bottomRight: Radius.circular(isUtente ? 4 : 16),
+              ),
+            ),
+            child: Text(
+              msg.testo,
+              style: TextStyle(
+                color: isUtente ? colorScheme.onPrimary : colorScheme.onSurface,
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -340,303 +432,231 @@ class _HomeScreenState extends State<HomeScreen> {
     final colorScheme = Theme.of(context).colorScheme;
 
     return Scaffold(
-      appBar: AppBar(
-        backgroundColor: colorScheme.primary,
-        foregroundColor: colorScheme.onPrimary,
-        // il titolo non e' piu' nello slot 'title' (che si
-        // centra solo nello spazio libero tra leading e actions, quindi
-        // appariva spostato a sinistra a causa delle icone a destra), ma
-        // dentro 'flexibleSpace', che copre l'intera larghezza dell'AppBar
-        // e quindi si centra davvero rispetto allo schermo.
-        title: null,
-        flexibleSpace: Align(
-          alignment: Alignment.center,
+      // 1. MENU LATERALE SINISTRO: Collezioni e Libri
+      drawer: Drawer(
+        child: SafeArea(
           child: Column(
-            mainAxisSize: MainAxisSize.min,
-            mainAxisAlignment: MainAxisAlignment.center,
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                'MAGIC',
-                style: TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                  color: colorScheme.onPrimary,
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(16),
+                color: colorScheme.primaryContainer,
+                child: Text(
+                  'Fonti Disponibili',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: colorScheme.onPrimaryContainer,
+                  ),
                 ),
               ),
-              Text(
-                'Biblioteca dei Girolamini',
-                style: TextStyle(fontSize: 12, color: colorScheme.onPrimary),
+              Expanded(
+                child: ListView(
+                  padding: EdgeInsets.zero,
+                  children: [
+                    _buildSezioneCollezioni(context, colorScheme),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 8,
+                      ),
+                      child: Text(
+                        'Tutti i Libri',
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          color: colorScheme.primary,
+                        ),
+                      ),
+                    ),
+                    ...opere.map(
+                      (opera) => ListTile(
+                        leading: const Icon(Icons.menu_book),
+                        title: Text(
+                          opera.titolo,
+                          style: const TextStyle(fontSize: 14),
+                        ),
+                        subtitle: Text(
+                          opera.autore,
+                          style: const TextStyle(fontSize: 12),
+                        ),
+                        onTap: () {
+                          context.read<AppState>().selezionaOpera(opera);
+                          Navigator.pop(context); // Chiudi il menu
+                          _impostaContestoChat(opera.titolo, [opera.id]);
+                        },
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ],
           ),
         ),
-        // barra sottile mentre la sync automatica e' in corso
+      ),
+
+      // 2. APP BAR AGGIORNATA PER EVITARE OVERLAP
+      appBar: AppBar(
+        backgroundColor: colorScheme.primary,
+        foregroundColor: colorScheme.onPrimary,
+        centerTitle: true, // Forza il titolo al centro
+        title: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment:
+              CrossAxisAlignment.center, // Allinea il testo al centro
+          children: const [
+            Text(
+              'MAGIC',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            ),
+            Text('Biblioteca dei Girolamini', style: TextStyle(fontSize: 11)),
+          ],
+        ),
         bottom: _syncInCorso
             ? PreferredSize(
                 preferredSize: const Size.fromHeight(3),
                 child: LinearProgressIndicator(
                   minHeight: 3,
                   color: colorScheme.onPrimary,
-                  backgroundColor: colorScheme.primary,
                 ),
               )
             : null,
         actions: [
-          // --- Vecchia struttura ---
-          // BOTTONE DOWNLOAD DA API INTERNA (solo VPN) — "bottone nuvola"
-          // manuale, sostituito dalla sync automatica silenziosa
-          // (vedi _sincronizzaPacchettoInBackground in initState).
-          // Lasciato commentato per riferimento / rollback rapido.
-          // IconButton(
-          //   icon: const Icon(Icons.cloud_download),
-          //   tooltip: 'Scarica da API (VPN)',
-          //   onPressed: () async {
-          //     try {
-          //       final service = PackageService();
-          //       String statoMessaggio = 'Connessione...';
-          //
-          //       showDialog(
-          //         context: context,
-          //         barrierDismissible: false,
-          //         builder: (ctx) => StatefulBuilder(
-          //           builder: (ctx, setStateDlg) => AlertDialog(
-          //             title: const Text('Download da API...'),
-          //             content: Column(
-          //               mainAxisSize: MainAxisSize.min,
-          //               children: [
-          //                 const CircularProgressIndicator(),
-          //                 const SizedBox(height: 16),
-          //                 Text(statoMessaggio),
-          //               ],
-          //             ),
-          //           ),
-          //         ),
-          //       );
-          //
-          //       final successo = await service.scaricaEEstraiDaApi(
-          //         packageId: AppConfig.packageId,
-          //         versione: 'api-latest',
-          //         onStato: (msg) {
-          //           statoMessaggio = msg;
-          //         },
-          //       );
-          //
-          //       if (context.mounted && Navigator.canPop(context)) {
-          //         Navigator.pop(context);
-          //       }
-          //
-          //       await Future.delayed(const Duration(milliseconds: 200));
-          //
-          //       if (context.mounted) {
-          //         ScaffoldMessenger.of(context).showSnackBar(
-          //           SnackBar(
-          //             content: Text(successo
-          //                 ? 'Pacchetto API installato!'
-          //                 : 'Errore download API — verifica VPN'),
-          //             backgroundColor:
-          //                 successo ? Colors.green : Colors.red,
-          //           ),
-          //         );
-          //       }
-          //     } catch (e) {
-          //       if (context.mounted && Navigator.canPop(context)) {
-          //         Navigator.pop(context);
-          //       }
-          //       if (context.mounted) {
-          //         ScaffoldMessenger.of(context).showSnackBar(
-          //           SnackBar(content: Text('Errore: $e')),
-          //         );
-          //       }
-          //     }
-          //   },
-          // ),
-          // BOTTONE AGGIORNAMENTO PACCHETTO — flusso ZIP mock/manifest
-          // (GitHub Releases + Gist), ormai sostituito dalla sync
-          // automatica reale con l'endpoint /check/.
-
-          // IconButton(
-          //   icon: const Icon(Icons.folder_zip),
-          //   tooltip: 'Aggiorna pacchetto',
-          //   onPressed: () async {
-          //     try {
-          //       final service = PackageService(
-          //         storage: context.read<PackageStorage>(),
-          //         authService: context.read<AuthService>(),
-          //       );
-          //
-          //       final manifest = await ApiService().scaricaManifest();
-          //       final versioneDisponibile = manifest.version;
-          //
-          //       final aggiornamentoDisponibile = await service
-          //           .isAggiornamentoDisponibile(
-          //             AppConfig.packageId,
-          //             versioneDisponibile,
-          //           );
-          //
-          //       if (!aggiornamentoDisponibile && context.mounted) {
-          //         ScaffoldMessenger.of(context).showSnackBar(
-          //           SnackBar(
-          //             content: Text(
-          //               'Pacchetto aggiornato — versione $versioneDisponibile',
-          //             ),
-          //             backgroundColor: Colors.green,
-          //           ),
-          //         );
-          //         return;
-          //       }
-          //
-          //       if (!context.mounted) return;
-          //       double progresso = 0;
-          //
-          //       showDialog(
-          //         context: context,
-          //         barrierDismissible: false,
-          //         builder: (ctx) => StatefulBuilder(
-          //           builder: (ctx, setStateDlg) => AlertDialog(
-          //             title: Text('Download versione $versioneDisponibile...'),
-          //             content: Column(
-          //               mainAxisSize: MainAxisSize.min,
-          //               children: [
-          //                 LinearProgressIndicator(value: progresso),
-          //                 const SizedBox(height: 8),
-          //                 Text('${(progresso * 100).toStringAsFixed(0)}%'),
-          //               ],
-          //             ),
-          //           ),
-          //         ),
-          //       );
-          //
-          //       await service.scaricaEEstrai(
-          //         url: AppConfig.packageUrl,
-          //         packageId: AppConfig.packageId,
-          //         versione: versioneDisponibile,
-          //         onProgress: (received, total) {
-          //           progresso = received / total;
-          //         },
-          //       );
-          //
-          //       if (context.mounted && Navigator.canPop(context)) {
-          //         Navigator.pop(context);
-          //       }
-          //
-          //       await Future.delayed(const Duration(milliseconds: 200));
-          //
-          //       if (context.mounted) {
-          //         showDialog(
-          //           context: context,
-          //           builder: (_) => AlertDialog(
-          //             title: Text('Versione $versioneDisponibile installata!'),
-          //             content: const Text(
-          //               'Il pacchetto e\' stato scaricato e installato correttamente.',
-          //             ),
-          //             actions: [
-          //               TextButton(
-          //                 onPressed: () => Navigator.pop(context),
-          //                 child: const Text('OK'),
-          //               ),
-          //             ],
-          //           ),
-          //         );
-          //       }
-          //     } catch (e) {
-          //       if (context.mounted && Navigator.canPop(context)) {
-          //         Navigator.pop(context);
-          //       }
-          //       if (context.mounted) {
-          //         ScaffoldMessenger.of(
-          //           context,
-          //         ).showSnackBar(SnackBar(content: Text('Errore: $e')));
-          //       }
-          //     }
-          //   },
-          // ),
-          // BOTTONE COLLEZIONI — rimosso dall'AppBar
-      
-          // IconButton(
-          //   icon: const Icon(Icons.collections_bookmark),
-          //   tooltip: 'Collezioni',
-          //   onPressed: () => context.push('/collezioni'),
-          // ),
-          // Badge "Viste: X" — contatore libri riconosciuti
-          // dalla camera. La logica di
-          // conteggio in AppState (opereRiconosciute) resta attiva e
-          // funzionante, cosi' il dato non si perde se si vuole
-          // ripristinare il badge in futuro.
-          // Consumer<AppState>(
-          //   builder: (context, appState, child) {
-          //     return Padding(
-          //       padding: const EdgeInsets.only(right: 16),
-          //       child: Center(
-          //         child: Container(
-          //           padding: const EdgeInsets.symmetric(
-          //             horizontal: 10,
-          //             vertical: 4,
-          //           ),
-          //           decoration: BoxDecoration(
-          //             color: colorScheme.onPrimary.withValues(alpha: 0.2),
-          //             borderRadius: BorderRadius.circular(20),
-          //           ),
-          //           child: Text(
-          //             'Viste: ${appState.opereRiconosciute}',
-          //             style: TextStyle(
-          //               color: colorScheme.onPrimary,
-          //               fontSize: 14,
-          //               fontWeight: FontWeight.bold,
-          //             ),
-          //           ),
-          //         ),
-          //       ),
-          //     );
-          //   },
-          // ),
-        ],
-      ),
-      // MODIFICATO — da ListView.builder (solo libri) a ListView con
-      // children misti: sezione collezioni in cima, poi i singoli volumi sotto.
-    
-      body: ListView(
-        padding: const EdgeInsets.only(top: 8),
-        children: [
-          _buildSezioneCollezioni(context, colorScheme),
-          ...opere.map(
-            (opera) => Card(
-              child: ListTile(
-                contentPadding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 8,
-                ),
-                leading: CircleAvatar(
-                  backgroundColor: colorScheme.primaryContainer,
-                  child: Icon(
-                    Icons.menu_book,
-                    color: colorScheme.onPrimaryContainer,
-                  ),
-                ),
-                title: Text(
-                  opera.titolo,
-                  style: const TextStyle(fontWeight: FontWeight.bold),
-                ),
-                subtitle: Text(opera.autore),
-                trailing: Icon(
-                  Icons.arrow_forward_ios,
-                  size: 16,
-                  color: colorScheme.primary,
-                ),
-                onTap: () {
-                  context.read<AppState>().selezionaOpera(opera);
-                  context.push('/opera/${opera.id}');
-                },
+          // Bottone Riconosci: solo icona
+          Padding(
+            padding: const EdgeInsets.only(right: 8.0),
+            child: IconButton.filled(
+              onPressed: () => context.push('/camera'),
+              icon: const Icon(Icons.camera_alt),
+              style: IconButton.styleFrom(
+                backgroundColor: colorScheme.onPrimary,
+                foregroundColor: colorScheme.primary,
               ),
             ),
           ),
         ],
       ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => context.push('/camera'),
-        icon: const Icon(Icons.camera_alt),
-        label: const Text('Riconosci'),
-        backgroundColor: colorScheme.primary,
-        foregroundColor: colorScheme.onPrimary,
+
+      // 3. BODY: INTERFACCIA CHAT
+      body: Column(
+        children: [
+          // Indicatore contesto attivo
+          if (_contestoAttivoNome != null)
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              color: colorScheme.secondaryContainer,
+              child: Row(
+                children: [
+                  Icon(
+                    Icons.folder_open,
+                    size: 16,
+                    color: colorScheme.onSecondaryContainer,
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'Fonte attiva: $_contestoAttivoNome',
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                        color: colorScheme.onSecondaryContainer,
+                      ),
+                    ),
+                  ),
+                  if (_contextSessionInCorso)
+                    SizedBox(
+                      width: 14,
+                      height: 14,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: colorScheme.onSecondaryContainer,
+                      ),
+                    )
+                  else
+                    Icon(
+                      _contextSessionCreata
+                          ? Icons.lock_outline
+                          : Icons.lock_open,
+                      size: 16,
+                      color: _contextSessionCreata
+                          ? Colors.green
+                          : Colors.orange,
+                    ),
+                ],
+              ),
+            ),
+
+          // Area Messaggi
+          Expanded(
+            child: ListView.builder(
+              controller: _scrollController,
+              padding: const EdgeInsets.all(16),
+              itemCount: _messaggi.length + (_botStaScrivendo ? 1 : 0),
+              itemBuilder: (context, index) {
+                if (index == _messaggi.length && _botStaScrivendo) {
+                  return const Padding(
+                    padding: EdgeInsets.only(bottom: 12),
+                    child: Text(
+                      'Sto elaborando...',
+                      style: TextStyle(
+                        fontStyle: FontStyle.italic,
+                        color: Colors.grey,
+                      ),
+                    ),
+                  );
+                }
+                return _buildBubble(_messaggi[index], colorScheme);
+              },
+            ),
+          ),
+
+          // Area Input Testo
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: colorScheme.surface,
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.05),
+                  blurRadius: 4,
+                  offset: const Offset(0, -2),
+                ),
+              ],
+            ),
+            child: Row(
+              children: [
+                Expanded(
+                  child: TextField(
+                    controller: _controller,
+                    decoration: InputDecoration(
+                      hintText: 'Fai una domanda...',
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(24),
+                        borderSide: BorderSide.none,
+                      ),
+                      filled: true,
+                      fillColor: colorScheme.surfaceContainerHighest,
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 10,
+                      ),
+                    ),
+                    onSubmitted: (_) => _invia(),
+                    enabled: !_botStaScrivendo,
+                  ),
+                ),
+                const SizedBox(width: 8),
+                FloatingActionButton.small(
+                  heroTag: 'chat_send_home',
+                  onPressed: _botStaScrivendo ? null : _invia,
+                  backgroundColor: colorScheme.primary,
+                  child: Icon(Icons.send, color: colorScheme.onPrimary),
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }
