@@ -115,45 +115,55 @@ class _VideoDialogState extends State<VideoDialog> {
   }
 
   Widget _buildVideoContent() {
+    double safeRatio = 16 / 9;
+
+    if (_controller != null && _controller!.value.isInitialized) {
+      final size = _controller!.value.size;
+      if (size.width > 0 && size.height > 0) {
+        safeRatio = size.width / size.height;
+      }
+    }
+
+    return ClipRRect(
+      borderRadius: const BorderRadius.vertical(bottom: Radius.circular(12)),
+      child: AspectRatio(aspectRatio: safeRatio, child: _buildVideoState()),
+    );
+  }
+
+  Widget _buildVideoState() {
     if (_hasError) return const VideoErrorState();
     if (!_isInitialized || _controller == null) {
       return const VideoLoadingState();
     }
 
-    return ClipRRect(
-      borderRadius: const BorderRadius.vertical(bottom: Radius.circular(12)),
-      child: AspectRatio(
-        aspectRatio: _controller!.value.aspectRatio,
-        child: GestureDetector(
-          onTap: _toggleControlli,
-          child: Stack(
-            alignment: Alignment.bottomCenter,
-            children: [
-              VideoPlayer(_controller!),
-              VideoControlOverlay(
-                controller: _controller!,
-                mostraControlli: _mostraControlli,
-                onJump: (secondi) {
-                  _salta(secondi);
+    return GestureDetector(
+      onTap: _toggleControlli,
+      child: Stack(
+        alignment: Alignment.bottomCenter,
+        children: [
+          VideoPlayer(_controller!),
+          VideoControlOverlay(
+            controller: _controller!,
+            mostraControlli: _mostraControlli,
+            onJump: (secondi) {
+              _salta(secondi);
+              _avviaTimerNascondiControlli();
+            },
+            onTogglePlay: () {
+              setState(() {
+                if (_controller!.value.isPlaying) {
+                  _controller!.pause();
+                  _timerNascondiControlli?.cancel();
+                } else {
+                  _controller!.play();
                   _avviaTimerNascondiControlli();
-                },
-                onTogglePlay: () {
-                  setState(() {
-                    if (_controller!.value.isPlaying) {
-                      _controller!.pause();
-                      _timerNascondiControlli?.cancel();
-                    } else {
-                      _controller!.play();
-                      _avviaTimerNascondiControlli();
-                    }
-                  });
-                },
-                onDragStart: () => _timerNascondiControlli?.cancel(),
-                onDragEnd: () => _avviaTimerNascondiControlli(),
-              ),
-            ],
+                }
+              });
+            },
+            onDragStart: () => _timerNascondiControlli?.cancel(),
+            onDragEnd: () => _avviaTimerNascondiControlli(),
           ),
-        ),
+        ],
       ),
     );
   }

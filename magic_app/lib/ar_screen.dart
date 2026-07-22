@@ -481,10 +481,14 @@ class ARMediaBubblesPanel extends StatelessWidget {
 
     final videoList = fileMultimediali.where((m) => m.tipo == 'video').toList();
     final audioList = fileMultimediali.where((m) => m.tipo == 'audio').toList();
-    final immaginiList = fileMultimediali.where((m) => m.tipo == 'immagine').toList();
+    final immaginiList = fileMultimediali
+        .where((m) => m.tipo == 'immagine')
+        .toList();
     final pdfList = fileMultimediali.where((m) => m.tipo == 'pdf').toList();
     final testoList = fileMultimediali.where((m) => m.tipo == 'testo').toList();
-    final linkList = fileMultimediali.where((m) => m.tipo == 'link_esterno').toList();
+    final linkList = fileMultimediali
+        .where((m) => m.tipo == 'link_esterno')
+        .toList();
 
     return Positioned(
       right: layout.bubblesRight,
@@ -524,11 +528,11 @@ class ARMediaBubblesPanel extends StatelessWidget {
   }
 
   Widget _buildBubble(
-      BuildContext context,
-      IconData icona,
-      String tipo,
-      List<MediaItem> mediaList,
-      ) {
+    BuildContext context,
+    IconData icona,
+    String tipo,
+    List<MediaItem> mediaList,
+  ) {
     if (mediaList.isEmpty) return const SizedBox.shrink();
 
     return SizedBox(
@@ -618,6 +622,17 @@ class ARMediaBubblesPanel extends StatelessWidget {
                           context.read<MediaService>().apriUrl(item.url);
                           return;
                         }
+                        if (item.tipo == 'pdf') {
+                          showDialog(
+                            context: context,
+                            useSafeArea: false,
+                            builder: (_) => PdfDialog(
+                              titolo: item.titolo,
+                              pdfPath: item.url,
+                            ),
+                          );
+                          return;
+                        }
                         showDialog(
                           context: context,
                           builder: (_) {
@@ -636,11 +651,6 @@ class ARMediaBubblesPanel extends StatelessWidget {
                                 return VideoDialog(
                                   titolo: item.titolo,
                                   videoPath: item.url,
-                                );
-                              case 'pdf':
-                                return PdfDialog(
-                                  titolo: item.titolo,
-                                  pdfPath: item.url,
                                 );
                               default:
                                 return const AlertDialog(

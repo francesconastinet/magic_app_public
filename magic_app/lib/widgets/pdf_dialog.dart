@@ -35,17 +35,14 @@ class _PdfDialogState extends State<PdfDialog> {
       // CASO 1: File negli asset (Modalità Test)
       // TODO: rimuovere quando il client sarà collegato al backend
       if (widget.pdfPath.startsWith('assets/')) {
-        // Legge i byte dal bundle dell'app
         final byteData = await rootBundle.load(widget.pdfPath);
         final fileBytes = byteData.buffer.asUint8List(
           byteData.offsetInBytes,
           byteData.lengthInBytes,
         );
 
-        // Trova la cartella temporanea del dispositivo
         final tempDir = await getTemporaryDirectory();
 
-        // Estrae il nome del file e lo salva temporaneamente
         final fileName = widget.pdfPath.split('/').last;
         final tempFile = File('${tempDir.path}/$fileName');
         await tempFile.writeAsBytes(fileBytes);
@@ -77,51 +74,73 @@ class _PdfDialogState extends State<PdfDialog> {
 
   @override
   Widget build(BuildContext context) {
-    return Dialog.fullscreen(
-      backgroundColor: Colors.black87,
-      child: Column(
-        children: [
-          Container(
-            padding: const EdgeInsets.only(
-              top: 40,
-              left: 16,
-              right: 16,
-              bottom: 16,
-            ),
-            color: Colors.black,
-            child: Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    widget.titolo,
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
+    final screenSize = MediaQuery.sizeOf(context);
+    final isLandscape =
+        MediaQuery.orientationOf(context) == Orientation.landscape;
+    final isTablet = screenSize.shortestSide >= 600;
+
+    final double maxPdfWidth = isTablet
+        ? (screenSize.width * 0.75).clamp(600.0, 900.0)
+        : (isLandscape
+              ? (screenSize.width * 0.55).clamp(350.0, 550.0)
+              : double.infinity);
+
+    return Scaffold(
+      backgroundColor: Colors.black,
+      body: SafeArea(
+        child: Column(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(16),
+              color: Colors.black,
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      widget.titolo,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
+                      overflow: TextOverflow.ellipsis,
                     ),
-                    overflow: TextOverflow.ellipsis,
                   ),
-                ),
-                if (_isReady && _percorsoAssoluto != null)
-                  Text(
-                    '${_currentPage! + 1}/$_totalPages',
-                    style: const TextStyle(color: Colors.white54),
+                  if (_isReady && _percorsoAssoluto != null)
+                    Text(
+                      '${_currentPage! + 1}/$_totalPages',
+                      style: const TextStyle(color: Colors.white54),
+                    ),
+                  const SizedBox(width: 16),
+                  IconButton(
+                    icon: const Icon(Icons.close, color: Colors.white),
+                    onPressed: () => Navigator.pop(context),
                   ),
-                const SizedBox(width: 16),
-                IconButton(
-                  icon: const Icon(Icons.close, color: Colors.white),
-                  onPressed: () => Navigator.pop(context),
-                ),
-              ],
+                ],
+              ),
             ),
-          ),
-          Expanded(child: _buildPdfContent()),
-        ],
+            Expanded(
+              child: Container(
+                color: Colors.black,
+                alignment: Alignment.center,
+                child: ConstrainedBox(
+                  constraints: BoxConstraints(maxWidth: maxPdfWidth),
+                  child: Container(
+                    width: double.infinity,
+                    height: double.infinity,
+                    color: Colors.white,
+                    child: _buildPdfContent(isLandscape),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
 
-  Widget _buildPdfContent() {
+  Widget _buildPdfContent(bool isLandscape) {
     if (_hasError) {
       return const Center(
         child: Text(
@@ -136,13 +155,16 @@ class _PdfDialogState extends State<PdfDialog> {
     }
 
     return Stack(
+      fit: StackFit.expand,
       children: [
         PDFView(
           filePath: _percorsoAssoluto!,
           enableSwipe: true,
           swipeHorizontal: false,
-          autoSpacing: false,
+          autoSpacing: true,
           pageFling: true,
+          fitEachPage: true,
+          fitPolicy: isLandscape ? FitPolicy.WIDTH : FitPolicy.BOTH,
           onRender: (pages) {
             setState(() {
               _totalPages = pages;
@@ -162,7 +184,6 @@ class _PdfDialogState extends State<PdfDialog> {
             debugPrint('Errore rendering pagina $page: $error');
           },
         ),
-
         if (!_isReady) const Center(child: CircularProgressIndicator()),
       ],
     );

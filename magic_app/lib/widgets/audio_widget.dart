@@ -222,61 +222,74 @@ class ExpandedAudioPlayer extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final screenSize = MediaQuery.sizeOf(context);
-    final isLandscape = MediaQuery.orientationOf(context) == Orientation.landscape;
+    final isLandscape =
+        MediaQuery.orientationOf(context) == Orientation.landscape;
 
     final double containerWidth = isLandscape
-        ? (screenSize.width * 0.6).clamp(300.0, 500.0)
+        ? (screenSize.width * 0.45).clamp(320.0, 500.0)
         : (screenSize.width * 0.85).clamp(300.0, 500.0);
-    final double verticalSpacing = screenSize.height * 0.02;
+
+    final double maxContainerHeight = isLandscape
+        ? screenSize.height * 0.75
+        : screenSize.height * 0.85;
+
+    final double verticalSpacing = (screenSize.height * 0.02).clamp(8.0, 24.0);
     final double padding = screenSize.width * 0.05;
-    final double iconSize = (screenSize.height * 0.15).clamp(30.0, 64.0);
+
+    final double iconSize = isLandscape ? 24.0 : 64.0;
 
     return Positioned.fill(
       child: Container(
         color: Colors.black54,
-        child: Center(
-          child: ConstrainedBox(
-            constraints: BoxConstraints(
-              maxWidth: containerWidth,
-              maxHeight: screenSize.height * 0.9,
-            ),
-            child: Container(
-              padding: EdgeInsets.symmetric(
-                vertical: verticalSpacing,
-                horizontal: padding.clamp(16.0, 32.0),
+        child: SafeArea(
+          minimum: const EdgeInsets.symmetric(vertical: 16.0),
+          child: Center(
+            child: ConstrainedBox(
+              constraints: BoxConstraints(
+                maxWidth: containerWidth,
+                maxHeight: maxContainerHeight,
               ),
-              decoration: BoxDecoration(
-                color: Colors.black87,
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: Colors.white24, width: 1),
-              ),
-              child: SingleChildScrollView(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    ExpandedPlayerHeader(
-                      onMinimize: onMinimize,
-                      onClose: onClose,
-                    ),
-                    ExpandedPlayerTitle(titolo: titolo),
-                    SizedBox(height: verticalSpacing),
-                    Icon(
-                      Icons.audiotrack,
-                      size: iconSize,
-                      color: Colors.blueAccent,
-                    ),
-                    SizedBox(height: verticalSpacing),
-                    AudioProgressBar(
-                      duration: duration,
-                      position: position,
-                      onSeek: onSeek,
-                    ),
-                    SizedBox(height: verticalSpacing),
-                    AudioPlayPauseButton(
-                      isPlaying: isPlaying,
-                      onTogglePlay: onTogglePlay,
-                    ),
-                  ],
+              child: Container(
+                padding: EdgeInsets.only(
+                  top: verticalSpacing,
+                  bottom: verticalSpacing + 16.0,
+                  left: padding.clamp(16.0, 32.0),
+                  right: padding.clamp(16.0, 32.0),
+                ),
+                decoration: BoxDecoration(
+                  color: Colors.black87,
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: Colors.white24, width: 1),
+                ),
+                child: SingleChildScrollView(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      ExpandedPlayerHeader(
+                        onMinimize: onMinimize,
+                        onClose: onClose,
+                      ),
+                      ExpandedPlayerTitle(titolo: titolo),
+                      SizedBox(height: verticalSpacing),
+                      Icon(
+                        Icons.audiotrack,
+                        size: iconSize,
+                        color: Colors.blueAccent,
+                      ),
+                      SizedBox(height: verticalSpacing),
+                      AudioProgressBar(
+                        duration: duration,
+                        position: position,
+                        onSeek: onSeek,
+                      ),
+                      SizedBox(height: verticalSpacing),
+                      AudioPlayPauseButton(
+                        isPlaying: isPlaying,
+                        onTogglePlay: onTogglePlay,
+                        isLandscape: isLandscape,
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ),
@@ -304,18 +317,11 @@ class ExpandedPlayerHeader extends StatelessWidget {
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
         IconButton(
-          icon: const Icon(
-            Icons.keyboard_arrow_down,
-            color: Colors.white54,
-          ),
+          icon: const Icon(Icons.keyboard_arrow_down, color: Colors.white54),
           onPressed: onMinimize,
         ),
         IconButton(
-          icon: const Icon(
-            Icons.close,
-            color: Colors.redAccent,
-            size: 24,
-          ),
+          icon: const Icon(Icons.close, color: Colors.redAccent, size: 24),
           onPressed: onClose,
         ),
       ],
@@ -405,23 +411,29 @@ class AudioProgressBar extends StatelessWidget {
 class AudioPlayPauseButton extends StatelessWidget {
   final bool isPlaying;
   final VoidCallback onTogglePlay;
+  final bool isLandscape;
 
   const AudioPlayPauseButton({
     super.key,
     required this.isPlaying,
     required this.onTogglePlay,
+    this.isLandscape = false,
   });
 
   @override
   Widget build(BuildContext context) {
+    final double radius = isLandscape ? 20.0 : 28.0;
+    final double iconSize = isLandscape ? 24.0 : 32.0;
+
     return CircleAvatar(
-      radius: 28,
+      radius: radius,
       backgroundColor: Colors.blueAccent,
       child: IconButton(
+        padding: EdgeInsets.zero,
         icon: Icon(
           isPlaying ? Icons.pause : Icons.play_arrow,
           color: Colors.white,
-          size: 32,
+          size: iconSize,
         ),
         onPressed: onTogglePlay,
       ),
