@@ -6,6 +6,10 @@ import 'package:provider/provider.dart';
 import '../package_storage.dart';
 import '../app_config.dart';
 
+// ==========================================
+// SCHERMATA PLAYER
+// ==========================================
+
 class VideoDialog extends StatefulWidget {
   final String titolo;
   final String videoPath;
@@ -24,7 +28,6 @@ class _VideoDialogState extends State<VideoDialog> {
   Timer? _timerNascondiControlli;
 
   // --- INIZIALIZZAZIONE ---
-
   @override
   void initState() {
     super.initState();
@@ -69,28 +72,44 @@ class _VideoDialogState extends State<VideoDialog> {
     super.dispose();
   }
 
-  // --- COSTRUZIONE SCHERMATA ---
-
+  // --- RENDERING ---
   @override
   Widget build(BuildContext context) {
+    final screenSize = MediaQuery.sizeOf(context);
+    final isLandscape =
+        MediaQuery.orientationOf(context) == Orientation.landscape;
+    final isTablet = screenSize.shortestSide >= 600;
+
+    final double adaptiveMaxWidth = isTablet
+        ? (isLandscape ? screenSize.width * 0.75 : screenSize.width * 0.9)
+        : (isLandscape ? screenSize.width * 0.7 : screenSize.width * 0.9);
+
     return Dialog(
       backgroundColor: Colors.transparent,
       insetPadding: const EdgeInsets.all(16),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          VideoDialogHeader(
-            titolo: widget.titolo,
-            onClose: () => Navigator.pop(context),
-          ),
-          Container(
-            decoration: const BoxDecoration(
-              color: Colors.black,
-              borderRadius: BorderRadius.vertical(bottom: Radius.circular(12)),
+      child: ConstrainedBox(
+        constraints: BoxConstraints(maxWidth: adaptiveMaxWidth),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            VideoDialogHeader(
+              titolo: widget.titolo,
+              onClose: () => Navigator.pop(context),
             ),
-            child: _buildVideoContent(),
-          ),
-        ],
+            Flexible(
+              child: Container(
+                decoration: const BoxDecoration(
+                  color: Colors.black,
+                  borderRadius: BorderRadius.vertical(
+                    bottom: Radius.circular(12),
+                  ),
+                ),
+                child: Center(heightFactor: 1.0, child: _buildVideoContent()),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -140,8 +159,6 @@ class _VideoDialogState extends State<VideoDialog> {
   }
 
   // --- LOGICA ---
-
-  // Metodo per saltare avanti/indietro
   Future<void> _salta(int secondi) async {
     if (_controller == null || !_controller!.value.isInitialized) return;
 
@@ -152,7 +169,6 @@ class _VideoDialogState extends State<VideoDialog> {
     }
   }
 
-  // Attiva/disattiva i controlli ogni volta che l'utente tocca lo schermo
   void _toggleControlli() {
     setState(() {
       _mostraControlli = !_mostraControlli;
@@ -165,7 +181,6 @@ class _VideoDialogState extends State<VideoDialog> {
     }
   }
 
-  // Timer di scomparsa dei controlli
   void _avviaTimerNascondiControlli() {
     _timerNascondiControlli?.cancel();
 
@@ -179,9 +194,11 @@ class _VideoDialogState extends State<VideoDialog> {
   }
 }
 
-// --- WIDGET ---
+// ==========================================
+// WIDGET
+// ==========================================
 
-// Header del Dialog con Titolo e tasto Chiudi
+// --- HEADER ---
 class VideoDialogHeader extends StatelessWidget {
   final String titolo;
   final VoidCallback onClose;
@@ -224,7 +241,7 @@ class VideoDialogHeader extends StatelessWidget {
   }
 }
 
-// Schermata di errore di lettura del file
+// --- SCHERMATA ERRORE ---
 class VideoErrorState extends StatelessWidget {
   const VideoErrorState({super.key});
 
@@ -248,7 +265,7 @@ class VideoErrorState extends StatelessWidget {
   }
 }
 
-// Schermata di carcamento
+// --- SCHERMATA CARICAMENTO ---
 class VideoLoadingState extends StatelessWidget {
   const VideoLoadingState({super.key});
 
@@ -261,7 +278,7 @@ class VideoLoadingState extends StatelessWidget {
   }
 }
 
-// Overlay che contiene i pulsanti e la barra di progressione
+// --- OVERLAY CONTROLLI ---
 class VideoControlOverlay extends StatelessWidget {
   final VideoPlayerController controller;
   final bool mostraControlli;
@@ -317,7 +334,7 @@ class VideoControlOverlay extends StatelessWidget {
   }
 }
 
-// Pulsantiera centrale: Indietro 5s, Play/Pausa, Avanti 5s
+// --- CONTROLLI PLAYER ---
 class VideoPlaybackButtons extends StatelessWidget {
   final bool isPlaying;
   final Function(int) onJump;
@@ -369,7 +386,7 @@ class VideoPlaybackButtons extends StatelessWidget {
   }
 }
 
-// Slider di progressione
+// --- BARRA PROGRESSIONE ---
 class VideoProgressBar extends StatelessWidget {
   final VideoPlayerController controller;
   final VoidCallback onDragStart;
