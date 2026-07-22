@@ -7,7 +7,7 @@ import '../package_storage.dart';
 import '../app_config.dart';
 
 // ==========================================
-// SCHERMATA PLAYER
+// SCHERMATA WIDGET
 // ==========================================
 
 class VideoDialog extends StatefulWidget {

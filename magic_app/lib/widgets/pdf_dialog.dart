@@ -7,6 +7,10 @@ import 'package:provider/provider.dart';
 import '../app_config.dart';
 import '../package_storage.dart';
 
+// ==========================================
+// SCHERMATA WIDGET
+// ==========================================
+
 class PdfDialog extends StatefulWidget {
   final String titolo;
   final String pdfPath;
@@ -30,6 +34,7 @@ class _PdfDialogState extends State<PdfDialog> {
     _inizializzaPdf();
   }
 
+  // --- INIZIALIZZAZIONE ---
   Future<void> _inizializzaPdf() async {
     try {
       // CASO 1: File negli asset (Modalità Test)
@@ -42,7 +47,6 @@ class _PdfDialogState extends State<PdfDialog> {
         );
 
         final tempDir = await getTemporaryDirectory();
-
         final fileName = widget.pdfPath.split('/').last;
         final tempFile = File('${tempDir.path}/$fileName');
         await tempFile.writeAsBytes(fileBytes);
@@ -72,6 +76,7 @@ class _PdfDialogState extends State<PdfDialog> {
     }
   }
 
+  // --- RENDERING ---
   @override
   Widget build(BuildContext context) {
     final screenSize = MediaQuery.sizeOf(context);
@@ -90,34 +95,13 @@ class _PdfDialogState extends State<PdfDialog> {
       body: SafeArea(
         child: Column(
           children: [
-            Container(
-              padding: const EdgeInsets.all(16),
-              color: Colors.black,
-              child: Row(
-                children: [
-                  Expanded(
-                    child: Text(
-                      widget.titolo,
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                      ),
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ),
-                  if (_isReady && _percorsoAssoluto != null)
-                    Text(
-                      '${_currentPage! + 1}/$_totalPages',
-                      style: const TextStyle(color: Colors.white54),
-                    ),
-                  const SizedBox(width: 16),
-                  IconButton(
-                    icon: const Icon(Icons.close, color: Colors.white),
-                    onPressed: () => Navigator.pop(context),
-                  ),
-                ],
-              ),
+            PdfDialogHeader(
+              titolo: widget.titolo,
+              currentPage: _currentPage,
+              totalPages: _totalPages,
+              isReady: _isReady,
+              percorsoAssoluto: _percorsoAssoluto,
+              onClose: () => Navigator.pop(context),
             ),
             Expanded(
               child: Container(
@@ -129,7 +113,26 @@ class _PdfDialogState extends State<PdfDialog> {
                     width: double.infinity,
                     height: double.infinity,
                     color: Colors.white,
-                    child: _buildPdfContent(isLandscape),
+                    child: PdfContentWidget(
+                      hasError: _hasError,
+                      percorsoAssoluto: _percorsoAssoluto,
+                      isLandscape: isLandscape,
+                      isReady: _isReady,
+                      onRender: (pages) {
+                        setState(() {
+                          _totalPages = pages;
+                          _isReady = true;
+                        });
+                      },
+                      onPageChanged: (page) {
+                        setState(() {
+                          _currentPage = page;
+                        });
+                      },
+                      onError: () {
+                        setState(() => _hasError = true);
+                      },
+                    ),
                   ),
                 ),
               ),
@@ -139,9 +142,89 @@ class _PdfDialogState extends State<PdfDialog> {
       ),
     );
   }
+}
 
-  Widget _buildPdfContent(bool isLandscape) {
-    if (_hasError) {
+// ==========================================
+// WIDGET
+// ==========================================
+
+// --- HEADER ---
+class PdfDialogHeader extends StatelessWidget {
+  final String titolo;
+  final int? currentPage;
+  final int? totalPages;
+  final bool isReady;
+  final String? percorsoAssoluto;
+  final VoidCallback onClose;
+
+  const PdfDialogHeader({
+    super.key,
+    required this.titolo,
+    required this.currentPage,
+    required this.totalPages,
+    required this.isReady,
+    required this.percorsoAssoluto,
+    required this.onClose,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      color: Colors.black,
+      child: Row(
+        children: [
+          Expanded(
+            child: Text(
+              titolo,
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+              ),
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+          if (isReady && percorsoAssoluto != null)
+            Text(
+              '${currentPage! + 1}/$totalPages',
+              style: const TextStyle(color: Colors.white54),
+            ),
+          const SizedBox(width: 16),
+          IconButton(
+            icon: const Icon(Icons.close, color: Colors.white),
+            onPressed: onClose,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// --- CONTENUTO PDF ---
+class PdfContentWidget extends StatelessWidget {
+  final bool hasError;
+  final String? percorsoAssoluto;
+  final bool isLandscape;
+  final bool isReady;
+  final ValueChanged<int?> onRender;
+  final ValueChanged<int?> onPageChanged;
+  final VoidCallback onError;
+
+  const PdfContentWidget({
+    super.key,
+    required this.hasError,
+    required this.percorsoAssoluto,
+    required this.isLandscape,
+    required this.isReady,
+    required this.onRender,
+    required this.onPageChanged,
+    required this.onError,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    if (hasError) {
       return const Center(
         child: Text(
           'Impossibile caricare il documento PDF.',
@@ -150,7 +233,7 @@ class _PdfDialogState extends State<PdfDialog> {
       );
     }
 
-    if (_percorsoAssoluto == null) {
+    if (percorsoAssoluto == null) {
       return const Center(child: CircularProgressIndicator());
     }
 
@@ -158,33 +241,24 @@ class _PdfDialogState extends State<PdfDialog> {
       fit: StackFit.expand,
       children: [
         PDFView(
-          filePath: _percorsoAssoluto!,
+          filePath: percorsoAssoluto!,
           enableSwipe: true,
           swipeHorizontal: false,
           autoSpacing: true,
           pageFling: true,
           fitEachPage: true,
           fitPolicy: isLandscape ? FitPolicy.WIDTH : FitPolicy.BOTH,
-          onRender: (pages) {
-            setState(() {
-              _totalPages = pages;
-              _isReady = true;
-            });
-          },
-          onPageChanged: (int? page, int? total) {
-            setState(() {
-              _currentPage = page;
-            });
-          },
+          onRender: onRender,
+          onPageChanged: (int? page, int? total) => onPageChanged(page),
           onError: (error) {
             debugPrint('Errore rendering PDFView: $error');
-            setState(() => _hasError = true);
+            onError();
           },
           onPageError: (page, error) {
             debugPrint('Errore rendering pagina $page: $error');
           },
         ),
-        if (!_isReady) const Center(child: CircularProgressIndicator()),
+        if (!isReady) const Center(child: CircularProgressIndicator()),
       ],
     );
   }

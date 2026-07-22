@@ -6,7 +6,7 @@ import '../package_storage.dart';
 import '../models.dart';
 
 // ==========================================
-// FINESTRA DI DIALOGO
+// SCHERMATA WIDGET
 // ==========================================
 
 class ImageDialog extends StatefulWidget {

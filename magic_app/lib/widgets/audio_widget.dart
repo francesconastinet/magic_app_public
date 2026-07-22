@@ -5,7 +5,7 @@ import '../app_config.dart';
 import '../package_storage.dart';
 
 // ==========================================
-// SCHERMATA PLAYER
+// SCHERMATA WIDGET
 // ==========================================
 
 class AudioWidget extends StatefulWidget {
@@ -118,8 +118,8 @@ class _AudioWidgetState extends State<AudioWidget> {
 // WIDGET
 // ==========================================
 
-// --- PLAYER MINIMIZZATO ---
 // *** RIMOSSO ***
+// --- PLAYER MINIMIZZATO ---
 // class MiniAudioPlayer extends StatelessWidget {
 //   final String titolo;
 //   final bool isPlaying;
