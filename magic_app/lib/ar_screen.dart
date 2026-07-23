@@ -227,6 +227,7 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
           ),
 
           ARChatButton(
+            opera: opera,
             overlayVisibile: _overlayVisibile,
             fadeAnimation: _fadeAnimation,
             layout: layout,
@@ -675,12 +676,14 @@ class ARMediaBubblesPanel extends StatelessWidget {
 
 // --- PULSANTE CHAT ---
 class ARChatButton extends StatelessWidget {
+  final BookModel opera;
   final bool overlayVisibile;
   final Animation<double> fadeAnimation;
   final ARLayout layout;
 
   const ARChatButton({
     super.key,
+    required this.opera,
     required this.overlayVisibile,
     required this.fadeAnimation,
     required this.layout,
@@ -708,8 +711,12 @@ class ARChatButton extends StatelessWidget {
                 Navigator.push(
                   context,
                   MaterialPageRoute(
-                    builder: (context) => ChatScreen(
-                      book: context.watch<AppState>().operaSelezionata!,
+                    builder: (_) => Scaffold(
+                      appBar: AppBar(title: Text('Chat')),
+                      body: ChatWidget(
+                        contestoAttivoNome: opera.titolo,
+                        bookIds: [opera.id],
+                      ),
                     ),
                   ),
                 );

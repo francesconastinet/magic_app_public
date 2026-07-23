@@ -70,7 +70,15 @@ class BookDetailScreen extends StatelessWidget {
             onPressed: () {
               Navigator.push(
                 context,
-                MaterialPageRoute(builder: (_) => ChatScreen(book: book)),
+                MaterialPageRoute(
+                  builder: (_) => Scaffold(
+                    appBar: AppBar(title: Text('Chat')),
+                    body: ChatWidget(
+                      contestoAttivoNome: book.titolo,
+                      bookIds: [book.id],
+                    ),
+                  ),
+                ),
               );
             },
           ),

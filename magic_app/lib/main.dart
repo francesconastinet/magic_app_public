@@ -1,6 +1,12 @@
 import 'package:magic_app/models.dart';
+import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
+import 'package:provider/provider.dart';
+import 'package:camera/camera.dart';
+import 'package:permission_handler/permission_handler.dart';
+import 'package:model_viewer_plus/model_viewer_plus.dart';
 import 'app_config.dart';
-import 'chat_service.dart';
+import 'chat_screen.dart';
 import 'media_service.dart';
 import 'package_service.dart';
 import 'collection_screen.dart';
@@ -10,32 +16,6 @@ import 'auth_service.dart';
 import 'update_service.dart';
 import 'recognition_service.dart';
 import 'ar_screen.dart';
-import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
-import 'package:provider/provider.dart';
-import 'package:camera/camera.dart';
-import 'package:permission_handler/permission_handler.dart';
-import 'package:model_viewer_plus/model_viewer_plus.dart';
-
-// --- MODELLO DATI OPERA ---
-// Vecchio modello sostituito con BookModel
-// class Opera {
-//   final String id;
-//   final String titolo;
-//   final String autore;
-//   final String biblioteca;
-//   final String periodo;
-//   final String supporto;
-//
-//   const Opera({
-//     required this.id,
-//     required this.titolo,
-//     required this.autore,
-//     required this.biblioteca,
-//     required this.periodo,
-//     required this.supporto,
-//   });
-// }
 
 // --- APP STATE ---
 class AppState extends ChangeNotifier {
@@ -154,22 +134,12 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  // --- STATO PACCHETTI ---
   bool _syncInCorso = false;
   late Future<List<CollectionV2Model>> _collezioniFuture;
 
-  // --- STATO CHAT INTEGRATA ---
-  final ChatService _chatService = ChatService();
-  final List<MessaggioChat> _messaggi = [];
-  final TextEditingController _controller = TextEditingController();
-  final ScrollController _scrollController = ScrollController();
-  bool _botStaScrivendo = false;
-  final List<FonteChat> _fonteTotali = [];
-  bool _contextSessionCreata = false;
-  bool _contextSessionInCorso = false;
-
-  // Traccia se la chat è limitata a un libro o a una collezione
+  // Variabili di stato per dire alla chat quale fonte usare
   String? _contestoAttivoNome;
+  List<String>? _contestoAttivoIds;
 
   @override
   void initState() {
@@ -177,18 +147,9 @@ class _HomeScreenState extends State<HomeScreen> {
     _collezioniFuture = _caricaCollezioni(context);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _sincronizzaPacchettoInBackground();
-      _aggiungiMessaggioBenvenutoGenerico();
     });
   }
 
-  @override
-  void dispose() {
-    _controller.dispose();
-    _scrollController.dispose();
-    super.dispose();
-  }
-
-  // --- METODI GESTIONE PACCHETTO ---
   Future<List<CollectionV2Model>> _caricaCollezioni(BuildContext context) {
     final service = PackageService(
       storage: context.read<PackageStorage>(),
@@ -232,114 +193,6 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
-  // --- LOGICA CHAT ---
-  void _aggiungiMessaggioBenvenutoGenerico() {
-    setState(() {
-      _messaggi.add(
-        MessaggioChat(
-          testo:
-              'Ciao! Sono il tuo assistente virtuale per la Biblioteca dei Girolamini. '
-              'Puoi farmi domande sull\'archivio, oppure aprire il menu a sinistra (☰) per selezionare '
-              'una collezione o un libro specifico e usarlo come fonte.',
-          isUtente: false,
-          timestamp: DateTime.now(),
-        ),
-      );
-    });
-  }
-
-  void _scrollaInFondo() {
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (_scrollController.hasClients) {
-        _scrollController.animateTo(
-          _scrollController.position.maxScrollExtent,
-          duration: const Duration(milliseconds: 300),
-          curve: Curves.easeOut,
-        );
-      }
-    });
-  }
-
-  Future<void> _impostaContestoChat(
-    String nomeContesto,
-    List<String> bookIds,
-  ) async {
-    if (_contestoAttivoNome == nomeContesto) return; // Già attivo
-
-    setState(() {
-      _contestoAttivoNome = nomeContesto;
-      _contextSessionInCorso = true;
-      _messaggi.add(
-        MessaggioChat(
-          testo:
-              'Hai selezionato "$nomeContesto". Sto aggiornando le mie fonti...',
-          isUtente: false,
-          timestamp: DateTime.now(),
-        ),
-      );
-    });
-    _scrollaInFondo();
-
-    final successo = await _chatService.creaContextSession(bookIds);
-    setState(() {
-      _contextSessionCreata = successo;
-      _contextSessionInCorso = false;
-      _messaggi.add(
-        MessaggioChat(
-          testo: successo
-              ? 'Fonti bloccate con successo! Ora risponderò basandomi esclusivamente su "$nomeContesto".'
-              : 'Si è verificato un problema, ma proverò comunque ad aiutarti.',
-          isUtente: false,
-          timestamp: DateTime.now(),
-        ),
-      );
-    });
-    _scrollaInFondo();
-  }
-
-  Future<void> _invia() async {
-    final testo = _controller.text.trim();
-    if (testo.isEmpty || _botStaScrivendo) return;
-
-    setState(() {
-      _messaggi.add(
-        MessaggioChat(testo: testo, isUtente: true, timestamp: DateTime.now()),
-      );
-      _botStaScrivendo = true;
-      _controller.clear();
-    });
-    _scrollaInFondo();
-
-    try {
-      final risposta = await _chatService.inviaMessaggio(testo);
-      setState(() {
-        _messaggi.add(risposta);
-        _botStaScrivendo = false;
-        // Aggiorna fonti totali
-        for (final fonte in risposta.fonti) {
-          if (!_fonteTotali.any(
-            (f) => f.workId == fonte.workId && fonte.workId.isNotEmpty,
-          )) {
-            _fonteTotali.add(fonte);
-          }
-        }
-      });
-    } catch (e) {
-      setState(() {
-        _messaggi.add(
-          MessaggioChat(
-            testo: 'Errore durante la comunicazione col server. Riprova.',
-            isUtente: false,
-            timestamp: DateTime.now(),
-          ),
-        );
-        _botStaScrivendo = false;
-      });
-    }
-    _scrollaInFondo();
-  }
-
-  // --- WIDGET UI ---
   Widget _buildSezioneCollezioni(
     BuildContext context,
     ColorScheme colorScheme,
@@ -377,8 +230,12 @@ class _HomeScreenState extends State<HomeScreen> {
                   style: const TextStyle(fontSize: 12, color: Colors.grey),
                 ),
                 onTap: () {
-                  Navigator.pop(context); // Chiudi il menu laterale
-                  _impostaContestoChat(collection.name, collection.bookIds);
+                  Navigator.pop(context); // Chiude il drawer
+                  setState(() {
+                    // Aggiorna lo stato, che verrà passato a ChatWidget
+                    _contestoAttivoNome = collection.name;
+                    _contestoAttivoIds = collection.bookIds;
+                  });
                 },
               ),
             ),
@@ -389,50 +246,13 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _buildBubble(MessaggioChat msg, ColorScheme colorScheme) {
-    final isUtente = msg.isUtente;
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
-      child: Column(
-        crossAxisAlignment: isUtente
-            ? CrossAxisAlignment.end
-            : CrossAxisAlignment.start,
-        children: [
-          Container(
-            constraints: BoxConstraints(
-              maxWidth: MediaQuery.of(context).size.width * 0.75,
-            ),
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-            decoration: BoxDecoration(
-              color: isUtente
-                  ? colorScheme.primary
-                  : colorScheme.surfaceContainerHighest,
-              borderRadius: BorderRadius.only(
-                topLeft: const Radius.circular(16),
-                topRight: const Radius.circular(16),
-                bottomLeft: Radius.circular(isUtente ? 16 : 4),
-                bottomRight: Radius.circular(isUtente ? 4 : 16),
-              ),
-            ),
-            child: Text(
-              msg.testo,
-              style: TextStyle(
-                color: isUtente ? colorScheme.onPrimary : colorScheme.onSurface,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     final opere = OperaRepository.tutteLeOpere();
     final colorScheme = Theme.of(context).colorScheme;
 
     return Scaffold(
-      // 1. MENU LATERALE SINISTRO: Collezioni e Libri
+      // MENU LATERALE
       drawer: Drawer(
         child: SafeArea(
           child: Column(
@@ -482,8 +302,11 @@ class _HomeScreenState extends State<HomeScreen> {
                         ),
                         onTap: () {
                           context.read<AppState>().selezionaOpera(opera);
-                          Navigator.pop(context); // Chiudi il menu
-                          _impostaContestoChat(opera.titolo, [opera.id]);
+                          Navigator.pop(context);
+                          setState(() {
+                            _contestoAttivoNome = opera.titolo;
+                            _contestoAttivoIds = [opera.id];
+                          });
                         },
                       ),
                     ),
@@ -495,15 +318,14 @@ class _HomeScreenState extends State<HomeScreen> {
         ),
       ),
 
-      // 2. APP BAR AGGIORNATA PER EVITARE OVERLAP
+      // APP BAR
       appBar: AppBar(
         backgroundColor: colorScheme.primary,
         foregroundColor: colorScheme.onPrimary,
-        centerTitle: true, // Forza il titolo al centro
+        centerTitle: true,
         title: Column(
           mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment:
-              CrossAxisAlignment.center, // Allinea il testo al centro
+          crossAxisAlignment: CrossAxisAlignment.center,
           children: const [
             Text(
               'MAGIC',
@@ -522,12 +344,12 @@ class _HomeScreenState extends State<HomeScreen> {
               )
             : null,
         actions: [
-          // Bottone Riconosci: solo icona
           Padding(
             padding: const EdgeInsets.only(right: 8.0),
             child: IconButton.filled(
               onPressed: () => context.push('/camera'),
               icon: const Icon(Icons.camera_alt),
+              tooltip: 'Riconosci',
               style: IconButton.styleFrom(
                 backgroundColor: colorScheme.onPrimary,
                 foregroundColor: colorScheme.primary,
@@ -537,126 +359,10 @@ class _HomeScreenState extends State<HomeScreen> {
         ],
       ),
 
-      // 3. BODY: INTERFACCIA CHAT
-      body: Column(
-        children: [
-          // Indicatore contesto attivo
-          if (_contestoAttivoNome != null)
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              color: colorScheme.secondaryContainer,
-              child: Row(
-                children: [
-                  Icon(
-                    Icons.folder_open,
-                    size: 16,
-                    color: colorScheme.onSecondaryContainer,
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      'Fonte attiva: $_contestoAttivoNome',
-                      style: TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.bold,
-                        color: colorScheme.onSecondaryContainer,
-                      ),
-                    ),
-                  ),
-                  if (_contextSessionInCorso)
-                    SizedBox(
-                      width: 14,
-                      height: 14,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        color: colorScheme.onSecondaryContainer,
-                      ),
-                    )
-                  else
-                    Icon(
-                      _contextSessionCreata
-                          ? Icons.lock_outline
-                          : Icons.lock_open,
-                      size: 16,
-                      color: _contextSessionCreata
-                          ? Colors.green
-                          : Colors.orange,
-                    ),
-                ],
-              ),
-            ),
-
-          // Area Messaggi
-          Expanded(
-            child: ListView.builder(
-              controller: _scrollController,
-              padding: const EdgeInsets.all(16),
-              itemCount: _messaggi.length + (_botStaScrivendo ? 1 : 0),
-              itemBuilder: (context, index) {
-                if (index == _messaggi.length && _botStaScrivendo) {
-                  return const Padding(
-                    padding: EdgeInsets.only(bottom: 12),
-                    child: Text(
-                      'Sto elaborando...',
-                      style: TextStyle(
-                        fontStyle: FontStyle.italic,
-                        color: Colors.grey,
-                      ),
-                    ),
-                  );
-                }
-                return _buildBubble(_messaggi[index], colorScheme);
-              },
-            ),
-          ),
-
-          // Area Input Testo
-          Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: colorScheme.surface,
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.05),
-                  blurRadius: 4,
-                  offset: const Offset(0, -2),
-                ),
-              ],
-            ),
-            child: Row(
-              children: [
-                Expanded(
-                  child: TextField(
-                    controller: _controller,
-                    decoration: InputDecoration(
-                      hintText: 'Fai una domanda...',
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(24),
-                        borderSide: BorderSide.none,
-                      ),
-                      filled: true,
-                      fillColor: colorScheme.surfaceContainerHighest,
-                      contentPadding: const EdgeInsets.symmetric(
-                        horizontal: 16,
-                        vertical: 10,
-                      ),
-                    ),
-                    onSubmitted: (_) => _invia(),
-                    enabled: !_botStaScrivendo,
-                  ),
-                ),
-                const SizedBox(width: 8),
-                FloatingActionButton.small(
-                  heroTag: 'chat_send_home',
-                  onPressed: _botStaScrivendo ? null : _invia,
-                  backgroundColor: colorScheme.primary,
-                  child: Icon(Icons.send, color: colorScheme.onPrimary),
-                ),
-              ],
-            ),
-          ),
-        ],
+      // COMPOSIZIONE: Inietta la chat
+      body: ChatWidget(
+        contestoAttivoNome: _contestoAttivoNome,
+        bookIds: _contestoAttivoIds,
       ),
     );
   }
