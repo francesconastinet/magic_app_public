@@ -34,7 +34,6 @@ class _AudioWidgetState extends State<AudioWidget> {
   Duration _duration = Duration.zero;
   Duration _position = Duration.zero;
 
-  // --- INIZIALIZZAZIONE ---
   @override
   void initState() {
     super.initState();
@@ -51,29 +50,6 @@ class _AudioWidgetState extends State<AudioWidget> {
     _audioPlayer.onPositionChanged.listen((newPosition) {
       if (mounted) setState(() => _position = newPosition);
     });
-  }
-
-  Future<void> _inizializzaAudio() async {
-    try {
-      // CASO 1: Modalità Test (File negli asset)
-      // TODO: rimuovere quando il client sarà collegato al backend
-      if (widget.audioPath.startsWith('assets/')) {
-        final assetPath = widget.audioPath.replaceFirst('assets/', '');
-        await _audioPlayer.setSource(AssetSource(assetPath));
-      }
-      // CASO 2: Modalità Produzione (File estratti su disco dallo ZIP)
-      else {
-        final storageService = context.read<PackageStorage>();
-        final basePath = await storageService.percorsoPacchetto(
-          AppConfig.packageId,
-        );
-        final percorsoAssoluto = '$basePath/${widget.audioPath}';
-        await _audioPlayer.setSourceDeviceFile(percorsoAssoluto);
-      }
-      await _audioPlayer.resume();
-    } catch (e) {
-      debugPrint('Errore caricamento audio: $e');
-    }
   }
 
   @override
@@ -105,6 +81,29 @@ class _AudioWidgetState extends State<AudioWidget> {
   }
 
   // --- LOGICA ---
+  Future<void> _inizializzaAudio() async {
+    try {
+      // CASO 1: Modalità Test (File negli asset)
+      // TODO: rimuovere quando il client sarà collegato al backend
+      if (widget.audioPath.startsWith('assets/')) {
+        final assetPath = widget.audioPath.replaceFirst('assets/', '');
+        await _audioPlayer.setSource(AssetSource(assetPath));
+      }
+      // CASO 2: Modalità Produzione (File estratti su disco dallo ZIP)
+      else {
+        final storageService = context.read<PackageStorage>();
+        final basePath = await storageService.percorsoPacchetto(
+          AppConfig.packageId,
+        );
+        final percorsoAssoluto = '$basePath/${widget.audioPath}';
+        await _audioPlayer.setSourceDeviceFile(percorsoAssoluto);
+      }
+      await _audioPlayer.resume();
+    } catch (e) {
+      debugPrint('Errore caricamento audio: $e');
+    }
+  }
+
   void _togglePlayPause() {
     if (_isPlaying) {
       _audioPlayer.pause();

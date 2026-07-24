@@ -6,7 +6,7 @@ import 'package:camera/camera.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:model_viewer_plus/model_viewer_plus.dart';
 import 'app_config.dart';
-import 'chat_screen.dart';
+import 'chat_widget.dart';
 import 'media_service.dart';
 import 'package_service.dart';
 import 'collection_screen.dart';
@@ -138,8 +138,8 @@ class _HomeScreenState extends State<HomeScreen> {
   late Future<List<CollectionV2Model>> _collezioniFuture;
 
   // Variabili di stato per dire alla chat quale fonte usare
-  String? _contestoAttivoNome;
-  List<String>? _contestoAttivoIds;
+  String? _titoloFonteSelezionata;
+  List<String>? _idsFonteSelezionata;
 
   @override
   void initState() {
@@ -233,8 +233,8 @@ class _HomeScreenState extends State<HomeScreen> {
                   Navigator.pop(context); // Chiude il drawer
                   setState(() {
                     // Aggiorna lo stato, che verrà passato a ChatWidget
-                    _contestoAttivoNome = collection.name;
-                    _contestoAttivoIds = collection.bookIds;
+                    _titoloFonteSelezionata = collection.name;
+                    _idsFonteSelezionata = collection.bookIds;
                   });
                 },
               ),
@@ -304,8 +304,8 @@ class _HomeScreenState extends State<HomeScreen> {
                           context.read<AppState>().selezionaOpera(opera);
                           Navigator.pop(context);
                           setState(() {
-                            _contestoAttivoNome = opera.titolo;
-                            _contestoAttivoIds = [opera.id];
+                            _titoloFonteSelezionata = opera.titolo;
+                            _idsFonteSelezionata = [opera.id];
                           });
                         },
                       ),
@@ -361,8 +361,8 @@ class _HomeScreenState extends State<HomeScreen> {
 
       // COMPOSIZIONE: Inietta la chat
       body: ChatWidget(
-        contestoAttivoNome: _contestoAttivoNome,
-        bookIds: _contestoAttivoIds,
+        titoloFonteSelezionata: _titoloFonteSelezionata,
+        bookIds: _idsFonteSelezionata,
       ),
     );
   }

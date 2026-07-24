@@ -5,7 +5,7 @@ import 'package:provider/provider.dart';
 import 'main.dart';
 import 'media_service.dart';
 import 'models.dart';
-import 'chat_screen.dart';
+import 'chat_widget.dart';
 import 'widgets/audio_widget.dart';
 import 'widgets/image_dialog.dart';
 import 'widgets/pdf_dialog.dart';
@@ -114,7 +114,6 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
   late AnimationController _scanController;
   late Animation<double> _scanAnimation;
 
-  // --- INIZIALIZZAZIONE ---
   @override
   void initState() {
     super.initState();
@@ -139,35 +138,6 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
     _scanController.repeat(reverse: true);
 
     _inizializzaCamera();
-  }
-
-  Future<void> _inizializzaCamera() async {
-    final cameras = await availableCameras();
-    if (cameras.isEmpty) return;
-    _camController = CameraController(cameras.first, ResolutionPreset.medium);
-    await _camController!.initialize();
-
-    if (mounted) {
-      setState(() => _cameraReady = true);
-      // TODO: colleagre al modello ML
-      if (!_overlayVisibile) _mostraOverlay();
-    }
-  }
-
-  void _mostraOverlay() {
-    setState(() => _overlayVisibile = true);
-    _scanController.stop();
-    _fadeController.forward();
-  }
-
-  void _nascondiOverlay() {
-    _fadeController.reverse().then((_) {
-      if (mounted) {
-        setState(() => _overlayVisibile = false);
-        setState(() => _audioInEsecuzione = null);
-        _scanController.repeat(reverse: true);
-      }
-    });
   }
 
   @override
@@ -199,14 +169,11 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
     return Stack(
       fit: StackFit.expand,
       children: [
-        // 1. Fotocamera
         ARCameraFeed(controller: _camController!, layout: layout),
 
-        // 2. Mirino della fotocamera
         if (!_overlayVisibile)
           ARCameraViewfinder(scanAnimation: _scanAnimation, layout: layout),
 
-        // 3. Menu di Debug
         if (kDebugMode)
           ARDebugMenu(
             layout: layout,
@@ -218,7 +185,6 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
             },
           ),
 
-        // 4. Elementi in sovraimpressione
         if (_overlayVisibile && opera != null) ...[
           AROperaInfoPanel(
             opera: opera,
@@ -277,6 +243,36 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
         ],
       ],
     );
+  }
+
+  // --- LOGICA ---
+  Future<void> _inizializzaCamera() async {
+    final cameras = await availableCameras();
+    if (cameras.isEmpty) return;
+    _camController = CameraController(cameras.first, ResolutionPreset.medium);
+    await _camController!.initialize();
+
+    if (mounted) {
+      setState(() => _cameraReady = true);
+      // TODO: colleagre al modello ML
+      if (!_overlayVisibile) _mostraOverlay();
+    }
+  }
+
+  void _mostraOverlay() {
+    setState(() => _overlayVisibile = true);
+    _scanController.stop();
+    _fadeController.forward();
+  }
+
+  void _nascondiOverlay() {
+    _fadeController.reverse().then((_) {
+      if (mounted) {
+        setState(() => _overlayVisibile = false);
+        setState(() => _audioInEsecuzione = null);
+        _scanController.repeat(reverse: true);
+      }
+    });
   }
 }
 
@@ -714,7 +710,7 @@ class ARChatButton extends StatelessWidget {
                     builder: (_) => Scaffold(
                       appBar: AppBar(title: Text('Chat')),
                       body: ChatWidget(
-                        contestoAttivoNome: opera.titolo,
+                        titoloFonteSelezionata: opera.titolo,
                         bookIds: [opera.id],
                       ),
                     ),

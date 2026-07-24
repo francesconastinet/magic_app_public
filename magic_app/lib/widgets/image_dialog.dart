@@ -27,7 +27,6 @@ class _ImageDialogState extends State<ImageDialog> {
   late PageController _pageController;
   late int _currentIndex;
 
-  // --- INIZIALIZZAZIONE ---
   @override
   void initState() {
     super.initState();

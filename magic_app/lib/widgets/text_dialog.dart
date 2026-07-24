@@ -14,7 +14,24 @@ class TextDialog extends StatelessWidget {
 
   const TextDialog({super.key, required this.titolo, required this.textPath});
 
-  // --- INIZIALIZZAZIONE ---
+  // --- RENDERING ---
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      backgroundColor: Colors.black87,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      title: TextDialogHeader(
+        titolo: titolo,
+        onClose: () => Navigator.pop(context),
+      ),
+      content: TextDialogContent(
+        futureText: _inizializzaTesto(context),
+        textPath: textPath,
+      ),
+    );
+  }
+
+  // --- LOGICA ---
   Future<String?> _inizializzaTesto(BuildContext context) async {
     try {
       // CASO 1: Modalità Test (File negli asset)
@@ -31,23 +48,6 @@ class TextDialog extends StatelessWidget {
       debugPrint('Errore lettura file testo: $e');
       return null;
     }
-  }
-
-  // --- RENDERING ---
-  @override
-  Widget build(BuildContext context) {
-    return AlertDialog(
-      backgroundColor: Colors.black87,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      title: TextDialogHeader(
-        titolo: titolo,
-        onClose: () => Navigator.pop(context),
-      ),
-      content: TextDialogContent(
-        futureText: _inizializzaTesto(context),
-        textPath: textPath,
-      ),
-    );
   }
 }
 

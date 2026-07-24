@@ -34,47 +34,6 @@ class _PdfDialogState extends State<PdfDialog> {
     _inizializzaPdf();
   }
 
-  // --- INIZIALIZZAZIONE ---
-  Future<void> _inizializzaPdf() async {
-    try {
-      // CASO 1: File negli asset (Modalità Test)
-      // TODO: rimuovere quando il client sarà collegato al backend
-      if (widget.pdfPath.startsWith('assets/')) {
-        final byteData = await rootBundle.load(widget.pdfPath);
-        final fileBytes = byteData.buffer.asUint8List(
-          byteData.offsetInBytes,
-          byteData.lengthInBytes,
-        );
-
-        final tempDir = await getTemporaryDirectory();
-        final fileName = widget.pdfPath.split('/').last;
-        final tempFile = File('${tempDir.path}/$fileName');
-        await tempFile.writeAsBytes(fileBytes);
-
-        if (mounted) {
-          setState(() {
-            _percorsoAssoluto = tempFile.path;
-          });
-        }
-      }
-      // CASO 2: File nel sistema (Scaricato dallo ZIP)
-      else {
-        final storageService = context.read<PackageStorage>();
-        final basePath = await storageService.percorsoPacchetto(
-          AppConfig.packageId,
-        );
-
-        if (mounted) {
-          setState(() {
-            _percorsoAssoluto = '$basePath/${widget.pdfPath}';
-          });
-        }
-      }
-    } catch (e) {
-      debugPrint('Errore inizializzazione PDF: $e');
-      if (mounted) setState(() => _hasError = true);
-    }
-  }
 
   // --- RENDERING ---
   @override
@@ -141,6 +100,48 @@ class _PdfDialogState extends State<PdfDialog> {
         ),
       ),
     );
+  }
+
+  // --- LOGICA ---
+  Future<void> _inizializzaPdf() async {
+    try {
+      // CASO 1: File negli asset (Modalità Test)
+      // TODO: rimuovere quando il client sarà collegato al backend
+      if (widget.pdfPath.startsWith('assets/')) {
+        final byteData = await rootBundle.load(widget.pdfPath);
+        final fileBytes = byteData.buffer.asUint8List(
+          byteData.offsetInBytes,
+          byteData.lengthInBytes,
+        );
+
+        final tempDir = await getTemporaryDirectory();
+        final fileName = widget.pdfPath.split('/').last;
+        final tempFile = File('${tempDir.path}/$fileName');
+        await tempFile.writeAsBytes(fileBytes);
+
+        if (mounted) {
+          setState(() {
+            _percorsoAssoluto = tempFile.path;
+          });
+        }
+      }
+      // CASO 2: File nel sistema (Scaricato dallo ZIP)
+      else {
+        final storageService = context.read<PackageStorage>();
+        final basePath = await storageService.percorsoPacchetto(
+          AppConfig.packageId,
+        );
+
+        if (mounted) {
+          setState(() {
+            _percorsoAssoluto = '$basePath/${widget.pdfPath}';
+          });
+        }
+      }
+    } catch (e) {
+      debugPrint('Errore inizializzazione PDF: $e');
+      if (mounted) setState(() => _hasError = true);
+    }
   }
 }
 

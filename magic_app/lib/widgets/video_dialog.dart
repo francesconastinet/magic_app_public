@@ -27,42 +27,10 @@ class _VideoDialogState extends State<VideoDialog> {
   bool _mostraControlli = true;
   Timer? _timerNascondiControlli;
 
-  // --- INIZIALIZZAZIONE ---
   @override
   void initState() {
     super.initState();
     _inizializzaVideo();
-  }
-
-  Future<void> _inizializzaVideo() async {
-    try {
-      // CASO 1: File negli asset (Modalità Test)
-      // TODO: rimuovere quando il client sarà collegato al backend
-      if (widget.videoPath.startsWith('assets/')) {
-        _controller = VideoPlayerController.asset(widget.videoPath);
-      }
-      // CASO 2: File nel file system (Scaricato dallo ZIP)
-      else {
-        final storageService = context.read<PackageStorage>();
-        final basePath = await storageService.percorsoPacchetto(
-          AppConfig.packageId,
-        );
-        final percorsoAssoluto = '$basePath/${widget.videoPath}';
-
-        _controller = VideoPlayerController.file(File(percorsoAssoluto));
-      }
-
-      await _controller!.initialize();
-
-      if (mounted) {
-        setState(() => _isInitialized = true);
-        _controller!.play();
-        _avviaTimerNascondiControlli();
-      }
-    } catch (e) {
-      debugPrint('Errore caricamento video: $e');
-      if (mounted) setState(() => _hasError = true);
-    }
   }
 
   @override
@@ -169,6 +137,37 @@ class _VideoDialogState extends State<VideoDialog> {
   }
 
   // --- LOGICA ---
+  Future<void> _inizializzaVideo() async {
+    try {
+      // CASO 1: File negli asset (Modalità Test)
+      // TODO: rimuovere quando il client sarà collegato al backend
+      if (widget.videoPath.startsWith('assets/')) {
+        _controller = VideoPlayerController.asset(widget.videoPath);
+      }
+      // CASO 2: File nel file system (Scaricato dallo ZIP)
+      else {
+        final storageService = context.read<PackageStorage>();
+        final basePath = await storageService.percorsoPacchetto(
+          AppConfig.packageId,
+        );
+        final percorsoAssoluto = '$basePath/${widget.videoPath}';
+
+        _controller = VideoPlayerController.file(File(percorsoAssoluto));
+      }
+
+      await _controller!.initialize();
+
+      if (mounted) {
+        setState(() => _isInitialized = true);
+        _controller!.play();
+        _avviaTimerNascondiControlli();
+      }
+    } catch (e) {
+      debugPrint('Errore caricamento video: $e');
+      if (mounted) setState(() => _hasError = true);
+    }
+  }
+
   Future<void> _salta(int secondi) async {
     if (_controller == null || !_controller!.value.isInitialized) return;
 

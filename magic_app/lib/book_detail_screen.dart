@@ -4,7 +4,7 @@ import 'package:provider/provider.dart';
 import 'models.dart';
 import 'main.dart';
 import 'media_service.dart';
-import 'chat_screen.dart';
+import 'chat_widget.dart';
 import 'audio_player_widget.dart';
 
 class BookDetailScreen extends StatelessWidget {
@@ -74,7 +74,7 @@ class BookDetailScreen extends StatelessWidget {
                   builder: (_) => Scaffold(
                     appBar: AppBar(title: Text('Chat')),
                     body: ChatWidget(
-                      contestoAttivoNome: book.titolo,
+                      titoloFonteSelezionata: book.titolo,
                       bookIds: [book.id],
                     ),
                   ),
