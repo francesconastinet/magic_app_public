@@ -137,9 +137,13 @@ class _HomeScreenState extends State<HomeScreen> {
   bool _syncInCorso = false;
   late Future<List<CollectionV2Model>> _collezioniFuture;
 
-  // Variabili di stato per dire alla chat quale fonte usare
+  // --- STATO CHAT ---
   String? _titoloFonteSelezionata;
   List<String>? _idsFonteSelezionata;
+
+  // --- STATO RICERCA FONTI ---
+  final TextEditingController _searchController = TextEditingController();
+  String _searchQuery = '';
 
   @override
   void initState() {
@@ -150,17 +154,16 @@ class _HomeScreenState extends State<HomeScreen> {
     });
   }
 
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
   Future<List<CollectionV2Model>> _caricaCollezioni(
     BuildContext context,
   ) async {
-    // Codice di produzione
-    // final service = PackageService(
-    //   storage: context.read<PackageStorage>(),
-    //   authService: context.read<AuthService>(),
-    // );
-    // return service.leggiCollezioniV2(AppConfig.packageId);
-
-    // TODO: rimuovere dopo la demo
+    // TODO: rimuovere il mock dopo la demo e usare il PackageService reale
     await Future.delayed(const Duration(milliseconds: 500));
     return [
       CollectionV2Model(
@@ -168,10 +171,7 @@ class _HomeScreenState extends State<HomeScreen> {
         name: 'Percorso Medievale',
         description:
             'Una selezione di manoscritti risalenti al periodo medievale.',
-        bookIds: [
-          '001',
-          '002',
-        ], // Inserisci qui gli ID reali usati in OperaRepository
+        bookIds: ['001', '002'],
       ),
       CollectionV2Model(
         id: 'coll_02',
@@ -223,6 +223,42 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
+  // --- BARRA DI RICERCA ---
+  Widget _buildSearchBar(ColorScheme colorScheme) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+      child: TextField(
+        controller: _searchController,
+        decoration: InputDecoration(
+          hintText: 'Cerca collezioni o libri',
+          hintStyle: TextStyle(
+            color: colorScheme.onSurfaceVariant,
+            fontSize: 14,
+          ),
+          prefixIcon: Icon(Icons.search, color: colorScheme.onSurfaceVariant),
+          suffixIcon: _searchQuery.isNotEmpty
+              ? IconButton(
+                  icon: const Icon(Icons.clear, size: 20),
+                  onPressed: () {
+                    _searchController.clear();
+                    setState(() => _searchQuery = '');
+                  },
+                )
+              : null,
+          filled: true,
+          fillColor: colorScheme.surfaceContainerHighest,
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: BorderSide.none,
+          ),
+          contentPadding: const EdgeInsets.symmetric(vertical: 0),
+        ),
+        onChanged: (value) => setState(() => _searchQuery = value),
+      ),
+    );
+  }
+
+  // --- SEZIONE COLLEZIONI ---
   Widget _buildSezioneCollezioni(
     BuildContext context,
     ColorScheme colorScheme,
@@ -230,9 +266,20 @@ class _HomeScreenState extends State<HomeScreen> {
     return FutureBuilder<List<CollectionV2Model>>(
       future: _collezioniFuture,
       builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting)
+        if (snapshot.connectionState == ConnectionState.waiting) {
           return const SizedBox.shrink();
-        final collezioni = snapshot.data ?? [];
+        }
+
+        var collezioni = snapshot.data ?? [];
+
+        // Applica il filtro di ricerca
+        if (_searchQuery.isNotEmpty) {
+          final query = _searchQuery.toLowerCase();
+          collezioni = collezioni
+              .where((c) => c.name.toLowerCase().contains(query))
+              .toList();
+        }
+
         if (collezioni.isEmpty) return const SizedBox.shrink();
 
         return Column(
@@ -262,7 +309,6 @@ class _HomeScreenState extends State<HomeScreen> {
                 onTap: () {
                   Navigator.pop(context); // Chiude il drawer
                   setState(() {
-                    // Aggiorna lo stato, che verrà passato a ChatWidget
                     _titoloFonteSelezionata = collection.name;
                     _idsFonteSelezionata = collection.bookIds;
                   });
@@ -276,8 +322,21 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
+  // --- SEZIONE LIBRI ---
   Widget _buildSezioneLibri(BuildContext context, ColorScheme colorScheme) {
-    final opere = OperaRepository.tutteLeOpere();
+    var opere = OperaRepository.tutteLeOpere();
+
+    // Applica il filtro di ricerca (cerca nel titolo o nell'autore)
+    if (_searchQuery.isNotEmpty) {
+      final query = _searchQuery.toLowerCase();
+      opere = opere
+          .where(
+            (o) =>
+                o.titolo.toLowerCase().contains(query) ||
+                o.autore.toLowerCase().contains(query),
+          )
+          .toList();
+    }
 
     if (opere.isEmpty) return const SizedBox.shrink();
 
@@ -337,12 +396,47 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                 ),
               ),
+              _buildSearchBar(colorScheme),
+              // Liste scrollabili
               Expanded(
                 child: ListView(
                   padding: EdgeInsets.zero,
                   children: [
                     _buildSezioneCollezioni(context, colorScheme),
                     _buildSezioneLibri(context, colorScheme),
+
+                    // Messaggio di feedback se la ricerca non produce risultati
+                    if (_searchQuery.isNotEmpty)
+                      FutureBuilder<List<CollectionV2Model>>(
+                        future: _collezioniFuture,
+                        builder: (context, snapshot) {
+                          final collezioni = snapshot.data ?? [];
+                          final query = _searchQuery.toLowerCase();
+                          final haCollezioni = collezioni.any(
+                            (c) => c.name.toLowerCase().contains(query),
+                          );
+                          final haLibri = OperaRepository.tutteLeOpere().any(
+                            (o) =>
+                                o.titolo.toLowerCase().contains(query) ||
+                                o.autore.toLowerCase().contains(query),
+                          );
+
+                          if (!haCollezioni && !haLibri) {
+                            return Padding(
+                              padding: const EdgeInsets.all(32.0),
+                              child: Center(
+                                child: Text(
+                                  'Nessun risultato trovato.',
+                                  style: TextStyle(
+                                    color: colorScheme.onSurfaceVariant,
+                                  ),
+                                ),
+                              ),
+                            );
+                          }
+                          return const SizedBox.shrink();
+                        },
+                      ),
                   ],
                 ),
               ),
@@ -351,7 +445,7 @@ class _HomeScreenState extends State<HomeScreen> {
         ),
       ),
 
-      // APP BAR
+      // APP BAR (invariata)
       appBar: AppBar(
         backgroundColor: colorScheme.primary,
         foregroundColor: colorScheme.onPrimary,
@@ -403,7 +497,7 @@ class _HomeScreenState extends State<HomeScreen> {
         ],
       ),
 
-      // COMPOSIZIONE: Inietta la chat
+      // CHAT WIDGET (invariato)
       body: ChatWidget(
         titoloFonteSelezionata: _titoloFonteSelezionata,
         bookIds: _idsFonteSelezionata,
