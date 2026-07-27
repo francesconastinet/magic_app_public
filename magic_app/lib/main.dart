@@ -230,7 +230,7 @@ class _HomeScreenState extends State<HomeScreen> {
       child: TextField(
         controller: _searchController,
         decoration: InputDecoration(
-          hintText: 'Cerca collezioni o libri',
+          hintText: 'Cerca collezioni o manoscritti...',
           hintStyle: TextStyle(
             color: colorScheme.onSurfaceVariant,
             fontSize: 14,
@@ -346,7 +346,7 @@ class _HomeScreenState extends State<HomeScreen> {
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
           child: Text(
-            'Tutti i Libri',
+            'Tutti i Manoscritti',
             style: TextStyle(
               fontWeight: FontWeight.bold,
               color: colorScheme.primary,
@@ -481,20 +481,6 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
               )
             : null,
-        actions: [
-          Padding(
-            padding: const EdgeInsets.only(right: 8.0),
-            child: IconButton.filled(
-              onPressed: () => context.push('/camera'),
-              icon: const Icon(Icons.camera_alt),
-              tooltip: 'Riconosci',
-              style: IconButton.styleFrom(
-                backgroundColor: colorScheme.onPrimary,
-                foregroundColor: colorScheme.primary,
-              ),
-            ),
-          ),
-        ],
       ),
 
       // CHAT WIDGET (invariato)

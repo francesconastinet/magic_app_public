@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'chat_service.dart';
 
 // ==========================================
@@ -248,26 +249,10 @@ class ChatHeaderBar extends StatelessWidget {
 
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+      padding: const EdgeInsets.only(right:8, left: 16, top: 4, bottom: 4),
       color: colorScheme.secondaryContainer,
       child: Row(
         children: [
-          Icon(
-            Icons.folder_open,
-            size: 14,
-            color: colorScheme.onSecondaryContainer,
-          ),
-          const SizedBox(width: 6),
-          Expanded(
-            child: Text(
-              titoloFonte != null ? 'Fonte: $titoloFonte' : 'Nessuna fonte',
-              style: TextStyle(
-                fontSize: 12,
-                color: colorScheme.onSecondaryContainer,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-          ),
           if (inCorso)
             SizedBox(
               width: 12,
@@ -283,48 +268,35 @@ class ChatHeaderBar extends StatelessWidget {
               size: 14,
               color: creata ? Colors.green : Colors.orange,
             ),
-          const SizedBox(width: 12),
-          IconButton(
-            padding: EdgeInsets.zero,
-            constraints: const BoxConstraints(),
-            icon: Stack(
-              clipBehavior: Clip.none,
-              children: [
-                Icon(
-                  Icons.menu_book,
-                  size: 20,
-                  color: colorScheme.onSecondaryContainer,
-                ),
-                if (numeroFonti > 0)
-                  Positioned(
-                    right: -4,
-                    top: -4,
-                    child: Container(
-                      padding: const EdgeInsets.all(2),
-                      decoration: BoxDecoration(
-                        color: Colors.orange,
-                        borderRadius: BorderRadius.circular(6),
-                      ),
-                      constraints: const BoxConstraints(
-                        minWidth: 14,
-                        minHeight: 14,
-                      ),
-                      child: Text(
-                        '$numeroFonti',
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 9,
-                          fontWeight: FontWeight.bold,
-                        ),
-                        textAlign: TextAlign.center,
-                      ),
-                    ),
-                  ),
-              ],
+          const SizedBox(width: 6),
+          Expanded(
+            child: Text(
+              titoloFonte != null ? 'Fonte: $titoloFonte' : 'Nessuna fonte',
+              style: TextStyle(
+                fontSize: 12,
+                color: colorScheme.onSecondaryContainer,
+                fontWeight: FontWeight.bold,
+              ),
             ),
-            tooltip: 'Fonti consultate',
-            onPressed: onMostraFonti,
           ),
+          const SizedBox(width: 12),
+          // Pulsante Fonti con contorno
+          IconButton.outlined(
+            padding: const EdgeInsets.all(8),
+            constraints: const BoxConstraints(),
+            icon: Icon(
+              Icons.menu_book,
+              size: 18,
+              color: colorScheme.onSecondaryContainer,
+            ),
+            style: IconButton.styleFrom(
+              backgroundColor: colorScheme.surface,
+              shape: const CircleBorder(),
+              side: BorderSide(color: colorScheme.outlineVariant),
+            ),
+            tooltip: 'Manoscritti consultati',
+            onPressed: onMostraFonti,
+          )
         ],
       ),
     );
@@ -351,35 +323,55 @@ class ChatInputArea extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(color: colorScheme.surface),
-      child: Row(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.end,
         children: [
-          Expanded(
-            child: TextField(
-              controller: controller,
-              decoration: InputDecoration(
-                hintText: 'Fai una domanda...',
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(24),
-                  borderSide: BorderSide.none,
-                ),
-                filled: true,
-                fillColor: colorScheme.surfaceContainerHighest,
-                contentPadding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 10,
-                ),
+          // Pulsante Fotocamera sopra l'area di input
+          Padding(
+            padding: const EdgeInsets.only(bottom: 8.0),
+            child: IconButton.filledTonal(
+              onPressed: () => context.push('/camera'),
+              icon: const Icon(Icons.camera_alt),
+              tooltip: 'Riconosci Manoscritto',
+              style: IconButton.styleFrom(
+                iconSize: 28,
+                padding: const EdgeInsets.all(8),
               ),
-              onSubmitted: (_) => onSend(),
-              enabled: !isWriting,
             ),
           ),
-          const SizedBox(width: 8),
-          FloatingActionButton.small(
-            heroTag: 'chat_send',
-            onPressed: isWriting ? null : onSend,
-            backgroundColor: colorScheme.primary,
-            tooltip: 'Invia',
-            child: Icon(Icons.send, color: colorScheme.onPrimary),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Expanded(
+                child: TextField(
+                  controller: controller,
+                  decoration: InputDecoration(
+                    hintText: 'Fai una domanda...',
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(24),
+                      borderSide: BorderSide.none,
+                    ),
+                    filled: true,
+                    fillColor: colorScheme.surfaceContainerHighest,
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 10,
+                    ),
+                  ),
+                  onSubmitted: (_) => onSend(),
+                  enabled: !isWriting,
+                ),
+              ),
+              const SizedBox(width: 8),
+              FloatingActionButton.small(
+                heroTag: 'chat_send',
+                onPressed: isWriting ? null : onSend,
+                backgroundColor: colorScheme.primary,
+                tooltip: 'Invia',
+                child: Icon(Icons.send, color: colorScheme.onPrimary),
+              ),
+            ],
           ),
         ],
       ),
@@ -511,7 +503,7 @@ class ChatMessageBubble extends StatelessWidget {
                   if (!isUtente && msg.fonti.isNotEmpty) ...[
                     const SizedBox(height: 6),
                     Text(
-                      'Libri consultati:',
+                      'Manoscritti consultati:',
                       style: TextStyle(
                         fontSize: 11,
                         color: colorScheme.onSurfaceVariant,
@@ -584,7 +576,7 @@ class FontiBottomSheet extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Libri consultati',
+                  'Manoscritti consultati',
                   style: TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.bold,
@@ -610,7 +602,7 @@ class FontiBottomSheet extends StatelessWidget {
                     child: Padding(
                       padding: const EdgeInsets.all(24),
                       child: Text(
-                        'Fai una domanda per vedere\ni libri consultati.',
+                        'Fai una domanda per vedere\ni manoscritti consultati.',
                         textAlign: TextAlign.center,
                         style: TextStyle(color: colorScheme.onSurfaceVariant),
                       ),
