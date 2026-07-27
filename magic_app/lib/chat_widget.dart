@@ -18,14 +18,13 @@ class ChatWidget extends StatefulWidget {
 
 class _ChatWidgetState extends State<ChatWidget> {
   final ChatService _chatService = ChatService();
-  final List<MessaggioChat> _messaggi = [];
   final TextEditingController _controller = TextEditingController();
   final ScrollController _scrollController = ScrollController();
-
+  final List<MessaggioChat> _messaggi = [];
+  final List<FonteChat> _fonteTotali = [];
   bool _botStaScrivendo = false;
   bool _contextSessionCreata = false;
   bool _contextSessionInCorso = false;
-  final List<FonteChat> _fonteTotali = [];
 
   @override
   void initState() {
@@ -50,7 +49,6 @@ class _ChatWidgetState extends State<ChatWidget> {
           titoloFonte: widget.titoloFonteSelezionata,
           inCorso: _contextSessionInCorso,
           creata: _contextSessionCreata,
-          numeroFonti: _fonteTotali.length,
           onMostraFonti: () => _mostraListaFonti(context),
         ),
 
@@ -63,7 +61,17 @@ class _ChatWidgetState extends State<ChatWidget> {
               if (index == _messaggi.length && _botStaScrivendo) {
                 return const ChatTypingIndicator();
               }
-              return ChatMessageBubble(msg: _messaggi[index]);
+
+              final msg = _messaggi[index];
+
+              if (msg.isSystem) {
+                return _buildSystemSeparator(
+                  msg.testo,
+                  Theme.of(context).colorScheme,
+                );
+              }
+
+              return ChatMessageBubble(msg: msg);
             },
           ),
         ),
@@ -81,11 +89,35 @@ class _ChatWidgetState extends State<ChatWidget> {
   @override
   void didUpdateWidget(covariant ChatWidget oldWidget) {
     super.didUpdateWidget(oldWidget);
+
     if (widget.bookIds != oldWidget.bookIds) {
       if (widget.bookIds != null && widget.bookIds!.isNotEmpty) {
         _gestisciInizializzazioneContesto(widget.bookIds);
       } else {
         _chatService.resetContextSession();
+
+        setState(() {
+          _messaggi.add(
+            MessaggioChat(
+              testo: 'Fonti sbloccate',
+              isUtente: false,
+              timestamp: DateTime.now(),
+              isSystem: true,
+            ),
+          );
+
+          _messaggi.add(
+            MessaggioChat(
+              testo:
+                  'Nessuna fonte selezionata.\n'
+                  'Chat in modalità fonti sbloccate.',
+              isUtente: false,
+              timestamp: DateTime.now(),
+            ),
+          );
+        });
+
+        _scrollaInFondo();
       }
     }
   }
@@ -102,14 +134,25 @@ class _ChatWidgetState extends State<ChatWidget> {
   ) async {
     setState(() {
       _contextSessionInCorso = true;
+
       _messaggi.add(
         MessaggioChat(
-          testo: 'Hai selezionato "$nomeContesto". Sto recuperando le fonti...',
+          testo: 'Fonte attiva: $nomeContesto',
+          isUtente: false,
+          timestamp: DateTime.now(),
+          isSystem: true,
+        ),
+      );
+
+      _messaggi.add(
+        MessaggioChat(
+          testo: 'Sto recuperando le fonti...',
           isUtente: false,
           timestamp: DateTime.now(),
         ),
       );
     });
+
     _scrollaInFondo();
 
     final successo = await _chatService.creaContextSession(ids);
@@ -122,8 +165,8 @@ class _ChatWidgetState extends State<ChatWidget> {
       _messaggi.add(
         MessaggioChat(
           testo: successo
-              ? 'Fonti recuperate con successo! Ora risponderò '
-                    'basandomi esclusivamente su "$nomeContesto".'
+              ? 'Fonti recuperate con successo! '
+                    'Ora le mie risposte saranno limitate a questa selezione.'
               : 'Si è verificato un problema col recupero delle fonti, '
                     'ma proverò comunque ad aiutarti.',
           isUtente: false,
@@ -131,6 +174,7 @@ class _ChatWidgetState extends State<ChatWidget> {
         ),
       );
     });
+
     _scrollaInFondo();
   }
 
@@ -165,6 +209,7 @@ class _ChatWidgetState extends State<ChatWidget> {
       final giaPresente = _fonteTotali.any(
         (f) => f.workId == fonte.workId && fonte.workId.isNotEmpty,
       );
+
       if (!giaPresente) {
         _fonteTotali.add(fonte);
       }
@@ -182,6 +227,7 @@ class _ChatWidgetState extends State<ChatWidget> {
       _botStaScrivendo = true;
       _controller.clear();
     });
+
     _scrollaInFondo();
 
     try {
@@ -194,6 +240,7 @@ class _ChatWidgetState extends State<ChatWidget> {
       });
     } catch (e) {
       if (!mounted) return;
+
       setState(() {
         _messaggi.add(
           MessaggioChat(
@@ -231,7 +278,6 @@ class ChatHeaderBar extends StatelessWidget {
   final String? titoloFonte;
   final bool inCorso;
   final bool creata;
-  final int numeroFonti;
   final VoidCallback onMostraFonti;
 
   const ChatHeaderBar({
@@ -239,7 +285,6 @@ class ChatHeaderBar extends StatelessWidget {
     this.titoloFonte,
     required this.inCorso,
     required this.creata,
-    required this.numeroFonti,
     required this.onMostraFonti,
   });
 
@@ -249,7 +294,7 @@ class ChatHeaderBar extends StatelessWidget {
 
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.only(right:8, left: 16, top: 4, bottom: 4),
+      padding: const EdgeInsets.fromLTRB(16, 4, 8, 4),
       color: colorScheme.secondaryContainer,
       child: Row(
         children: [
@@ -268,7 +313,9 @@ class ChatHeaderBar extends StatelessWidget {
               size: 14,
               color: creata ? Colors.green : Colors.orange,
             ),
+
           const SizedBox(width: 6),
+
           Expanded(
             child: Text(
               titoloFonte != null ? 'Fonte: $titoloFonte' : 'Nessuna fonte',
@@ -279,8 +326,9 @@ class ChatHeaderBar extends StatelessWidget {
               ),
             ),
           ),
+
           const SizedBox(width: 12),
-          // Pulsante Fonti con contorno
+
           IconButton.outlined(
             padding: const EdgeInsets.all(8),
             constraints: const BoxConstraints(),
@@ -296,7 +344,7 @@ class ChatHeaderBar extends StatelessWidget {
             ),
             tooltip: 'Manoscritti consultati',
             onPressed: onMostraFonti,
-          )
+          ),
         ],
       ),
     );
@@ -327,7 +375,6 @@ class ChatInputArea extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.end,
         children: [
-          // Pulsante Fotocamera sopra l'area di input
           Padding(
             padding: const EdgeInsets.only(bottom: 8.0),
             child: IconButton.filledTonal(
@@ -340,6 +387,7 @@ class ChatInputArea extends StatelessWidget {
               ),
             ),
           ),
+
           Row(
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
@@ -400,6 +448,7 @@ class ChatTypingIndicator extends StatelessWidget {
             ),
             size: const Size(6, 12),
           ),
+
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
             decoration: BoxDecoration(
@@ -447,16 +496,15 @@ class ChatMessageBubble extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
     final isUtente = msg.isUtente;
+    final colorScheme = Theme.of(context).colorScheme;
+    final textColor = isUtente ? colorScheme.onPrimary : colorScheme.onSurface;
     final timeStr =
         '${msg.timestamp.hour.toString().padLeft(2, '0')}:'
         '${msg.timestamp.minute.toString().padLeft(2, '0')}';
-
     final bgColor = isUtente
         ? colorScheme.primary
         : colorScheme.surfaceContainerHighest;
-    final textColor = isUtente ? colorScheme.onPrimary : colorScheme.onSurface;
 
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
@@ -525,6 +573,7 @@ class ChatMessageBubble extends StatelessWidget {
                   ],
 
                   const SizedBox(height: 4),
+
                   Align(
                     alignment: Alignment.bottomRight,
                     child: Text(
@@ -583,7 +632,9 @@ class FontiBottomSheet extends StatelessWidget {
                     color: colorScheme.onPrimaryContainer,
                   ),
                 ),
+
                 const SizedBox(height: 4),
+
                 Text(
                   'Usati: ${fonteTotali.length}',
                   style: TextStyle(
@@ -596,6 +647,7 @@ class FontiBottomSheet extends StatelessWidget {
               ],
             ),
           ),
+
           Expanded(
             child: fonteTotali.isEmpty
                 ? Center(
@@ -628,6 +680,7 @@ class FontiBottomSheet extends StatelessWidget {
                                   fontSize: 14,
                                 ),
                               ),
+
                               if (fonte.author.isNotEmpty) ...[
                                 const SizedBox(height: 4),
                                 Text(
@@ -638,6 +691,7 @@ class FontiBottomSheet extends StatelessWidget {
                                   ),
                                 ),
                               ],
+
                               if (fonte.date.isNotEmpty) ...[
                                 const SizedBox(height: 2),
                                 Text(
@@ -659,6 +713,38 @@ class FontiBottomSheet extends StatelessWidget {
       ),
     );
   }
+}
+
+Widget _buildSystemSeparator(String testo, ColorScheme colorScheme) {
+  return Padding(
+    padding: const EdgeInsets.symmetric(vertical: 16),
+    child: Row(
+      children: [
+        Expanded(child: Divider(color: colorScheme.outlineVariant)),
+
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 8),
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+            decoration: BoxDecoration(
+              color: colorScheme.surfaceContainerHighest,
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Text(
+              testo,
+              style: TextStyle(
+                fontSize: 11,
+                color: colorScheme.onSurfaceVariant,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
+        ),
+
+        Expanded(child: Divider(color: colorScheme.outlineVariant)),
+      ],
+    ),
+  );
 }
 
 // --- PAINTER BUBBLE ---

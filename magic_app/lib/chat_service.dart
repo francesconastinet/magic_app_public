@@ -9,12 +9,14 @@ class MessaggioChat {
   final bool isUtente;
   final DateTime timestamp;
   final List<FonteChat> fonti;
+  final bool isSystem;
 
   MessaggioChat({
     required this.testo,
     required this.isUtente,
     required this.timestamp,
     this.fonti = const [],
+    this.isSystem = false,
   });
 }
 

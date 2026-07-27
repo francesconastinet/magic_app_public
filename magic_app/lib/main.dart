@@ -179,12 +179,6 @@ class _HomeScreenState extends State<HomeScreen> {
         description: 'Le opere più belle decorate con miniature e capilettera.',
         bookIds: ['003'],
       ),
-      CollectionV2Model(
-        id: 'coll_03',
-        name: 'Test - Collezione Vuota',
-        description: 'Per testare come si comporta la chat senza libri.',
-        bookIds: [],
-      ),
     ];
   }
 
@@ -223,6 +217,35 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
+  // --- PULSANTE RESET FONTI ---
+  Widget _buildResetButton(BuildContext context, ColorScheme colorScheme) {
+    if (_titoloFonteSelezionata == null) {
+      return const SizedBox.shrink();
+    }
+
+    return Padding(
+      padding: const EdgeInsets.only(top: 8.0),
+      child: TextButton.icon(
+        onPressed: () {
+          setState(() {
+            _titoloFonteSelezionata = null;
+            _idsFonteSelezionata = null;
+          });
+          Navigator.pop(context);
+        },
+        icon: const Icon(Icons.lock_open, size: 14),
+        label: const Text('Sblocca le fonti', style: TextStyle(fontSize: 12)),
+        style: TextButton.styleFrom(
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+          minimumSize: Size.zero,
+          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+          foregroundColor: colorScheme.primary,
+          backgroundColor: colorScheme.surface.withValues(alpha: 0.5),
+        ),
+      ),
+    );
+  }
+
   // --- BARRA DI RICERCA ---
   Widget _buildSearchBar(ColorScheme colorScheme) {
     return Padding(
@@ -230,7 +253,7 @@ class _HomeScreenState extends State<HomeScreen> {
       child: TextField(
         controller: _searchController,
         decoration: InputDecoration(
-          hintText: 'Cerca collezioni o manoscritti...',
+          hintText: 'Cerca una fonte...',
           hintStyle: TextStyle(
             color: colorScheme.onSurfaceVariant,
             fontSize: 14,
@@ -387,16 +410,25 @@ class _HomeScreenState extends State<HomeScreen> {
                 width: double.infinity,
                 padding: const EdgeInsets.all(16),
                 color: colorScheme.primaryContainer,
-                child: Text(
-                  'Fonti Disponibili',
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    color: colorScheme.onPrimaryContainer,
-                  ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Fonti Disponibili',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: colorScheme.onPrimaryContainer,
+                      ),
+                    ),
+
+                    _buildResetButton(context, colorScheme),
+                  ],
                 ),
               ),
+
               _buildSearchBar(colorScheme),
+
               // Liste scrollabili
               Expanded(
                 child: ListView(
