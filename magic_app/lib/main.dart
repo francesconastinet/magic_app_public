@@ -150,12 +150,42 @@ class _HomeScreenState extends State<HomeScreen> {
     });
   }
 
-  Future<List<CollectionV2Model>> _caricaCollezioni(BuildContext context) {
-    final service = PackageService(
-      storage: context.read<PackageStorage>(),
-      authService: context.read<AuthService>(),
-    );
-    return service.leggiCollezioniV2(AppConfig.packageId);
+  Future<List<CollectionV2Model>> _caricaCollezioni(
+    BuildContext context,
+  ) async {
+    // Codice di produzione
+    // final service = PackageService(
+    //   storage: context.read<PackageStorage>(),
+    //   authService: context.read<AuthService>(),
+    // );
+    // return service.leggiCollezioniV2(AppConfig.packageId);
+
+    // TODO: rimuovere dopo la demo
+    await Future.delayed(const Duration(milliseconds: 500));
+    return [
+      CollectionV2Model(
+        id: 'coll_01',
+        name: 'Percorso Medievale',
+        description:
+            'Una selezione di manoscritti risalenti al periodo medievale.',
+        bookIds: [
+          '001',
+          '002',
+        ], // Inserisci qui gli ID reali usati in OperaRepository
+      ),
+      CollectionV2Model(
+        id: 'coll_02',
+        name: 'Codici Miniati',
+        description: 'Le opere più belle decorate con miniature e capilettera.',
+        bookIds: ['003'],
+      ),
+      CollectionV2Model(
+        id: 'coll_03',
+        name: 'Test - Collezione Vuota',
+        description: 'Per testare come si comporta la chat senza libri.',
+        bookIds: [],
+      ),
+    ];
   }
 
   Future<void> _sincronizzaPacchettoInBackground() async {
@@ -246,9 +276,45 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
+  Widget _buildSezioneLibri(BuildContext context, ColorScheme colorScheme) {
+    final opere = OperaRepository.tutteLeOpere();
+
+    if (opere.isEmpty) return const SizedBox.shrink();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          child: Text(
+            'Tutti i Libri',
+            style: TextStyle(
+              fontWeight: FontWeight.bold,
+              color: colorScheme.primary,
+            ),
+          ),
+        ),
+        ...opere.map(
+          (opera) => ListTile(
+            leading: const Icon(Icons.menu_book),
+            title: Text(opera.titolo, style: const TextStyle(fontSize: 14)),
+            subtitle: Text(opera.autore, style: const TextStyle(fontSize: 12)),
+            onTap: () {
+              context.read<AppState>().selezionaOpera(opera);
+              Navigator.pop(context);
+              setState(() {
+                _titoloFonteSelezionata = opera.titolo;
+                _idsFonteSelezionata = [opera.id];
+              });
+            },
+          ),
+        ),
+      ],
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-    final opere = OperaRepository.tutteLeOpere();
     final colorScheme = Theme.of(context).colorScheme;
 
     return Scaffold(
@@ -276,40 +342,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   padding: EdgeInsets.zero,
                   children: [
                     _buildSezioneCollezioni(context, colorScheme),
-                    Padding(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 16,
-                        vertical: 8,
-                      ),
-                      child: Text(
-                        'Tutti i Libri',
-                        style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          color: colorScheme.primary,
-                        ),
-                      ),
-                    ),
-                    ...opere.map(
-                      (opera) => ListTile(
-                        leading: const Icon(Icons.menu_book),
-                        title: Text(
-                          opera.titolo,
-                          style: const TextStyle(fontSize: 14),
-                        ),
-                        subtitle: Text(
-                          opera.autore,
-                          style: const TextStyle(fontSize: 12),
-                        ),
-                        onTap: () {
-                          context.read<AppState>().selezionaOpera(opera);
-                          Navigator.pop(context);
-                          setState(() {
-                            _titoloFonteSelezionata = opera.titolo;
-                            _idsFonteSelezionata = [opera.id];
-                          });
-                        },
-                      ),
-                    ),
+                    _buildSezioneLibri(context, colorScheme),
                   ],
                 ),
               ),
@@ -323,6 +356,17 @@ class _HomeScreenState extends State<HomeScreen> {
         backgroundColor: colorScheme.primary,
         foregroundColor: colorScheme.onPrimary,
         centerTitle: true,
+        leading: Builder(
+          builder: (BuildContext context) {
+            return IconButton(
+              icon: const Icon(Icons.menu),
+              tooltip: 'Apri menu collezioni',
+              onPressed: () {
+                Scaffold.of(context).openDrawer();
+              },
+            );
+          },
+        ),
         title: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.center,

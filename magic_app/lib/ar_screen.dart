@@ -6,11 +6,11 @@ import 'main.dart';
 import 'media_service.dart';
 import 'models.dart';
 import 'chat_widget.dart';
-import 'widgets/audio_widget.dart';
-import 'widgets/image_dialog.dart';
-import 'widgets/pdf_dialog.dart';
-import 'widgets/text_dialog.dart';
-import 'widgets/video_dialog.dart';
+import 'ar_widgets/audio_widget.dart';
+import 'ar_widgets/image_dialog.dart';
+import 'ar_widgets/pdf_dialog.dart';
+import 'ar_widgets/text_dialog.dart';
+import 'ar_widgets/video_dialog.dart';
 
 // ==========================================
 // CONFIGURAZIONE LAYOUT
@@ -294,15 +294,19 @@ class ARCameraFeed extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final previewSize = controller.value.previewSize;
-    final fallbackWidth = layout.screenSize.width;
-    final fallbackHeight = layout.screenSize.height;
+    final double cameraWidth = previewSize != null
+        ? (layout.isLandscape ? previewSize.width : previewSize.height)
+        : layout.screenSize.width;
+    final double cameraHeight = previewSize != null
+        ? (layout.isLandscape ? previewSize.height : previewSize.width)
+        : layout.screenSize.height;
 
     return SizedBox.expand(
       child: FittedBox(
         fit: BoxFit.cover,
         child: SizedBox(
-          width: previewSize?.height ?? fallbackWidth,
-          height: previewSize?.width ?? fallbackHeight,
+          width: cameraWidth,
+          height: cameraHeight,
           child: CameraPreview(controller),
         ),
       ),

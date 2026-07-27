@@ -378,6 +378,7 @@ class ChatInputArea extends StatelessWidget {
             heroTag: 'chat_send',
             onPressed: isWriting ? null : onSend,
             backgroundColor: colorScheme.primary,
+            tooltip: 'Invia',
             child: Icon(Icons.send, color: colorScheme.onPrimary),
           ),
         ],
