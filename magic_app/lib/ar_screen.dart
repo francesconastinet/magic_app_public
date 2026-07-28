@@ -35,7 +35,7 @@ class ARLayout {
   // --- PANNELLO INFO OPERA ---
   Alignment get infoAlignment {
     if (isLandscape) {
-      return isTablet ? Alignment.topRight : Alignment.topLeft;
+      return Alignment.topRight;
     }
     return Alignment.topCenter;
   }
@@ -57,23 +57,23 @@ class ARLayout {
   double get infoPadding => isTablet ? 14.0 : 12.0;
 
   // --- PANNELLO BOLLE MULTIMEDIALI ---
-  double get bubblesTop {
-    if (isLandscape) {
-      return safePadding.top + (isTablet ? 170.0 : 16.0);
-    }
-    return safePadding.top + (isTablet ? 160.0 : 140.0);
-  }
-
+  double get bubblesTop => isLandscape
+      ? safePadding.top + (screenSize.width * 0.15)
+      : safePadding.top + (isTablet ? 160.0 : 110.0);
   double get bubblesPanelWidth =>
       isLandscape ? (isTablet ? 170.0 : 130.0) : (isTablet ? 85.0 : 60.0);
-  double get bubblesBottom => safePadding.bottom + (isTablet ? 120.0 : 100.0);
-  double get bubblesRight => safePadding.right + (isTablet ? 0.0 : 16.0);
-  double get bubblesSize => isTablet ? 60.0 : 56.0;
+  double get bubblesBottom =>
+      safePadding.bottom +
+      (isLandscape ? (isTablet ? 150.0 : 100.0) : (isTablet ? 120.0 : 100.0));
+  double get bubblesRight =>
+      safePadding.right +
+      (isLandscape ? (isTablet ? 0.0 : 16.0) : (isTablet ? 10.0 : 16.0));
+  double get bubblesSize => isTablet ? 52.0 : 48.0;
   double get bubblesIconSize => isTablet ? 32.0 : 24.0;
 
   // --- BOTTONE CHAT ---
-  double get chatBottom => safePadding.bottom;
-  double get chatRight => safePadding.right + (isTablet ? 12.0 : 16.0);
+  double get chatBottom => safePadding.bottom + (isLandscape ? 0.0 : 50.0);
+  double get chatRight => safePadding.right + (isTablet ? 20.0 : 16.0);
   double get chatSize => isTablet ? 60.0 : 56.0;
   double get chatIconSize => isTablet ? 32.0 : 24.0;
 
@@ -153,8 +153,13 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
   Widget build(BuildContext context) {
     final opera = context.watch<AppState>().operaSelezionata;
 
+    final isLandscape =
+        MediaQuery.orientationOf(context) == Orientation.landscape;
+
     return Scaffold(
-      appBar: AppBar(title: const Text('Realtà Aumentata')),
+      appBar: isLandscape
+          ? null
+          : AppBar(title: const Text('Realtà Aumentata')),
       body: _buildBody(opera),
     );
   }
