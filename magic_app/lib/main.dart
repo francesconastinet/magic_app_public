@@ -1,13 +1,15 @@
-import 'package:magic_app/models.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import 'package:camera/camera.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:model_viewer_plus/model_viewer_plus.dart';
 import 'app_config.dart';
+import 'chat_service.dart';
 import 'chat_widget.dart';
 import 'media_service.dart';
+import 'models.dart';
 import 'package_service.dart';
 import 'collection_screen.dart';
 import 'opera_repository.dart';
@@ -79,6 +81,9 @@ void main() {
         // login/logout, ed essendo un provider e' UNA SOLA istanza condivisa
         // in tutta l'app (niente piu' login ripetuti ad ogni download).
         ChangeNotifierProvider(create: (context) => AuthService()),
+
+        // NUOVO — ChatService globale
+        ChangeNotifierProvider(create: (context) => ChatService()),
 
         // Servizi di Logica
         // (Usano il Provider base perché non hanno uno stato che cambia)
@@ -472,12 +477,270 @@ class _HomeScreenState extends State<HomeScreen> {
                   ],
                 ),
               ),
+
+              const Divider(height: 1),
+
+              Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 8,
+                ),
+                child: Text(
+                  'Gestione',
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 12,
+                    color: colorScheme.onSurfaceVariant,
+                  ),
+                ),
+              ),
+
+              // PULSANTE CONDIVIDI CHAT
+              ListTile(
+                dense: true,
+                leading: Icon(
+                  Icons.mobile_screen_share,
+                  color: colorScheme.primary,
+                ),
+                title: const Text('Condividi questa Chat'),
+                onTap: () async {
+                  Navigator.pop(context);
+                  final chatService = context.read<ChatService>();
+
+                  showDialog(
+                    context: context,
+                    barrierDismissible: false,
+                    builder: (ctx) =>
+                        const Center(child: CircularProgressIndicator()),
+                  );
+
+                  final codice = await chatService.generaCodiceCondivisione();
+                  if (!context.mounted) return;
+                  Navigator.pop(context);
+
+                  if (codice != null) {
+                    showDialog(
+                      context: context,
+                      builder: (ctx) => AlertDialog(
+                        titlePadding: EdgeInsets.zero,
+                        clipBehavior: Clip.hardEdge,
+                        title: Container(
+                          color: colorScheme.primaryContainer,
+                          padding: const EdgeInsets.all(16),
+                          child: Row(
+                            children: [
+                              Icon(
+                                Icons.mobile_screen_share,
+                                color: colorScheme.onPrimaryContainer,
+                              ),
+                              const SizedBox(width: 12),
+                              Text(
+                                'Codice di Ripristino',
+                                style: TextStyle(
+                                  color: colorScheme.onPrimaryContainer,
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 18,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        content: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Padding(
+                              padding: EdgeInsets.only(top: 8.0, bottom: 16.0),
+                              child: Text(
+                                'Usa questo codice per continuare la '
+                                'conversazione su un altro dispositivo:',
+                              ),
+                            ),
+
+                            Container(
+                              padding: const EdgeInsets.only(
+                                left: 24,
+                                right: 8,
+                                top: 8,
+                                bottom: 8,
+                              ),
+                              decoration: BoxDecoration(
+                                color: colorScheme.surfaceContainerHighest,
+                                borderRadius: BorderRadius.circular(
+                                  16,
+                                ),
+                                border: Border.all(
+                                  color: colorScheme.outlineVariant,
+                                ),
+                              ),
+                              child: Row(
+                                mainAxisSize:
+                                    MainAxisSize.min,
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Text(
+                                    codice,
+                                    style: TextStyle(
+                                      fontSize: 28,
+                                      fontWeight: FontWeight.bold,
+                                      letterSpacing: 6,
+                                      color: colorScheme.onSurface,
+                                    ),
+                                  ),
+
+                                  const SizedBox(width: 8),
+
+                                  IconButton(
+                                    icon: const Icon(Icons.copy),
+                                    color: colorScheme.primary,
+                                    tooltip: 'Copia negli appunti',
+                                    onPressed: () async {
+                                      await Clipboard.setData(
+                                        ClipboardData(text: codice),
+                                      );
+                                      if (!ctx.mounted) return;
+
+                                      ScaffoldMessenger.of(ctx).showSnackBar(
+                                        const SnackBar(
+                                          content: Text(
+                                            'Codice copiato negli appunti!',
+                                          ),
+                                          duration: Duration(seconds: 2),
+                                        ),
+                                      );
+                                    },
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                        actions: [
+                          TextButton(
+                            onPressed: () => Navigator.pop(ctx),
+                            child: const Text('Chiudi'),
+                          ),
+                        ],
+                      ),
+                    );
+                  }
+                },
+              ),
+
+              // PULSANTE RIPRISTINA CHAT
+              ListTile(
+                dense: true,
+                leading: Icon(
+                  Icons.settings_backup_restore,
+                  color: colorScheme.primary,
+                ),
+                title: const Text('Ripristina Chat'),
+                onTap: () {
+                  Navigator.pop(context);
+                  final codeController = TextEditingController();
+
+                  showDialog(
+                    context: context,
+                    builder: (ctx) => AlertDialog(
+                      titlePadding: EdgeInsets.zero,
+                      clipBehavior: Clip.hardEdge,
+                      title: Container(
+                        color: colorScheme.primaryContainer,
+                        padding: const EdgeInsets.all(16),
+                        child: Row(
+                          children: [
+                            Icon(
+                              Icons.settings_backup_restore,
+                              color: colorScheme.onPrimaryContainer,
+                            ),
+
+                            const SizedBox(width: 12),
+
+                            Text(
+                              'Ripristina Chat',
+                              style: TextStyle(
+                                color: colorScheme.onPrimaryContainer,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 18,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      content: Padding(
+                        padding: const EdgeInsets.only(top: 8.0),
+                        child: TextField(
+                          controller: codeController,
+                          maxLength: 6,
+                          textCapitalization: TextCapitalization.characters,
+                          decoration: InputDecoration(
+                            labelText: 'Codice di 6 caratteri',
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            filled: true,
+                            fillColor: colorScheme.surfaceContainerHighest
+                                .withValues(alpha: 0.5),
+                          ),
+                        ),
+                      ),
+                      actions: [
+                        TextButton(
+                          onPressed: () => Navigator.pop(ctx),
+                          child: const Text('Annulla'),
+                        ),
+                        FilledButton(
+                          onPressed: () async {
+                            final codice = codeController.text.trim();
+                            if (codice.length != 6) return;
+
+                            Navigator.pop(ctx);
+
+                            showDialog(
+                              context: context,
+                              barrierDismissible: false,
+                              builder: (_) => const Center(
+                                child: CircularProgressIndicator(),
+                              ),
+                            );
+
+                            final successo = await context
+                                .read<ChatService>()
+                                .ripristinaSessione(codice);
+
+                            if (!context.mounted) return;
+                            Navigator.pop(context);
+
+                            if (successo) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text(
+                                    'Sessione ripristinata con successo!',
+                                  ),
+                                  duration: Duration(seconds: 2),
+                                ),
+                              );
+                            } else {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text('Codice invalido o scaduto'),
+                                  duration: Duration(seconds: 2),
+                                ),
+                              );
+                            }
+                          },
+                          child: const Text('Ripristina'),
+                        ),
+                      ],
+                    ),
+                  );
+                },
+              ),
             ],
           ),
         ),
       ),
 
-      // APP BAR (invariata)
+      // APP BAR
       appBar: AppBar(
         backgroundColor: colorScheme.primary,
         foregroundColor: colorScheme.onPrimary,
@@ -515,7 +778,7 @@ class _HomeScreenState extends State<HomeScreen> {
             : null,
       ),
 
-      // CHAT WIDGET (invariato)
+      // CHAT WIDGET
       body: ChatWidget(
         titoloFonteSelezionata: _titoloFonteSelezionata,
         bookIds: _idsFonteSelezionata,

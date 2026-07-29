@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:math' as math; // TODO: rimuovere dopo collegamento al backend
 import 'package:dio/dio.dart';
 import 'package:uuid/uuid.dart';
 import 'package:flutter/foundation.dart';
@@ -39,7 +40,6 @@ class FonteChat {
     required this.chunksCount,
   });
 
-  // Aggiornato per leggere used_books invece di sources
   factory FonteChat.fromJson(Map<String, dynamic> json) {
     return FonteChat(
       workId: json['work_id']?.toString() ?? '',
@@ -53,7 +53,7 @@ class FonteChat {
   }
 }
 
-class ChatService {
+class ChatService extends ChangeNotifier {
   final Dio _dio = Dio(
     BaseOptions(
       connectTimeout: const Duration(seconds: 30),
@@ -61,17 +61,79 @@ class ChatService {
     ),
   );
 
-  // Genera UUID per la sessione
-  final String _sessionId = const Uuid().v4();
-
-  // Codice collezione da AppConfig — aggiornare quando disponibile dataset Girolamini
+  // Codice collezione da AppConfig
+  // TODO: aggiornare quando disponibile dataset Girolamini
   final String _selectCode = AppConfig.chatSelectCode;
-
-  // Context session id per modalita' fonti bloccate — null = fonti libere
+  String _sessionId = const Uuid().v4();
   String? _contextSessionId;
+
+  List<MessaggioChat> messaggi = [];
+  List<FonteChat> fontiTotali = [];
+
+  // Mappa statica per simulare il database del server
+  // TODO: rimuovere dopo collegamento al backend
+  static final Map<String, Map<String, dynamic>> _mockDbSessioni = {};
 
   String get sessionId => _sessionId;
   String? get contextSessionId => _contextSessionId;
+
+  void aggiungiMessaggio(MessaggioChat msg) {
+    messaggi.add(msg);
+    notifyListeners();
+  }
+
+  void aggiornaFonti(List<FonteChat> nuoveFonti) {
+    for (final fonte in nuoveFonti) {
+      if (!fontiTotali.any(
+            (f) => f.workId == fonte.workId && fonte.workId.isNotEmpty,
+      )) {
+        fontiTotali.add(fonte);
+      }
+    }
+    notifyListeners();
+  }
+
+  // POST /chat/session/share
+  Future<String?> generaCodiceCondivisione() async {
+    if (messaggi.isEmpty) return null;
+
+    await Future.delayed(const Duration(milliseconds: 800)); // Latenza
+    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+    final rnd = math.Random();
+    final codice = String.fromCharCodes(
+      Iterable.generate(6, (_) => chars.codeUnitAt(rnd.nextInt(chars.length))),
+    );
+
+    _mockDbSessioni[codice] = {
+      'session_id': _sessionId,
+      'context_session_id': _contextSessionId,
+      'history': List<MessaggioChat>.from(messaggi),
+    };
+
+    return codice;
+  }
+
+  // POST /chat/session/restore
+  Future<bool> ripristinaSessione(String codice) async {
+    await Future.delayed(const Duration(milliseconds: 800));
+    final codiceUpper = codice.toUpperCase();
+
+    if (!_mockDbSessioni.containsKey(codiceUpper)) return false;
+
+    final dati = _mockDbSessioni[codiceUpper]!;
+
+    _sessionId = dati['session_id'];
+    _contextSessionId = dati['context_session_id'];
+    messaggi = List<MessaggioChat>.from(dati['history']);
+
+    fontiTotali.clear();
+    for (var msg in messaggi) {
+      aggiornaFonti(msg.fonti);
+    }
+
+    notifyListeners();
+    return true;
+  }
 
   // Crea una context session vincolata a uno o piu' libri
   // POST /chat/context-sessions con lista book_ids
@@ -98,7 +160,7 @@ class ChatService {
     }
   }
 
-  // Resetta la context session — torna a modalita' fonti libere
+  // Torna a fonti libere
   void resetContextSession() {
     _contextSessionId = null;
     debugPrint('[CHAT] Context session resettata — modalita\' fonti libere');
@@ -106,14 +168,12 @@ class ChatService {
 
   // Invia messaggio al server
   // POST /query con question, session_id, select_code
-  // Se _contextSessionId e' impostato → modalita' fonti bloccate su un libro
   Future<MessaggioChat> inviaMessaggio(String domanda) async {
     final body = {
       'question': domanda,
       'session_id': _sessionId,
       'select_code': _selectCode,
       'top_k': 10,
-      // Aggiunge context_session_id solo se in modalita' fonti bloccate
       if (_contextSessionId != null) 'context_session_id': _contextSessionId,
     };
 
@@ -129,21 +189,21 @@ class ChatService {
           ? jsonDecode(response.data)
           : response.data;
 
-      // Estrae testo risposta
       final testo =
           data['answer'] as String? ??
           data['text'] as String? ??
           data['response'] as String? ??
           'Nessuna risposta ricevuta';
 
-      // Legge used_books invece di sources (campo corretto per POST /query)
       final usedBooksRaw = data['used_books'] as List? ?? [];
+
       final fonti = usedBooksRaw
           .map((f) => FonteChat.fromJson(f as Map<String, dynamic>))
           .toList();
 
       debugPrint(
-        '[CHAT] Risposta ricevuta: ${testo.substring(0, testo.length.clamp(0, 50))}...',
+        '[CHAT] Risposta ricevuta: '
+        '${testo.substring(0, testo.length.clamp(0, 50))}...',
       );
       debugPrint('[CHAT] Libri usati: ${fonti.map((f) => f.title).join(', ')}');
 

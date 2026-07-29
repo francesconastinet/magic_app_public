@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:provider/provider.dart';
 import 'chat_service.dart';
 
 // ==========================================
@@ -17,11 +18,9 @@ class ChatWidget extends StatefulWidget {
 }
 
 class _ChatWidgetState extends State<ChatWidget> {
-  final ChatService _chatService = ChatService();
   final TextEditingController _controller = TextEditingController();
   final ScrollController _scrollController = ScrollController();
-  final List<MessaggioChat> _messaggi = [];
-  final List<FonteChat> _fonteTotali = [];
+
   bool _botStaScrivendo = false;
   bool _contextSessionCreata = false;
   bool _contextSessionInCorso = false;
@@ -29,8 +28,10 @@ class _ChatWidgetState extends State<ChatWidget> {
   @override
   void initState() {
     super.initState();
-    _aggiungiMessaggioBenvenuto();
-    _gestisciInizializzazioneContesto(widget.bookIds);
+    Future.microtask(() {
+      _aggiungiMessaggioBenvenuto();
+      _gestisciInizializzazioneContesto(widget.bookIds);
+    });
   }
 
   @override
@@ -43,26 +44,30 @@ class _ChatWidgetState extends State<ChatWidget> {
   // --- RENDERING ---
   @override
   Widget build(BuildContext context) {
+    final chatService = context.watch<ChatService>();
+    final messaggi = chatService.messaggi;
+
     return Column(
       children: [
         ChatHeaderBar(
           titoloFonte: widget.titoloFonteSelezionata,
           inCorso: _contextSessionInCorso,
           creata: _contextSessionCreata,
-          onMostraFonti: () => _mostraListaFonti(context),
+          onMostraFonti: () =>
+              _mostraListaFonti(context, chatService.fontiTotali),
         ),
 
         Expanded(
           child: ListView.builder(
             controller: _scrollController,
             padding: const EdgeInsets.all(16),
-            itemCount: _messaggi.length + (_botStaScrivendo ? 1 : 0),
+            itemCount: messaggi.length + (_botStaScrivendo ? 1 : 0),
             itemBuilder: (context, index) {
-              if (index == _messaggi.length && _botStaScrivendo) {
+              if (index == messaggi.length && _botStaScrivendo) {
                 return const ChatTypingIndicator();
               }
 
-              final msg = _messaggi[index];
+              final msg = messaggi[index];
 
               if (msg.isSystem) {
                 return _buildSystemSeparator(
@@ -79,7 +84,7 @@ class _ChatWidgetState extends State<ChatWidget> {
         ChatInputArea(
           controller: _controller,
           isWriting: _botStaScrivendo,
-          onSend: _invia,
+          onSend: _inviaMessaggio,
         ),
       ],
     );
@@ -91,31 +96,31 @@ class _ChatWidgetState extends State<ChatWidget> {
     super.didUpdateWidget(oldWidget);
 
     if (widget.bookIds != oldWidget.bookIds) {
+      final chatService = context.read<ChatService>();
+
       if (widget.bookIds != null && widget.bookIds!.isNotEmpty) {
         _gestisciInizializzazioneContesto(widget.bookIds);
       } else {
-        _chatService.resetContextSession();
+        chatService.resetContextSession();
 
-        setState(() {
-          _messaggi.add(
-            MessaggioChat(
-              testo: 'Fonti sbloccate',
-              isUtente: false,
-              timestamp: DateTime.now(),
-              isSystem: true,
-            ),
-          );
+        chatService.aggiungiMessaggio(
+          MessaggioChat(
+            testo: 'Fonti sbloccate',
+            isUtente: false,
+            timestamp: DateTime.now(),
+            isSystem: true,
+          ),
+        );
 
-          _messaggi.add(
-            MessaggioChat(
-              testo:
-                  'Nessuna fonte selezionata.\n'
-                  'Chat in modalità fonti sbloccate.',
-              isUtente: false,
-              timestamp: DateTime.now(),
-            ),
-          );
-        });
+        chatService.aggiungiMessaggio(
+          MessaggioChat(
+            testo:
+                'Nessuna fonte selezionata.\n'
+                'Chat in modalità fonti sbloccate.',
+            isUtente: false,
+            timestamp: DateTime.now(),
+          ),
+        );
 
         _scrollaInFondo();
       }
@@ -132,55 +137,59 @@ class _ChatWidgetState extends State<ChatWidget> {
     List<String> ids,
     String nomeContesto,
   ) async {
+    final chatService = context.read<ChatService>();
+
     setState(() {
       _contextSessionInCorso = true;
-
-      _messaggi.add(
-        MessaggioChat(
-          testo: 'Fonte attiva: $nomeContesto',
-          isUtente: false,
-          timestamp: DateTime.now(),
-          isSystem: true,
-        ),
-      );
-
-      _messaggi.add(
-        MessaggioChat(
-          testo: 'Sto recuperando le fonti...',
-          isUtente: false,
-          timestamp: DateTime.now(),
-        ),
-      );
     });
+
+    chatService.aggiungiMessaggio(
+      MessaggioChat(
+        testo: 'Fonte attiva: $nomeContesto',
+        isUtente: false,
+        timestamp: DateTime.now(),
+        isSystem: true,
+      ),
+    );
+
+    chatService.aggiungiMessaggio(
+      MessaggioChat(
+        testo: 'Sto recuperando le fonti...',
+        isUtente: false,
+        timestamp: DateTime.now(),
+      ),
+    );
 
     _scrollaInFondo();
 
-    final successo = await _chatService.creaContextSession(ids);
+    final successo = await chatService.creaContextSession(ids);
 
     if (!mounted) return;
 
     setState(() {
       _contextSessionCreata = successo;
       _contextSessionInCorso = false;
-      _messaggi.add(
-        MessaggioChat(
-          testo: successo
-              ? 'Fonti recuperate con successo! '
-                    'Ora le mie risposte saranno limitate a questa selezione.'
-              : 'Si è verificato un problema col recupero delle fonti, '
-                    'ma proverò comunque ad aiutarti.',
-          isUtente: false,
-          timestamp: DateTime.now(),
-        ),
-      );
     });
+
+    chatService.aggiungiMessaggio(
+      MessaggioChat(
+        testo: successo
+            ? 'Fonti recuperate con successo! Ora le mie risposte '
+                  'saranno limitate a questa selezione.'
+            : 'Si è verificato un problema col recupero delle fonti, '
+                  'ma proverò comunque ad aiutarti.',
+        isUtente: false,
+        timestamp: DateTime.now(),
+      ),
+    );
 
     _scrollaInFondo();
   }
 
   void _aggiungiMessaggioBenvenuto() {
-    setState(() {
-      _messaggi.add(
+    final chatService = context.read<ChatService>();
+    if (chatService.messaggi.isEmpty) {
+      chatService.aggiungiMessaggio(
         MessaggioChat(
           testo:
               'Ciao! Sono il tuo assistente virtuale per la '
@@ -189,7 +198,7 @@ class _ChatWidgetState extends State<ChatWidget> {
           timestamp: DateTime.now(),
         ),
       );
-    });
+    }
   }
 
   void _scrollaInFondo() {
@@ -204,54 +213,41 @@ class _ChatWidgetState extends State<ChatWidget> {
     });
   }
 
-  void _aggiornaFonti(List<FonteChat> nuoveFonti) {
-    for (final fonte in nuoveFonti) {
-      final giaPresente = _fonteTotali.any(
-        (f) => f.workId == fonte.workId && fonte.workId.isNotEmpty,
-      );
-
-      if (!giaPresente) {
-        _fonteTotali.add(fonte);
-      }
-    }
-  }
-
-  Future<void> _invia() async {
+  Future<void> _inviaMessaggio() async {
     final testo = _controller.text.trim();
     if (testo.isEmpty || _botStaScrivendo) return;
 
+    final chatService = context.read<ChatService>();
+
     setState(() {
-      _messaggi.add(
-        MessaggioChat(testo: testo, isUtente: true, timestamp: DateTime.now()),
-      );
       _botStaScrivendo = true;
       _controller.clear();
     });
 
+    chatService.aggiungiMessaggio(
+      MessaggioChat(testo: testo, isUtente: true, timestamp: DateTime.now()),
+    );
+
     _scrollaInFondo();
 
     try {
-      final risposta = await _chatService.inviaMessaggio(testo);
+      final risposta = await chatService.inviaMessaggio(testo);
       if (!mounted) return;
 
-      setState(() {
-        _messaggi.add(risposta);
-        _aggiornaFonti(risposta.fonti);
-      });
+      chatService.aggiungiMessaggio(risposta);
+      chatService.aggiornaFonti(risposta.fonti);
     } catch (e) {
       if (!mounted) return;
 
-      setState(() {
-        _messaggi.add(
-          MessaggioChat(
-            testo:
-                'Si è verificato un errore di comunicazione con il server. '
-                'Verifica la tua connessione e riprova.',
-            isUtente: false,
-            timestamp: DateTime.now(),
-          ),
-        );
-      });
+      chatService.aggiungiMessaggio(
+        MessaggioChat(
+          testo:
+              'Si è verificato un errore di comunicazione con il server. '
+              'Verifica la tua connessione e riprova.',
+          isUtente: false,
+          timestamp: DateTime.now(),
+        ),
+      );
     } finally {
       if (mounted) {
         setState(() => _botStaScrivendo = false);
@@ -260,11 +256,11 @@ class _ChatWidgetState extends State<ChatWidget> {
     }
   }
 
-  void _mostraListaFonti(BuildContext context) {
+  void _mostraListaFonti(BuildContext context, List<FonteChat> fonti) {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      builder: (ctx) => FontiBottomSheet(fonteTotali: _fonteTotali),
+      builder: (ctx) => FontiBottomSheet(fonteTotali: fonti),
     );
   }
 }
@@ -311,7 +307,7 @@ class ChatHeaderBar extends StatelessWidget {
             Icon(
               creata ? Icons.check : Icons.close,
               size: 14,
-              color: creata ? Colors.green : Colors.orange,
+              color: creata ? Colors.green : Colors.red,
             ),
 
           const SizedBox(width: 6),
@@ -715,6 +711,7 @@ class FontiBottomSheet extends StatelessWidget {
   }
 }
 
+// --- SEPARATORE MESSAGGI ---
 Widget _buildSystemSeparator(String testo, ColorScheme colorScheme) {
   return Padding(
     padding: const EdgeInsets.symmetric(vertical: 16),
