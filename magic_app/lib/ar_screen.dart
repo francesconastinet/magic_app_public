@@ -259,7 +259,6 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
 
     if (mounted) {
       setState(() => _cameraReady = true);
-      // TODO: colleagre al modello ML
       if (!_overlayVisibile) _mostraOverlay();
     }
   }
@@ -286,6 +285,7 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
 // ==========================================
 
 // --- FLUSSO VIDEO FOTOCAMERA ---
+// TODO: colleagre a RecognitionService
 class ARCameraFeed extends StatelessWidget {
   final CameraController controller;
   final ARLayout layout;
@@ -419,6 +419,7 @@ class AROperaInfoPanel extends StatelessWidget {
                     size: layout.infoIconSize,
                   ),
                 ),
+
                 Expanded(
                   child: Text(
                     opera.titolo,
@@ -434,10 +435,12 @@ class AROperaInfoPanel extends StatelessWidget {
                 ),
               ],
             ),
+
             const Padding(
               padding: EdgeInsets.symmetric(vertical: 6.0),
               child: Divider(color: Colors.white24, height: 1),
             ),
+
             Text(
               'Autore: ${opera.autore}',
               style: TextStyle(
@@ -447,7 +450,9 @@ class AROperaInfoPanel extends StatelessWidget {
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
             ),
+
             const SizedBox(height: 2),
+
             Text(
               'Anno: ${opera.anno}',
               style: TextStyle(
@@ -516,14 +521,19 @@ class ARMediaBubblesPanel extends StatelessWidget {
               children: [
                 if (videoList.isNotEmpty)
                   _buildBubble(context, Icons.videocam, 'Video', videoList),
+
                 if (audioList.isNotEmpty)
                   _buildBubble(context, Icons.audiotrack, 'Audio', audioList),
+
                 if (immaginiList.isNotEmpty)
                   _buildBubble(context, Icons.image, 'Immagini', immaginiList),
+
                 if (pdfList.isNotEmpty)
                   _buildBubble(context, Icons.picture_as_pdf, 'PDF', pdfList),
+
                 if (testoList.isNotEmpty)
                   _buildBubble(context, Icons.article, 'Testo', testoList),
+
                 if (linkList.isNotEmpty)
                   _buildBubble(context, Icons.link, 'Link', linkList),
               ],
@@ -595,7 +605,9 @@ class ARMediaBubblesPanel extends StatelessWidget {
                         fontWeight: FontWeight.bold,
                       ),
                     ),
+
                     const Spacer(),
+
                     Text(
                       '${mediaList.length} elementi',
                       style: const TextStyle(color: Colors.white54),
@@ -603,7 +615,9 @@ class ARMediaBubblesPanel extends StatelessWidget {
                   ],
                 ),
               ),
+
               const Divider(color: Colors.white24, height: 1),
+
               Flexible(
                 child: ListView.builder(
                   shrinkWrap: true,
@@ -811,7 +825,9 @@ class ARDebugMenu extends StatelessWidget {
                 'MENU DEBUG',
                 style: TextStyle(color: Colors.white70, fontSize: 11),
               ),
+
               const SizedBox(height: 10),
+
               _buildButton(
                 context: context,
                 color: Colors.cyan.shade800,
@@ -867,6 +883,7 @@ class ARDebugMenu extends StatelessWidget {
                   ],
                 ),
               ),
+
               const SizedBox(height: 8),
               _buildButton(
                 context: context,
@@ -900,6 +917,7 @@ class ARDebugMenu extends StatelessWidget {
                   ],
                 ),
               ),
+
               const SizedBox(height: 8),
               _buildButton(
                 context: context,
