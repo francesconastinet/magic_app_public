@@ -150,6 +150,9 @@ class _HomeScreenState extends State<HomeScreen> {
   final TextEditingController _searchController = TextEditingController();
   String _searchQuery = '';
 
+  // --- STATO MOCK LOGIN (Da rimuovere quando ci sarà il backend) ---
+  String? _mockLoggedUser;
+
   @override
   void initState() {
     super.initState();
@@ -168,8 +171,6 @@ class _HomeScreenState extends State<HomeScreen> {
   Future<List<CollectionV2Model>> _caricaCollezioni(
     BuildContext context,
   ) async {
-    // TODO: rimuovere il mock dopo la demo e usare il PackageService reale
-    await Future.delayed(const Duration(milliseconds: 500));
     return [
       CollectionV2Model(
         id: 'coll_01',
@@ -220,6 +221,133 @@ class _HomeScreenState extends State<HomeScreen> {
     } finally {
       if (mounted) setState(() => _syncInCorso = false);
     }
+  }
+
+  // --- DIALOG MOCK PER IL LOGIN ---
+  void _mostraDialogLogin() {
+    final colorScheme = Theme.of(context).colorScheme;
+    final userCtrl = TextEditingController();
+    final passCtrl = TextEditingController();
+    bool isLoading = false;
+
+    showDialog(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (context, setStateDialog) {
+          return AlertDialog(
+            titlePadding: EdgeInsets.zero,
+            clipBehavior: Clip.hardEdge,
+            title: Container(
+              color: colorScheme.primaryContainer,
+              padding: const EdgeInsets.all(16),
+              child: Row(
+                children: [
+                  Icon(Icons.login, color: colorScheme.onPrimaryContainer),
+                  const SizedBox(width: 12),
+                  Text(
+                    'Accedi',
+                    style: TextStyle(
+                      color: colorScheme.onPrimaryContainer,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 18,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            content: Padding(
+              padding: const EdgeInsets.only(top: 8.0),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    'Inserisci un nome utente e una password.',
+                    style: TextStyle(
+                      fontSize: 13,
+                      color: colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  TextField(
+                    controller: userCtrl,
+                    decoration: InputDecoration(
+                      labelText: 'Nome Utente',
+                      prefixIcon: const Icon(Icons.person_outline),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      filled: true,
+                      fillColor: colorScheme.surfaceContainerHighest.withValues(
+                        alpha: 0.5,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  TextField(
+                    controller: passCtrl,
+                    obscureText: true,
+                    decoration: InputDecoration(
+                      labelText: 'Password',
+                      prefixIcon: const Icon(Icons.lock_outline),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      filled: true,
+                      fillColor: colorScheme.surfaceContainerHighest.withValues(
+                        alpha: 0.5,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(ctx),
+                child: const Text('Annulla'),
+              ),
+              FilledButton(
+                onPressed: isLoading
+                    ? null
+                    : () async {
+                        final user = userCtrl.text.trim();
+                        if (user.isEmpty) return;
+
+                        setStateDialog(() => isLoading = true);
+                        if (!ctx.mounted) return;
+
+                        Navigator.pop(ctx);
+                        setState(() {
+                          _mockLoggedUser = user;
+                        });
+
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text(
+                              'Benvenuto, $_mockLoggedUser!',
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                            duration: const Duration(seconds: 2),
+                          ),
+                        );
+                      },
+                child: isLoading
+                    ? const SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: Colors.white,
+                        ),
+                      )
+                    : const Text('Accedi'),
+              ),
+            ],
+          );
+        },
+      ),
+    );
   }
 
   // --- PULSANTE RESET FONTI ---
@@ -300,7 +428,6 @@ class _HomeScreenState extends State<HomeScreen> {
 
         var collezioni = snapshot.data ?? [];
 
-        // Applica il filtro di ricerca
         if (_searchQuery.isNotEmpty) {
           final query = _searchQuery.toLowerCase();
           collezioni = collezioni
@@ -335,7 +462,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   style: const TextStyle(fontSize: 12, color: Colors.grey),
                 ),
                 onTap: () {
-                  Navigator.pop(context); // Chiude il drawer
+                  Navigator.pop(context);
                   setState(() {
                     _titoloFonteSelezionata = collection.name;
                     _idsFonteSelezionata = collection.bookIds;
@@ -354,7 +481,6 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget _buildSezioneLibri(BuildContext context, ColorScheme colorScheme) {
     var opere = OperaRepository.tutteLeOpere();
 
-    // Applica il filtro di ricerca (cerca nel titolo o nell'autore)
     if (_searchQuery.isNotEmpty) {
       final query = _searchQuery.toLowerCase();
       opere = opere
@@ -405,7 +531,6 @@ class _HomeScreenState extends State<HomeScreen> {
     final colorScheme = Theme.of(context).colorScheme;
 
     return Scaffold(
-      // MENU LATERALE
       drawer: Drawer(
         child: SafeArea(
           child: Column(
@@ -426,7 +551,6 @@ class _HomeScreenState extends State<HomeScreen> {
                         color: colorScheme.onPrimaryContainer,
                       ),
                     ),
-
                     _buildResetButton(context, colorScheme),
                   ],
                 ),
@@ -434,7 +558,6 @@ class _HomeScreenState extends State<HomeScreen> {
 
               _buildSearchBar(colorScheme),
 
-              // Liste scrollabili
               Expanded(
                 child: ListView(
                   padding: EdgeInsets.zero,
@@ -442,7 +565,6 @@ class _HomeScreenState extends State<HomeScreen> {
                     _buildSezioneCollezioni(context, colorScheme),
                     _buildSezioneLibri(context, colorScheme),
 
-                    // Messaggio di feedback se la ricerca non produce risultati
                     if (_searchQuery.isNotEmpty)
                       FutureBuilder<List<CollectionV2Model>>(
                         future: _collezioniFuture,
@@ -480,13 +602,16 @@ class _HomeScreenState extends State<HomeScreen> {
 
               const Divider(height: 1),
 
+              // ==========================================
+              // SEZIONE GESTIONE E SALVATAGGI
+              // ==========================================
               Padding(
                 padding: const EdgeInsets.symmetric(
                   horizontal: 16,
                   vertical: 8,
                 ),
                 child: Text(
-                  'Gestione',
+                  'Chat',
                   style: TextStyle(
                     fontWeight: FontWeight.bold,
                     fontSize: 12,
@@ -495,14 +620,13 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
               ),
 
-              // PULSANTE CONDIVIDI CHAT
               ListTile(
                 dense: true,
                 leading: Icon(
                   Icons.mobile_screen_share,
                   color: colorScheme.primary,
                 ),
-                title: const Text('Condividi questa Chat'),
+                title: const Text('Condividi Chat'),
                 onTap: () async {
                   Navigator.pop(context);
                   final chatService = context.read<ChatService>();
@@ -565,16 +689,13 @@ class _HomeScreenState extends State<HomeScreen> {
                               ),
                               decoration: BoxDecoration(
                                 color: colorScheme.surfaceContainerHighest,
-                                borderRadius: BorderRadius.circular(
-                                  16,
-                                ),
+                                borderRadius: BorderRadius.circular(16),
                                 border: Border.all(
                                   color: colorScheme.outlineVariant,
                                 ),
                               ),
                               child: Row(
-                                mainAxisSize:
-                                    MainAxisSize.min,
+                                mainAxisSize: MainAxisSize.min,
                                 mainAxisAlignment: MainAxisAlignment.center,
                                 children: [
                                   Text(
@@ -586,9 +707,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                       color: colorScheme.onSurface,
                                     ),
                                   ),
-
                                   const SizedBox(width: 8),
-
                                   IconButton(
                                     icon: const Icon(Icons.copy),
                                     color: colorScheme.primary,
@@ -598,7 +717,6 @@ class _HomeScreenState extends State<HomeScreen> {
                                         ClipboardData(text: codice),
                                       );
                                       if (!ctx.mounted) return;
-
                                       ScaffoldMessenger.of(ctx).showSnackBar(
                                         const SnackBar(
                                           content: Text(
@@ -626,7 +744,6 @@ class _HomeScreenState extends State<HomeScreen> {
                 },
               ),
 
-              // PULSANTE RIPRISTINA CHAT
               ListTile(
                 dense: true,
                 leading: Icon(
@@ -652,9 +769,7 @@ class _HomeScreenState extends State<HomeScreen> {
                               Icons.settings_backup_restore,
                               color: colorScheme.onPrimaryContainer,
                             ),
-
                             const SizedBox(width: 12),
-
                             Text(
                               'Ripristina Chat',
                               style: TextStyle(
@@ -668,19 +783,29 @@ class _HomeScreenState extends State<HomeScreen> {
                       ),
                       content: Padding(
                         padding: const EdgeInsets.only(top: 8.0),
-                        child: TextField(
-                          controller: codeController,
-                          maxLength: 6,
-                          textCapitalization: TextCapitalization.characters,
-                          decoration: InputDecoration(
-                            labelText: 'Codice di 6 caratteri',
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(12),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text(
+                              'Usa un codice per continuare una conversazione.',
                             ),
-                            filled: true,
-                            fillColor: colorScheme.surfaceContainerHighest
-                                .withValues(alpha: 0.5),
-                          ),
+                            const SizedBox(height: 16),
+                            TextField(
+                              controller: codeController,
+                              maxLength: 6,
+                              textCapitalization: TextCapitalization.characters,
+                              decoration: InputDecoration(
+                                labelText: 'Codice di 6 caratteri',
+                                border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                filled: true,
+                                fillColor: colorScheme.surfaceContainerHighest
+                                    .withValues(alpha: 0.5),
+                              ),
+                            ),
+                          ],
                         ),
                       ),
                       actions: [
@@ -694,7 +819,6 @@ class _HomeScreenState extends State<HomeScreen> {
                             if (codice.length != 6) return;
 
                             Navigator.pop(ctx);
-
                             showDialog(
                               context: context,
                               barrierDismissible: false,
@@ -735,6 +859,81 @@ class _HomeScreenState extends State<HomeScreen> {
                   );
                 },
               ),
+
+              const Divider(height: 1),
+
+              // ==========================================
+              // NUOVA SEZIONE UTENTE (Mock)
+              // ==========================================
+              Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 8,
+                ),
+                child: Text(
+                  'Profilo',
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 12,
+                    color: colorScheme.onSurfaceVariant,
+                  ),
+                ),
+              ),
+
+              if (_mockLoggedUser != null)
+                Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 8,
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Flexible(
+                        child: Chip(
+                          avatar: Icon(
+                            Icons.person,
+                            color: colorScheme.onPrimaryContainer,
+                          ),
+                          label: Text(
+                            _mockLoggedUser!,
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              color: colorScheme.onPrimaryContainer,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          backgroundColor: colorScheme.primaryContainer,
+                          side: BorderSide.none,
+                        ),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.logout),
+                        color: colorScheme.error,
+                        tooltip: 'Esci',
+                        onPressed: () {
+                          Navigator.pop(context);
+                          setState(() => _mockLoggedUser = null);
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('Logout effettuato')),
+                          );
+                        },
+                      ),
+                    ],
+                  ),
+                )
+              else
+                ListTile(
+                  dense: true,
+                  leading: Icon(Icons.login, color: colorScheme.primary),
+                  title: const Text('Accedi / Registrati'),
+                  onTap: () {
+                    Navigator.pop(context); // Chiude il drawer
+                    _mostraDialogLogin(); // Apre il popup di mock
+                  },
+                ),
+              const SizedBox(height: 8),
             ],
           ),
         ),

@@ -129,7 +129,10 @@ class _ChatWidgetState extends State<ChatWidget> {
 
   void _gestisciInizializzazioneContesto(List<String>? ids) {
     if (ids != null && ids.isNotEmpty) {
-      _inizializzaContextSession(ids, widget.titoloFonteSelezionata ?? 'Libro');
+      _inizializzaContextSession(
+        ids,
+        widget.titoloFonteSelezionata ?? 'Manoscritto',
+      );
     }
   }
 
@@ -145,7 +148,7 @@ class _ChatWidgetState extends State<ChatWidget> {
 
     chatService.aggiungiMessaggio(
       MessaggioChat(
-        testo: 'Fonte attiva: $nomeContesto',
+        testo: 'Nuova fonte: $nomeContesto',
         isUtente: false,
         timestamp: DateTime.now(),
         isSystem: true,
@@ -305,9 +308,9 @@ class ChatHeaderBar extends StatelessWidget {
             )
           else
             Icon(
-              creata ? Icons.check : Icons.close,
+              creata ? Icons.check_circle : Icons.cancel,
               size: 14,
-              color: creata ? Colors.green : Colors.red,
+              color: Colors.orange,
             ),
 
           const SizedBox(width: 6),
@@ -544,31 +547,31 @@ class ChatMessageBubble extends StatelessWidget {
                     style: TextStyle(color: textColor, fontSize: 14),
                   ),
 
-                  if (!isUtente && msg.fonti.isNotEmpty) ...[
-                    const SizedBox(height: 6),
-                    Text(
-                      'Manoscritti consultati:',
-                      style: TextStyle(
-                        fontSize: 11,
-                        color: colorScheme.onSurfaceVariant,
-                        fontStyle: FontStyle.italic,
-                      ),
-                    ),
-                    ...msg.fonti.map(
-                      (fonte) => Padding(
-                        padding: const EdgeInsets.only(top: 2),
-                        child: Text(
-                          '• ${fonte.title.isNotEmpty ? fonte.title : fonte.identifier}',
-                          style: TextStyle(
-                            fontSize: 11,
-                            color: colorScheme.primary,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
-
-                  const SizedBox(height: 4),
+                  // if (!isUtente && msg.fonti.isNotEmpty) ...[
+                  //   const SizedBox(height: 6),
+                  //   Text(
+                  //     'Manoscritti consultati:',
+                  //     style: TextStyle(
+                  //       fontSize: 11,
+                  //       color: colorScheme.onSurfaceVariant,
+                  //       fontStyle: FontStyle.italic,
+                  //     ),
+                  //   ),
+                  //   ...msg.fonti.map(
+                  //     (fonte) => Padding(
+                  //       padding: const EdgeInsets.only(top: 2),
+                  //       child: Text(
+                  //         '• ${fonte.title.isNotEmpty ? fonte.title : fonte.identifier}',
+                  //         style: TextStyle(
+                  //           fontSize: 11,
+                  //           color: colorScheme.primary,
+                  //         ),
+                  //       ),
+                  //     ),
+                  //   ),
+                  // ],
+                  //
+                  // const SizedBox(height: 4),
 
                   Align(
                     alignment: Alignment.bottomRight,
@@ -650,7 +653,7 @@ class FontiBottomSheet extends StatelessWidget {
                     child: Padding(
                       padding: const EdgeInsets.all(24),
                       child: Text(
-                        'Fai una domanda per vedere\ni manoscritti consultati.',
+                        'Fai una domanda per vedere i manoscritti consultati.',
                         textAlign: TextAlign.center,
                         style: TextStyle(color: colorScheme.onSurfaceVariant),
                       ),

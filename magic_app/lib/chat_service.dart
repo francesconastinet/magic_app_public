@@ -1,5 +1,5 @@
 import 'dart:convert';
-import 'dart:math' as math; // TODO: rimuovere dopo collegamento al backend
+import 'dart:math' as math; // TODO: rimuovere quando disponibile api
 import 'package:dio/dio.dart';
 import 'package:uuid/uuid.dart';
 import 'package:flutter/foundation.dart';
@@ -61,8 +61,6 @@ class ChatService extends ChangeNotifier {
     ),
   );
 
-  // Codice collezione da AppConfig
-  // TODO: aggiornare quando disponibile dataset Girolamini
   final String _selectCode = AppConfig.chatSelectCode;
   String _sessionId = const Uuid().v4();
   String? _contextSessionId;
@@ -71,7 +69,7 @@ class ChatService extends ChangeNotifier {
   List<FonteChat> fontiTotali = [];
 
   // Mappa statica per simulare il database del server
-  // TODO: rimuovere dopo collegamento al backend
+  // TODO: rimuovere quando disponibile api
   static final Map<String, Map<String, dynamic>> _mockDbSessioni = {};
 
   String get sessionId => _sessionId;
@@ -94,10 +92,10 @@ class ChatService extends ChangeNotifier {
   }
 
   // POST /chat/session/share
+  // TODO: modificare quando disponibile api
   Future<String?> generaCodiceCondivisione() async {
     if (messaggi.isEmpty) return null;
 
-    await Future.delayed(const Duration(milliseconds: 800)); // Latenza
     const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
     final rnd = math.Random();
     final codice = String.fromCharCodes(
@@ -114,8 +112,8 @@ class ChatService extends ChangeNotifier {
   }
 
   // POST /chat/session/restore
+  // TODO: modificare quando disponibile api
   Future<bool> ripristinaSessione(String codice) async {
-    await Future.delayed(const Duration(milliseconds: 800));
     final codiceUpper = codice.toUpperCase();
 
     if (!_mockDbSessioni.containsKey(codiceUpper)) return false;
@@ -155,7 +153,10 @@ class ChatService extends ChangeNotifier {
       debugPrint('[CHAT] Context session creata: $_contextSessionId');
       return _contextSessionId != null;
     } on DioException catch (e) {
-      debugPrint('[CHAT] Errore context session: ${e.message}');
+      debugPrint('[CHAT] Errore di rete context session: ${e.message ?? e}');
+      return false;
+    } catch (e, stack) {
+      debugPrint('[CHAT] Errore generico context session: $e\n$stack');
       return false;
     }
   }
@@ -163,7 +164,7 @@ class ChatService extends ChangeNotifier {
   // Torna a fonti libere
   void resetContextSession() {
     _contextSessionId = null;
-    debugPrint('[CHAT] Context session resettata — modalita\' fonti libere');
+    debugPrint('[CHAT] Context session resettata — modalità fonti libere');
   }
 
   // Invia messaggio al server
@@ -214,8 +215,11 @@ class ChatService extends ChangeNotifier {
         fonti: fonti,
       );
     } on DioException catch (e) {
-      debugPrint('[CHAT] Errore: ${e.message}');
-      throw Exception('Errore comunicazione chat: ${e.message}');
+      debugPrint('[CHAT] Errore di rete invio messaggio: ${e.message ?? e}');
+      throw Exception('Errore di connessione col server.');
+    } catch (e, stack) {
+      debugPrint('[CHAT] Errore parsing dati invio messaggio: $e\n$stack');
+      throw Exception('Errore imprevisto nella lettura della risposta.');
     }
   }
 
@@ -230,7 +234,10 @@ class ChatService extends ChangeNotifier {
           ? jsonDecode(response.data)
           : response.data;
     } on DioException catch (e) {
-      debugPrint('[CHAT] Errore dettagli libro: ${e.message}');
+      debugPrint('[CHAT] Errore rete dettagli libro: ${e.message ?? e}');
+      return null;
+    } catch (e, stack) {
+      debugPrint('[CHAT] Errore parsing JSON dettagli libro: $e\n$stack');
       return null;
     }
   }
