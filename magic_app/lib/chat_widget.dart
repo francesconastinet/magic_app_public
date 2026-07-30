@@ -4,7 +4,7 @@ import 'package:provider/provider.dart';
 import 'chat_service.dart';
 
 // ==========================================
-// SCHERMATA WIDGET
+// SCHERMATA
 // ==========================================
 
 class ChatWidget extends StatefulWidget {
@@ -463,7 +463,7 @@ class ChatTypingIndicator extends StatelessWidget {
               mainAxisSize: MainAxisSize.min,
               children: [
                 SizedBox(
-                  width: 40,
+                  width: 20,
                   height: 20,
                   child: CircularProgressIndicator(
                     strokeWidth: 2,
@@ -546,32 +546,6 @@ class ChatMessageBubble extends StatelessWidget {
                     msg.testo,
                     style: TextStyle(color: textColor, fontSize: 14),
                   ),
-
-                  // if (!isUtente && msg.fonti.isNotEmpty) ...[
-                  //   const SizedBox(height: 6),
-                  //   Text(
-                  //     'Manoscritti consultati:',
-                  //     style: TextStyle(
-                  //       fontSize: 11,
-                  //       color: colorScheme.onSurfaceVariant,
-                  //       fontStyle: FontStyle.italic,
-                  //     ),
-                  //   ),
-                  //   ...msg.fonti.map(
-                  //     (fonte) => Padding(
-                  //       padding: const EdgeInsets.only(top: 2),
-                  //       child: Text(
-                  //         '• ${fonte.title.isNotEmpty ? fonte.title : fonte.identifier}',
-                  //         style: TextStyle(
-                  //           fontSize: 11,
-                  //           color: colorScheme.primary,
-                  //         ),
-                  //       ),
-                  //     ),
-                  //   ),
-                  // ],
-                  //
-                  // const SizedBox(height: 4),
 
                   Align(
                     alignment: Alignment.bottomRight,

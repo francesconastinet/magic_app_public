@@ -8,7 +8,7 @@ import '../app_config.dart';
 import '../package_storage.dart';
 
 // ==========================================
-// SCHERMATA WIDGET
+// SCHERMATA
 // ==========================================
 
 class PdfDialog extends StatefulWidget {

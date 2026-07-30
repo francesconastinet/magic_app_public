@@ -5,7 +5,7 @@ import '../app_config.dart';
 import '../package_storage.dart';
 
 // ==========================================
-// SCHERMATA WIDGET
+// SCHERMATA
 // ==========================================
 
 class AudioWidget extends StatefulWidget {
@@ -117,85 +117,7 @@ class _AudioWidgetState extends State<AudioWidget> {
 // WIDGET
 // ==========================================
 
-// *** RIMOSSO ***
-// --- PLAYER MINIMIZZATO ---
-// class MiniAudioPlayer extends StatelessWidget {
-//   final String titolo;
-//   final bool isPlaying;
-//   final VoidCallback onTogglePlay;
-//   final VoidCallback onExpand;
-//   final VoidCallback onClose;
-//
-//   const MiniAudioPlayer({
-//     super.key,
-//     required this.titolo,
-//     required this.isPlaying,
-//     required this.onTogglePlay,
-//     required this.onExpand,
-//     required this.onClose,
-//   });
-//
-//   @override
-//   Widget build(BuildContext context) {
-//     return Positioned(
-//       top: 124,
-//       left: 60,
-//       right: 60,
-//       child: Card(
-//         color: Colors.black.withValues(alpha: 0.75),
-//         shape: RoundedRectangleBorder(
-//           borderRadius: BorderRadius.circular(12),
-//         ),
-//         elevation: 6,
-//         child: Padding(
-//           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-//           child: Row(
-//             children: [
-//               const Icon(Icons.audiotrack, color: Colors.blueAccent),
-//               const SizedBox(width: 8),
-//               Expanded(
-//                 child: Text(
-//                   titolo,
-//                   style: const TextStyle(
-//                     color: Colors.white,
-//                     fontWeight: FontWeight.bold,
-//                   ),
-//                   maxLines: 1,
-//                   overflow: TextOverflow.ellipsis,
-//                 ),
-//               ),
-//               IconButton(
-//                 icon: Icon(
-//                   isPlaying ? Icons.pause : Icons.play_arrow,
-//                   color: Colors.white,
-//                 ),
-//                 onPressed: onTogglePlay,
-//               ),
-//               IconButton(
-//                 icon: const Icon(
-//                   Icons.open_in_full,
-//                   color: Colors.white,
-//                   size: 20,
-//                 ),
-//                 onPressed: onExpand,
-//               ),
-//               IconButton(
-//                 icon: const Icon(
-//                   Icons.close,
-//                   color: Colors.redAccent,
-//                   size: 20,
-//                 ),
-//                 onPressed: onClose,
-//               ),
-//             ],
-//           ),
-//         ),
-//       ),
-//     );
-//   }
-// }
-
-// --- PLAYER ESPANSO ---
+// --- PLAYER ---
 class ExpandedAudioPlayer extends StatelessWidget {
   final String titolo;
   final bool isPlaying;

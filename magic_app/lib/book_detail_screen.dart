@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
+import 'app_state.dart';
 import 'models.dart';
-import 'main.dart';
 import 'media_service.dart';
 import 'chat_widget.dart';
 import 'audio_widget_book.dart';

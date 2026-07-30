@@ -6,7 +6,7 @@ import '../package_storage.dart';
 import '../models.dart';
 
 // ==========================================
-// SCHERMATA WIDGET
+// SCHERMATA
 // ==========================================
 
 class ImageDialog extends StatefulWidget {

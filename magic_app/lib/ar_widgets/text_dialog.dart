@@ -5,7 +5,7 @@ import '../package_storage.dart';
 import '../app_config.dart';
 
 // ==========================================
-// SCHERMATA DIALOG
+// SCHERMATA
 // ==========================================
 
 class TextDialog extends StatelessWidget {

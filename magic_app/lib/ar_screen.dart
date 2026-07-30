@@ -2,10 +2,10 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:camera/camera.dart';
 import 'package:provider/provider.dart';
-import 'main.dart';
+import 'app_state.dart';
+import 'chat_screen.dart';
 import 'media_service.dart';
 import 'models.dart';
-import 'chat_widget.dart';
 import 'ar_widgets/audio_widget.dart';
 import 'ar_widgets/image_dialog.dart';
 import 'ar_widgets/pdf_dialog.dart';
@@ -91,7 +91,7 @@ class ARLayout {
 }
 
 // ==========================================
-// SCHERMATA PRINCIPALE
+// SCHERMATA
 // ==========================================
 
 class ARScreen extends StatefulWidget {
@@ -730,12 +730,9 @@ class ARChatButton extends StatelessWidget {
                 Navigator.push(
                   context,
                   MaterialPageRoute(
-                    builder: (_) => Scaffold(
-                      appBar: AppBar(title: Text('Chat')),
-                      body: ChatWidget(
-                        titoloFonteSelezionata: opera.titolo,
-                        bookIds: [opera.id],
-                      ),
+                    builder: (_) => ChatScreen(
+                      titoloFonteIniziale: opera.titolo,
+                      idsFonteIniziale: [opera.id],
                     ),
                   ),
                 );
