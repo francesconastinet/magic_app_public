@@ -2,12 +2,6 @@
 // Duplicare il file, rinominare in app_config.dart e inserire i valori reali
 
 class AppConfig {
-  // URL manifest (GitHub Gist) - Corso 1
-  static const String manifestUrl = 'INSERIRE_MANIFEST_URL';
-
-  // URL pacchetto ZIP (GitHub Releases) - Corso 1
-  static const String packageUrl = 'INSERIRE_PACKAGE_URL';
-
   // ID pacchetto
   static const String packageId = 'INSERIRE_PACKAGE_ID';
 
