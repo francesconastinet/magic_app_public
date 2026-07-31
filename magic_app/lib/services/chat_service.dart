@@ -3,7 +3,7 @@ import 'dart:math' as math; // TODO: rimuovere quando disponibile api
 import 'package:dio/dio.dart';
 import 'package:uuid/uuid.dart';
 import 'package:flutter/foundation.dart';
-import 'app_config.dart';
+import '../app_config.dart';
 
 class MessaggioChat {
   final String testo;
@@ -83,7 +83,7 @@ class ChatService extends ChangeNotifier {
   void aggiornaFonti(List<FonteChat> nuoveFonti) {
     for (final fonte in nuoveFonti) {
       if (!fontiTotali.any(
-            (f) => f.workId == fonte.workId && fonte.workId.isNotEmpty,
+        (f) => f.workId == fonte.workId && fonte.workId.isNotEmpty,
       )) {
         fontiTotali.add(fonte);
       }

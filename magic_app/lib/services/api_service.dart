@@ -1,7 +1,7 @@
 import 'dart:convert';
 import 'package:dio/dio.dart';
-import 'models.dart';
-import 'app_config.dart';
+import '../models.dart';
+import '../app_config.dart';
 
 class ApiService {
   // URL manifest da AppConfig — non hardcodato

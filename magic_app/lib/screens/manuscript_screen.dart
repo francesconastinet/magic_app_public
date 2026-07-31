@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package_service.dart';
-import 'package_storage.dart';
-import 'auth_service.dart';
-import 'models.dart';
+import '../services/package_service.dart';
+import '../services/package_storage.dart';
+import '../services/auth_service.dart';
+import '../models.dart';
 import 'book_detail_screen.dart';
 
 class ManuscriptScreen extends StatelessWidget {

@@ -1,16 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
-import 'chat_screen.dart';
-import 'camera_screen.dart';
-import 'collection_screen.dart';
-import 'ar_screen.dart';
-import 'dettaglio_screen.dart';
+import 'screens/chat_screen.dart';
+import 'screens/camera_screen.dart';
+import 'screens/collection_screen.dart';
+import 'screens/ar_screen.dart';
+import 'screens/dettaglio_screen.dart';
 import 'app_state.dart';
-import 'chat_service.dart';
-import 'auth_service.dart';
-import 'package_storage.dart';
-import 'media_service.dart';
+import 'services/chat_service.dart';
+import 'services/auth_service.dart';
+import 'services/package_storage.dart';
+import 'services/media_service.dart';
 
 // --- ROUTER ---
 final router = GoRouter(

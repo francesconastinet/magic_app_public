@@ -1,7 +1,7 @@
 import 'dart:convert';
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
-import 'app_config.dart';
+import '../app_config.dart';
 
 // NUOVO — extends ChangeNotifier per diventare un ChangeNotifierProvider
 // i widget potranno ascoltare isLoggato/accessToken

@@ -3,9 +3,9 @@ import 'package:camera/camera.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import 'package:permission_handler/permission_handler.dart';
-import 'app_state.dart';
-import 'recognition_service.dart';
-import 'opera_repository.dart';
+import '../app_state.dart';
+import '../services/recognition_service.dart';
+import '../opera_repository.dart';
 
 class CameraScreen extends StatefulWidget {
   const CameraScreen({super.key});

@@ -5,7 +5,7 @@ import 'package_storage.dart';
 import 'package:flutter/foundation.dart';
 import 'download_service.dart';
 import 'update_service.dart';
-import 'models.dart';
+import '../models.dart';
 import 'auth_service.dart';
 
 // Risultato della sincronizzazione automatica in background.

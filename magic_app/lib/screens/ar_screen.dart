@@ -2,15 +2,15 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:camera/camera.dart';
 import 'package:provider/provider.dart';
-import 'app_state.dart';
+import '../app_state.dart';
 import 'chat_screen.dart';
-import 'media_service.dart';
-import 'models.dart';
-import 'ar_widgets/audio_widget.dart';
-import 'ar_widgets/image_dialog.dart';
-import 'ar_widgets/pdf_dialog.dart';
-import 'ar_widgets/text_dialog.dart';
-import 'ar_widgets/video_dialog.dart';
+import '../services/media_service.dart';
+import '../models.dart';
+import '../widgets/ar/audio_widget.dart';
+import '../widgets/ar/image_dialog.dart';
+import '../widgets/ar/pdf_dialog.dart';
+import '../widgets/ar/text_dialog.dart';
+import '../widgets/ar/video_dialog.dart';
 
 // ==========================================
 // CONFIGURAZIONE LAYOUT

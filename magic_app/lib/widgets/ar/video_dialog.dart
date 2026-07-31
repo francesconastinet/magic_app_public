@@ -3,8 +3,8 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:video_player/video_player.dart';
 import 'package:provider/provider.dart';
-import '../package_storage.dart';
-import '../app_config.dart';
+import '../../services/package_storage.dart';
+import '../../app_config.dart';
 
 // ==========================================
 // SCHERMATA

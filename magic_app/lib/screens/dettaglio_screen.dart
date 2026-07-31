@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import 'package:model_viewer_plus/model_viewer_plus.dart';
-import 'app_state.dart';
+import '../app_state.dart';
 
 class DettaglioScreen extends StatelessWidget {
   final String id;

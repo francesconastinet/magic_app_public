@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:audioplayers/audioplayers.dart';
-import 'models.dart';
+import '../models.dart';
 
 class AudioPlayerWidget extends StatefulWidget {
   final MediaItem media;

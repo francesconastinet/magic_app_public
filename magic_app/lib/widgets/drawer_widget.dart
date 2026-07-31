@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
-import 'app_state.dart';
-import 'chat_service.dart';
-import 'models.dart';
-import 'opera_repository.dart';
+import '../app_state.dart';
+import '../services/chat_service.dart';
+import '../models.dart';
+import '../opera_repository.dart';
 
 // ==========================================
 // SCHERMATA

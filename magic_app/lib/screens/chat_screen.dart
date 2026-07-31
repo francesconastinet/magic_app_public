@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'app_config.dart';
-import 'chat_widget.dart';
-import 'package_service.dart';
-import 'package_storage.dart';
-import 'auth_service.dart';
-import 'update_service.dart';
-import 'drawer_widget.dart';
+import '../app_config.dart';
+import '../widgets/chat_widget.dart';
+import '../services/package_service.dart';
+import '../services/package_storage.dart';
+import '../services/auth_service.dart';
+import '../services/update_service.dart';
+import '../widgets/drawer_widget.dart';
 
 class ChatScreen extends StatefulWidget {
   final String? titoloFonteIniziale;

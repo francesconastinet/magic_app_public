@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
-import 'app_state.dart';
-import 'models.dart';
-import 'media_service.dart';
-import 'chat_widget.dart';
-import 'audio_widget_book.dart';
+import '../app_state.dart';
+import '../models.dart';
+import '../services/media_service.dart';
+import '../widgets/chat_widget.dart';
+import '../widgets/audio_widget_book.dart';
 
 class BookDetailScreen extends StatelessWidget {
   final BookModel book;

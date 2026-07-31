@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
-import 'chat_service.dart';
+import '../services/chat_service.dart';
 
 // ==========================================
 // SCHERMATA
