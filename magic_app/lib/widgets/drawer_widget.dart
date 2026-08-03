@@ -1,23 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
-import '../app_state.dart';
 import '../services/chat_service.dart';
-import '../models.dart';
-import '../opera_repository.dart';
 
 // ==========================================
 // SCHERMATA
 // ==========================================
 
 class DrawerWidget extends StatefulWidget {
-  final String? titoloFonteAttuale;
-  final void Function(String? titolo, List<String>? ids) onFonteSelezionata;
-
   const DrawerWidget({
     super.key,
-    required this.titoloFonteAttuale,
-    required this.onFonteSelezionata,
   });
 
   @override
@@ -25,24 +17,16 @@ class DrawerWidget extends StatefulWidget {
 }
 
 class _DrawerWidgetState extends State<DrawerWidget> {
-  late Future<List<CollectionV2Model>> _collezioniFuture;
-  final TextEditingController _searchController = TextEditingController();
-  String _searchQuery = '';
-
   // TODO; rimuovere quando disponibile login
   static String? _mockLoggedUser;
 
   @override
   void initState() {
     super.initState();
-
-    // TODO: modificare quando disponibile dataset
-    _collezioniFuture = _caricaCollezioni();
   }
 
   @override
   void dispose() {
-    _searchController.dispose();
     super.dispose();
   }
 
@@ -54,59 +38,29 @@ class _DrawerWidgetState extends State<DrawerWidget> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            DrawerHeaderSection(
-              titoloFonteAttuale: widget.titoloFonteAttuale,
-              onReset: () {
-                widget.onFonteSelezionata(null, null);
-                Navigator.pop(context);
-              },
-            ),
-
-            DrawerSearchBar(
-              controller: _searchController,
-              searchQuery: _searchQuery,
-              onChanged: (value) => setState(() => _searchQuery = value),
-              onClear: () {
-                _searchController.clear();
-                setState(() => _searchQuery = '');
-              },
-            ),
-
-            Expanded(
-              child: ListView(
-                padding: EdgeInsets.zero,
-                children: [
-                  CollectionsSection(
-                    collezioniFuture: _collezioniFuture,
-                    searchQuery: _searchQuery,
-                    onFonteSelezionata: widget.onFonteSelezionata,
-                  ),
-
-                  BooksSection(
-                    searchQuery: _searchQuery,
-                    onFonteSelezionata: widget.onFonteSelezionata,
-                  ),
-
-                  EmptySearchResults(
-                    collezioniFuture: _collezioniFuture,
-                    searchQuery: _searchQuery,
-                  ),
-                ],
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(16),
+              color: Theme.of(context).colorScheme.primaryContainer,
+              child: Text(
+                'Menu Principale',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: Theme.of(context).colorScheme.onPrimaryContainer,
+                ),
               ),
             ),
 
-            const Divider(height: 1),
-
+            const SizedBox(height: 16),
             DrawerSectionTitle(titolo: 'Chat'),
-
             const ShareChatTile(),
-
             const RestoreChatTile(),
 
-            const Divider(height: 1),
+            const Divider(height: 1, indent: 16, endIndent: 16),
+            const SizedBox(height: 8),
 
             DrawerSectionTitle(titolo: 'Profilo'),
-
             ProfileSection(
               mockLoggedUser: _mockLoggedUser,
               onLogin: (user) {
@@ -131,30 +85,11 @@ class _DrawerWidgetState extends State<DrawerWidget> {
                 );
               },
             ),
-            const SizedBox(height: 8),
+            const Spacer(),
           ],
         ),
       ),
     );
-  }
-
-  // --- LOGICA ---
-  Future<List<CollectionV2Model>> _caricaCollezioni() async {
-    return [
-      CollectionV2Model(
-        id: 'coll_01',
-        name: 'Percorso Medievale',
-        description:
-            'Una selezione di manoscritti risalenti al periodo medievale.',
-        bookIds: ['001', '002'],
-      ),
-      CollectionV2Model(
-        id: 'coll_02',
-        name: 'Codici Miniati',
-        description: 'Le opere più belle decorate con miniature e capilettera.',
-        bookIds: ['003'],
-      ),
-    ];
   }
 }
 
@@ -180,300 +115,6 @@ class DrawerSectionTitle extends StatelessWidget {
           color: Theme.of(context).colorScheme.onSurfaceVariant,
         ),
       ),
-    );
-  }
-}
-
-// --- HEADER FONTI ---
-class DrawerHeaderSection extends StatelessWidget {
-  final String? titoloFonteAttuale;
-  final VoidCallback onReset;
-
-  const DrawerHeaderSection({
-    super.key,
-    required this.titoloFonteAttuale,
-    required this.onReset,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(16),
-      color: colorScheme.primaryContainer,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'Fonti Disponibili',
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-              color: colorScheme.onPrimaryContainer,
-            ),
-          ),
-
-          if (titoloFonteAttuale != null)
-            Padding(
-              padding: const EdgeInsets.only(top: 8.0),
-              child: TextButton.icon(
-                onPressed: onReset,
-                icon: const Icon(Icons.lock_open, size: 14),
-                label: const Text(
-                  'Sblocca le fonti',
-                  style: TextStyle(fontSize: 12),
-                ),
-                style: TextButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 8,
-                    vertical: 4,
-                  ),
-                  minimumSize: Size.zero,
-                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                  foregroundColor: colorScheme.primary,
-                  backgroundColor: colorScheme.surface.withValues(alpha: 0.5),
-                ),
-              ),
-            ),
-        ],
-      ),
-    );
-  }
-}
-
-// --- BARRA DI RICERCA ---
-class DrawerSearchBar extends StatelessWidget {
-  final TextEditingController controller;
-  final String searchQuery;
-  final ValueChanged<String> onChanged;
-  final VoidCallback onClear;
-
-  const DrawerSearchBar({
-    super.key,
-    required this.controller,
-    required this.searchQuery,
-    required this.onChanged,
-    required this.onClear,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-      child: TextField(
-        controller: controller,
-        decoration: InputDecoration(
-          hintText: 'Cerca una fonte...',
-          hintStyle: TextStyle(
-            color: colorScheme.onSurfaceVariant,
-            fontSize: 14,
-          ),
-          prefixIcon: Icon(Icons.search, color: colorScheme.onSurfaceVariant),
-          suffixIcon: searchQuery.isNotEmpty
-              ? IconButton(
-                  icon: const Icon(Icons.clear, size: 20),
-                  onPressed: onClear,
-                )
-              : null,
-          filled: true,
-          fillColor: colorScheme.surfaceContainerHighest,
-          border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12),
-            borderSide: BorderSide.none,
-          ),
-          contentPadding: const EdgeInsets.symmetric(vertical: 0),
-        ),
-        onChanged: onChanged,
-      ),
-    );
-  }
-}
-
-// --- SEZIONE COLLEZIONI ---
-class CollectionsSection extends StatelessWidget {
-  final Future<List<CollectionV2Model>> collezioniFuture;
-  final String searchQuery;
-  final void Function(String? titolo, List<String>? ids) onFonteSelezionata;
-
-  const CollectionsSection({
-    super.key,
-    required this.collezioniFuture,
-    required this.searchQuery,
-    required this.onFonteSelezionata,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-
-    return FutureBuilder<List<CollectionV2Model>>(
-      future: collezioniFuture,
-      builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return const SizedBox.shrink();
-        }
-
-        var collezioni = snapshot.data ?? [];
-
-        if (searchQuery.isNotEmpty) {
-          final query = searchQuery.toLowerCase();
-          collezioni = collezioni
-              .where((c) => c.name.toLowerCase().contains(query))
-              .toList();
-        }
-
-        if (collezioni.isEmpty) return const SizedBox.shrink();
-
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              child: Text(
-                'Collezioni',
-                style: TextStyle(
-                  fontWeight: FontWeight.bold,
-                  color: colorScheme.primary,
-                ),
-              ),
-            ),
-
-            ...collezioni.map(
-              (collection) => ListTile(
-                leading: const Icon(Icons.collections_bookmark),
-                title: Text(
-                  collection.name,
-                  style: const TextStyle(fontSize: 14),
-                ),
-                trailing: Text(
-                  '${collection.bookIds.length} vol.',
-                  style: const TextStyle(fontSize: 12, color: Colors.grey),
-                ),
-                onTap: () {
-                  Navigator.pop(context);
-                  onFonteSelezionata(collection.name, collection.bookIds);
-                },
-              ),
-            ),
-
-            const Divider(),
-          ],
-        );
-      },
-    );
-  }
-}
-
-// --- SEZIONE LIBRI ---
-class BooksSection extends StatelessWidget {
-  final String searchQuery;
-  final void Function(String? titolo, List<String>? ids) onFonteSelezionata;
-
-  const BooksSection({
-    super.key,
-    required this.searchQuery,
-    required this.onFonteSelezionata,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-
-    // TODO: modificare quando disponibile dataset
-    var opere = OperaRepository.tutteLeOpere();
-
-    if (searchQuery.isNotEmpty) {
-      final query = searchQuery.toLowerCase();
-      opere = opere
-          .where(
-            (o) =>
-                o.titolo.toLowerCase().contains(query) ||
-                o.autore.toLowerCase().contains(query),
-          )
-          .toList();
-    }
-
-    if (opere.isEmpty) return const SizedBox.shrink();
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-          child: Text(
-            'Tutti i Manoscritti',
-            style: TextStyle(
-              fontWeight: FontWeight.bold,
-              color: colorScheme.primary,
-            ),
-          ),
-        ),
-
-        ...opere.map(
-          (opera) => ListTile(
-            leading: const Icon(Icons.menu_book),
-            title: Text(opera.titolo, style: const TextStyle(fontSize: 14)),
-            subtitle: Text(opera.autore, style: const TextStyle(fontSize: 12)),
-            onTap: () {
-              context.read<AppState>().selezionaOpera(opera);
-              Navigator.pop(context);
-              onFonteSelezionata(opera.titolo, [opera.id]);
-            },
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-// --- NESSUN RISULTATO RICERCA ---
-class EmptySearchResults extends StatelessWidget {
-  final Future<List<CollectionV2Model>> collezioniFuture;
-  final String searchQuery;
-
-  const EmptySearchResults({
-    super.key,
-    required this.collezioniFuture,
-    required this.searchQuery,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    if (searchQuery.isEmpty) return const SizedBox.shrink();
-
-    return FutureBuilder<List<CollectionV2Model>>(
-      future: collezioniFuture,
-      builder: (context, snapshot) {
-        final collezioni = snapshot.data ?? [];
-        final query = searchQuery.toLowerCase();
-        final haCollezioni = collezioni.any(
-          (c) => c.name.toLowerCase().contains(query),
-        );
-        final haLibri = OperaRepository.tutteLeOpere().any(
-          (o) =>
-              o.titolo.toLowerCase().contains(query) ||
-              o.autore.toLowerCase().contains(query),
-        );
-
-        if (!haCollezioni && !haLibri) {
-          return Padding(
-            padding: const EdgeInsets.all(32.0),
-            child: Center(
-              child: Text(
-                'Nessun risultato trovato.',
-                style: TextStyle(
-                  color: Theme.of(context).colorScheme.onSurfaceVariant,
-                ),
-              ),
-            ),
-          );
-        }
-        return const SizedBox.shrink();
-      },
     );
   }
 }

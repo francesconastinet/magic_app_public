@@ -45,31 +45,24 @@ class _ChatScreenState extends State<ChatScreen> {
     final colorScheme = Theme.of(context).colorScheme;
 
     return Scaffold(
-      drawer: DrawerWidget(
-        titoloFonteAttuale: _titoloFonteSelezionata,
-        onFonteSelezionata: (titolo, ids) {
-          setState(() {
-            _titoloFonteSelezionata = titolo;
-            _idsFonteSelezionata = ids;
-          });
-        },
-      ),
-
       appBar: AppBar(
         backgroundColor: colorScheme.primary,
         foregroundColor: colorScheme.onPrimary,
         centerTitle: true,
-        leading: Builder(
-          builder: (BuildContext context) {
-            return IconButton(
-              icon: const Icon(Icons.menu),
-              tooltip: 'Apri menu collezioni',
-              onPressed: () {
-                Scaffold.of(context).openDrawer();
-              },
-            );
-          },
-        ),
+        leading: const SizedBox.shrink(),
+        actions: [
+          Builder(
+            builder: (BuildContext context) {
+              return IconButton(
+                icon: const Icon(Icons.menu),
+                tooltip: 'Apri menu principale',
+                onPressed: () {
+                  Scaffold.of(context).openEndDrawer();
+                },
+              );
+            },
+          ),
+        ],
         title: Image.asset(
           'assets/magic-logo.png',
           height: 30,
@@ -85,6 +78,8 @@ class _ChatScreenState extends State<ChatScreen> {
               )
             : null,
       ),
+
+      endDrawer: DrawerWidget(),
 
       body: ChatWidget(
         titoloFonteSelezionata: _titoloFonteSelezionata,
