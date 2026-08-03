@@ -46,16 +46,16 @@ class _ChatWidgetState extends State<ChatWidget> {
   Widget build(BuildContext context) {
     final chatService = context.watch<ChatService>();
     final messaggi = chatService.messaggi;
+    final bool fontiBloccate = widget.bookIds != null && widget.bookIds!.isNotEmpty;
 
     return Column(
       children: [
-        ChatHeaderBar(
-          titoloFonte: widget.titoloFonteSelezionata,
-          inCorso: _contextSessionInCorso,
-          creata: _contextSessionCreata,
-          onMostraFonti: () =>
-              _mostraListaFonti(context, chatService.fontiTotali),
-        ),
+        if (fontiBloccate)
+          ChatHeaderBar(
+            titoloFonte: widget.titoloFonteSelezionata,
+            inCorso: _contextSessionInCorso,
+            creata: _contextSessionCreata,
+          ),
 
         Expanded(
           child: ListView.builder(
@@ -258,14 +258,6 @@ class _ChatWidgetState extends State<ChatWidget> {
       }
     }
   }
-
-  void _mostraListaFonti(BuildContext context, List<FonteChat> fonti) {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      builder: (ctx) => FontiBottomSheet(fonteTotali: fonti),
-    );
-  }
 }
 
 // ==========================================
@@ -277,14 +269,12 @@ class ChatHeaderBar extends StatelessWidget {
   final String? titoloFonte;
   final bool inCorso;
   final bool creata;
-  final VoidCallback onMostraFonti;
 
   const ChatHeaderBar({
     super.key,
     this.titoloFonte,
     required this.inCorso,
     required this.creata,
-    required this.onMostraFonti,
   });
 
   @override
@@ -293,7 +283,7 @@ class ChatHeaderBar extends StatelessWidget {
 
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.fromLTRB(16, 4, 8, 4),
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
       color: colorScheme.secondaryContainer,
       child: Row(
         children: [
@@ -324,25 +314,6 @@ class ChatHeaderBar extends StatelessWidget {
                 fontWeight: FontWeight.bold,
               ),
             ),
-          ),
-
-          const SizedBox(width: 12),
-
-          IconButton.outlined(
-            padding: const EdgeInsets.all(8),
-            constraints: const BoxConstraints(),
-            icon: Icon(
-              Icons.menu_book,
-              size: 18,
-              color: colorScheme.onSecondaryContainer,
-            ),
-            style: IconButton.styleFrom(
-              backgroundColor: colorScheme.surface,
-              shape: const CircleBorder(),
-              side: BorderSide(color: colorScheme.outlineVariant),
-            ),
-            tooltip: 'Manoscritti consultati',
-            onPressed: onMostraFonti,
           ),
         ],
       ),

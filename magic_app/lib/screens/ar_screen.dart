@@ -85,8 +85,8 @@ class ARLayout {
   double get closeIconSize => isTablet ? 32.0 : 24.0;
 
   // --- MENU DEBUG ---
-  double get debugTop => safePadding.top + 160.0;
-  double get debugLeft => 120.0;
+  double get debugTop => safePadding.top + 120.0;
+  double get debugLeft => 10.0;
   double get debugWidth => (screenSize.width * 0.5).clamp(180.0, 300.0);
 }
 
