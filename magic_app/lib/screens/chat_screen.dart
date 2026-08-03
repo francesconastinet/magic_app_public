@@ -6,7 +6,7 @@ import '../services/package_service.dart';
 import '../services/package_storage.dart';
 import '../services/auth_service.dart';
 import '../services/update_service.dart';
-import '../widgets/drawer_widget.dart';
+import '../widgets/menu_principale_widget.dart';
 
 class ChatScreen extends StatefulWidget {
   final String? titoloFonteIniziale;
@@ -84,6 +84,12 @@ class _ChatScreenState extends State<ChatScreen> {
       body: ChatWidget(
         titoloFonteSelezionata: _titoloFonteSelezionata,
         bookIds: _idsFonteSelezionata,
+        onFonteSelezionata: (titolo, ids) {
+          setState(() {
+            _titoloFonteSelezionata = titolo;
+            _idsFonteSelezionata = ids;
+          });
+        },
       ),
     );
   }

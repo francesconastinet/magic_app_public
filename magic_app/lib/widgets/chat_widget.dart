@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import '../services/chat_service.dart';
+import 'fonti_widget.dart';
 
 // ==========================================
 // SCHERMATA
@@ -10,8 +11,14 @@ import '../services/chat_service.dart';
 class ChatWidget extends StatefulWidget {
   final String? titoloFonteSelezionata;
   final List<String>? bookIds;
+  final void Function(String? titolo, List<String>? ids)? onFonteSelezionata;
 
-  const ChatWidget({super.key, this.titoloFonteSelezionata, this.bookIds});
+  const ChatWidget({
+    super.key,
+    this.titoloFonteSelezionata,
+    this.bookIds,
+    this.onFonteSelezionata,
+  });
 
   @override
   State<ChatWidget> createState() => _ChatWidgetState();
@@ -46,7 +53,8 @@ class _ChatWidgetState extends State<ChatWidget> {
   Widget build(BuildContext context) {
     final chatService = context.watch<ChatService>();
     final messaggi = chatService.messaggi;
-    final bool fontiBloccate = widget.bookIds != null && widget.bookIds!.isNotEmpty;
+    final bool fontiBloccate =
+        widget.bookIds != null && widget.bookIds!.isNotEmpty;
 
     return Column(
       children: [
@@ -85,6 +93,16 @@ class _ChatWidgetState extends State<ChatWidget> {
           controller: _controller,
           isWriting: _botStaScrivendo,
           onSend: _inviaMessaggio,
+          onApriFonti: () {
+            showModalBottomSheet(
+              context: context,
+              isScrollControlled: true,
+              builder: (ctx) => FontiSelectionSheet(
+                titoloFonteAttuale: widget.titoloFonteSelezionata,
+                onFonteSelezionata: widget.onFonteSelezionata ?? (t, ids) {},
+              ),
+            );
+          },
         ),
       ],
     );
@@ -95,11 +113,17 @@ class _ChatWidgetState extends State<ChatWidget> {
   void didUpdateWidget(covariant ChatWidget oldWidget) {
     super.didUpdateWidget(oldWidget);
 
-    if (widget.bookIds != oldWidget.bookIds) {
+    final bool idsCambiati = _listaStringheDiversa(widget.bookIds, oldWidget.bookIds);
+    final bool titoloCambiato = widget.titoloFonteSelezionata != oldWidget.titoloFonteSelezionata;
+
+    if (idsCambiati || titoloCambiato) {
       final chatService = context.read<ChatService>();
 
       if (widget.bookIds != null && widget.bookIds!.isNotEmpty) {
-        _gestisciInizializzazioneContesto(widget.bookIds);
+        _inizializzaContextSession(
+          widget.bookIds!,
+          widget.titoloFonteSelezionata ?? 'Manoscritto',
+        );
       } else {
         chatService.resetContextSession();
 
@@ -115,8 +139,8 @@ class _ChatWidgetState extends State<ChatWidget> {
         chatService.aggiungiMessaggio(
           MessaggioChat(
             testo:
-                'Nessuna fonte selezionata.\n'
-                'Chat in modalità fonti sbloccate.',
+            'Nessun manoscritto selezionato.\n'
+                'Chat in modalità smart.',
             isUtente: false,
             timestamp: DateTime.now(),
           ),
@@ -125,6 +149,16 @@ class _ChatWidgetState extends State<ChatWidget> {
         _scrollaInFondo();
       }
     }
+  }
+
+  bool _listaStringheDiversa(List<String>? list1, List<String>? list2) {
+    if (list1 == null && list2 == null) return false;
+    if (list1 == null || list2 == null) return true;
+    if (list1.length != list2.length) return true;
+    for (int i = 0; i < list1.length; i++) {
+      if (list1[i] != list2[i]) return true;
+    }
+    return false;
   }
 
   void _gestisciInizializzazioneContesto(List<String>? ids) {
@@ -137,10 +171,12 @@ class _ChatWidgetState extends State<ChatWidget> {
   }
 
   Future<void> _inizializzaContextSession(
-    List<String> ids,
-    String nomeContesto,
-  ) async {
+      List<String> ids,
+      String nomeContesto,
+      ) async {
     final chatService = context.read<ChatService>();
+
+    if (!mounted) return;
 
     setState(() {
       _contextSessionInCorso = true;
@@ -148,7 +184,7 @@ class _ChatWidgetState extends State<ChatWidget> {
 
     chatService.aggiungiMessaggio(
       MessaggioChat(
-        testo: 'Nuova fonte: $nomeContesto',
+        testo: '$nomeContesto',
         isUtente: false,
         timestamp: DateTime.now(),
         isSystem: true,
@@ -157,7 +193,7 @@ class _ChatWidgetState extends State<ChatWidget> {
 
     chatService.aggiungiMessaggio(
       MessaggioChat(
-        testo: 'Sto recuperando le fonti...',
+        testo: 'Sto recuperando le fonti per "$nomeContesto"...',
         isUtente: false,
         timestamp: DateTime.now(),
       ),
@@ -178,9 +214,9 @@ class _ChatWidgetState extends State<ChatWidget> {
       MessaggioChat(
         testo: successo
             ? 'Fonti recuperate con successo! Ora le mie risposte '
-                  'saranno limitate a questa selezione.'
+            'saranno limitate a questa selezione.'
             : 'Si è verificato un problema col recupero delle fonti, '
-                  'ma proverò comunque ad aiutarti.',
+            'ma proverò comunque ad aiutarti (modalità fallback).',
         isUtente: false,
         timestamp: DateTime.now(),
       ),
@@ -307,7 +343,7 @@ class ChatHeaderBar extends StatelessWidget {
 
           Expanded(
             child: Text(
-              titoloFonte != null ? 'Fonte: $titoloFonte' : 'Nessuna fonte',
+              titoloFonte != null ? '$titoloFonte' : 'Nessun manoscritto',
               style: TextStyle(
                 fontSize: 12,
                 color: colorScheme.onSecondaryContainer,
@@ -326,12 +362,14 @@ class ChatInputArea extends StatelessWidget {
   final TextEditingController controller;
   final bool isWriting;
   final VoidCallback onSend;
+  final VoidCallback onApriFonti;
 
   const ChatInputArea({
     super.key,
     required this.controller,
     required this.isWriting,
     required this.onSend,
+    required this.onApriFonti,
   });
 
   @override
@@ -347,14 +385,28 @@ class ChatInputArea extends StatelessWidget {
         children: [
           Padding(
             padding: const EdgeInsets.only(bottom: 8.0),
-            child: IconButton.filledTonal(
-              onPressed: () => context.push('/camera'),
-              icon: const Icon(Icons.camera_alt),
-              tooltip: 'Riconosci Manoscritto',
-              style: IconButton.styleFrom(
-                iconSize: 28,
-                padding: const EdgeInsets.all(8),
-              ),
+            child: Column(
+              children: [
+                IconButton.filledTonal(
+                  onPressed: onApriFonti,
+                  icon: const Icon(Icons.library_books),
+                  tooltip: 'Gestisci Fonti',
+                  style: IconButton.styleFrom(
+                    iconSize: 24,
+                    padding: const EdgeInsets.all(8),
+                  ),
+                ),
+                const SizedBox(height: 8),
+                IconButton.filledTonal(
+                  onPressed: () => context.push('/camera'),
+                  icon: const Icon(Icons.camera_alt),
+                  tooltip: 'Riconosci Manoscritto',
+                  style: IconButton.styleFrom(
+                    iconSize: 28,
+                    padding: const EdgeInsets.all(8),
+                  ),
+                ),
+              ],
             ),
           ),
 

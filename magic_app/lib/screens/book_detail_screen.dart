@@ -5,7 +5,7 @@ import '../app_state.dart';
 import '../models.dart';
 import '../services/media_service.dart';
 import '../widgets/chat_widget.dart';
-import '../widgets/audio_widget_book.dart';
+import '../widgets/audio_book_widget.dart';
 
 class BookDetailScreen extends StatelessWidget {
   final BookModel book;
