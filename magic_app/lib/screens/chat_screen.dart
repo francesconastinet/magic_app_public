@@ -70,16 +70,10 @@ class _ChatScreenState extends State<ChatScreen> {
             );
           },
         ),
-        title: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: const [
-            Text(
-              'MAGIC',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-            ),
-            Text('Biblioteca dei Girolamini', style: TextStyle(fontSize: 11)),
-          ],
+        title: Image.asset(
+          'assets/magic-logo.png',
+          height: 30,
+          fit: BoxFit.contain,
         ),
         bottom: _syncInCorso
             ? PreferredSize(
