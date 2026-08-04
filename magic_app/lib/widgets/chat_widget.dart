@@ -53,6 +53,7 @@ class _ChatWidgetState extends State<ChatWidget> {
   Widget build(BuildContext context) {
     final chatService = context.watch<ChatService>();
     final messaggi = chatService.messaggi;
+    final colorScheme = Theme.of(context).colorScheme;
 
     return Column(
       children: [
@@ -63,26 +64,69 @@ class _ChatWidgetState extends State<ChatWidget> {
         ),
 
         Expanded(
-          child: ListView.builder(
-            controller: _scrollController,
-            padding: const EdgeInsets.all(16),
-            itemCount: messaggi.length + (_botStaScrivendo ? 1 : 0),
-            itemBuilder: (context, index) {
-              if (index == messaggi.length && _botStaScrivendo) {
-                return const ChatTypingIndicator();
-              }
+          child: Stack(
+            children: [
+              ListView.builder(
+                controller: _scrollController,
+                padding: const EdgeInsets.all(16),
+                itemCount: messaggi.length + (_botStaScrivendo ? 1 : 0),
+                itemBuilder: (context, index) {
+                  if (index == messaggi.length && _botStaScrivendo) {
+                    return const ChatTypingIndicator();
+                  }
 
-              final msg = messaggi[index];
+                  final msg = messaggi[index];
 
-              if (msg.isSystem) {
-                return _buildSystemSeparator(
-                  msg.testo,
-                  Theme.of(context).colorScheme,
-                );
-              }
+                  if (msg.isSystem) {
+                    return _buildSystemSeparator(
+                      msg.testo,
+                      Theme.of(context).colorScheme,
+                    );
+                  }
 
-              return ChatMessageBubble(msg: msg);
-            },
+                  return ChatMessageBubble(msg: msg);
+                },
+              ),
+
+              Positioned(
+                right: 12,
+                bottom: 0,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    FloatingActionButton.small(
+                      heroTag: 'fab_fonti',
+                      backgroundColor: colorScheme.secondaryContainer,
+                      foregroundColor: colorScheme.onSecondaryContainer,
+                      elevation: 2,
+                      tooltip: 'Gestisci Fonti',
+                      onPressed: () {
+                        showModalBottomSheet(
+                          context: context,
+                          isScrollControlled: true,
+                          builder: (ctx) => FontiSelectionSheet(
+                            idsFonteIniziale: widget.bookIds,
+                            onFonteSelezionata:
+                                widget.onFonteSelezionata ?? (t, ids) {},
+                          ),
+                        );
+                      },
+                      child: const Icon(Icons.library_books, size: 25),
+                    ),
+                    const SizedBox(height: 12),
+                    FloatingActionButton.small(
+                      heroTag: 'fab_camera',
+                      backgroundColor: colorScheme.secondaryContainer,
+                      foregroundColor: colorScheme.onSecondaryContainer,
+                      elevation: 2,
+                      tooltip: 'Riconosci Manoscritto',
+                      onPressed: () => context.push('/camera'),
+                      child: const Icon(Icons.camera_alt, size: 25),
+                    ),
+                  ],
+                ),
+              ),
+            ],
           ),
         ),
 
@@ -90,16 +134,6 @@ class _ChatWidgetState extends State<ChatWidget> {
           controller: _controller,
           isWriting: _botStaScrivendo,
           onSend: _inviaMessaggio,
-          onApriFonti: () {
-            showModalBottomSheet(
-              context: context,
-              isScrollControlled: true,
-              builder: (ctx) => FontiSelectionSheet(
-                idsFonteIniziale: widget.bookIds,
-                onFonteSelezionata: widget.onFonteSelezionata ?? (t, ids) {},
-              ),
-            );
-          },
         ),
       ],
     );
@@ -367,14 +401,12 @@ class ChatInputArea extends StatelessWidget {
   final TextEditingController controller;
   final bool isWriting;
   final VoidCallback onSend;
-  final VoidCallback onApriFonti;
 
   const ChatInputArea({
     super.key,
     required this.controller,
     required this.isWriting,
     required this.onSend,
-    required this.onApriFonti,
   });
 
   @override
@@ -382,71 +414,39 @@ class ChatInputArea extends StatelessWidget {
     final colorScheme = Theme.of(context).colorScheme;
 
     return Container(
-      padding: const EdgeInsets.all(12),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
       decoration: BoxDecoration(color: colorScheme.surface),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
+      child: Row(
         crossAxisAlignment: CrossAxisAlignment.end,
         children: [
-          Padding(
-            padding: const EdgeInsets.only(bottom: 8.0),
-            child: Column(
-              children: [
-                IconButton.filledTonal(
-                  onPressed: onApriFonti,
-                  icon: const Icon(Icons.library_books),
-                  tooltip: 'Gestisci Fonti',
-                  style: IconButton.styleFrom(
-                    iconSize: 24,
-                    padding: const EdgeInsets.all(8),
-                  ),
+          Expanded(
+            child: TextField(
+              controller: controller,
+              decoration: InputDecoration(
+                hintText: 'Fai una domanda...',
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(24),
+                  borderSide: BorderSide.none,
                 ),
-                const SizedBox(height: 8),
-                IconButton.filledTonal(
-                  onPressed: () => context.push('/camera'),
-                  icon: const Icon(Icons.camera_alt),
-                  tooltip: 'Riconosci Manoscritto',
-                  style: IconButton.styleFrom(
-                    iconSize: 28,
-                    padding: const EdgeInsets.all(8),
-                  ),
+                filled: true,
+                fillColor: colorScheme.surfaceContainerHighest,
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 10,
                 ),
-              ],
+              ),
+              onSubmitted: (_) => onSend(),
+              enabled: !isWriting,
             ),
           ),
-
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              Expanded(
-                child: TextField(
-                  controller: controller,
-                  decoration: InputDecoration(
-                    hintText: 'Fai una domanda...',
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(24),
-                      borderSide: BorderSide.none,
-                    ),
-                    filled: true,
-                    fillColor: colorScheme.surfaceContainerHighest,
-                    contentPadding: const EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 10,
-                    ),
-                  ),
-                  onSubmitted: (_) => onSend(),
-                  enabled: !isWriting,
-                ),
-              ),
-              const SizedBox(width: 8),
-              FloatingActionButton.small(
-                heroTag: 'chat_send',
-                onPressed: isWriting ? null : onSend,
-                backgroundColor: colorScheme.primary,
-                tooltip: 'Invia',
-                child: Icon(Icons.send, color: colorScheme.onPrimary),
-              ),
-            ],
+          const SizedBox(width: 8),
+          FloatingActionButton.small(
+            heroTag: 'chat_send_btn',
+            elevation: 0,
+            onPressed: isWriting ? null : onSend,
+            backgroundColor: colorScheme.primary,
+            tooltip: 'Invia',
+            child: Icon(Icons.send, color: colorScheme.onPrimary),
           ),
         ],
       ),

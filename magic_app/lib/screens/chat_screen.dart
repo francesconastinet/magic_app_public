@@ -6,7 +6,7 @@ import '../services/package_service.dart';
 import '../services/package_storage.dart';
 import '../services/auth_service.dart';
 import '../services/update_service.dart';
-import '../widgets/menu_principale_widget.dart';
+import '../widgets/menu_laterale_widget.dart';
 
 class ChatScreen extends StatefulWidget {
   final String? titoloFonteIniziale;
