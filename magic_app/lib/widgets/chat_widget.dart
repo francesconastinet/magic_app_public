@@ -53,17 +53,14 @@ class _ChatWidgetState extends State<ChatWidget> {
   Widget build(BuildContext context) {
     final chatService = context.watch<ChatService>();
     final messaggi = chatService.messaggi;
-    final bool fontiBloccate =
-        widget.bookIds != null && widget.bookIds!.isNotEmpty;
 
     return Column(
       children: [
-        if (fontiBloccate)
-          ChatHeaderBar(
-            titoloFonte: widget.titoloFonteSelezionata,
-            inCorso: _contextSessionInCorso,
-            creata: _contextSessionCreata,
-          ),
+        ChatHeaderBar(
+          titoloFonte: widget.titoloFonteSelezionata,
+          inCorso: _contextSessionInCorso,
+          creata: _contextSessionCreata,
+        ),
 
         Expanded(
           child: ListView.builder(
@@ -98,7 +95,7 @@ class _ChatWidgetState extends State<ChatWidget> {
               context: context,
               isScrollControlled: true,
               builder: (ctx) => FontiSelectionSheet(
-                titoloFonteAttuale: widget.titoloFonteSelezionata,
+                idsFonteIniziale: widget.bookIds,
                 onFonteSelezionata: widget.onFonteSelezionata ?? (t, ids) {},
               ),
             );
@@ -113,8 +110,12 @@ class _ChatWidgetState extends State<ChatWidget> {
   void didUpdateWidget(covariant ChatWidget oldWidget) {
     super.didUpdateWidget(oldWidget);
 
-    final bool idsCambiati = _listaStringheDiversa(widget.bookIds, oldWidget.bookIds);
-    final bool titoloCambiato = widget.titoloFonteSelezionata != oldWidget.titoloFonteSelezionata;
+    final bool idsCambiati = _listaStringheDiversa(
+      widget.bookIds,
+      oldWidget.bookIds,
+    );
+    final bool titoloCambiato =
+        widget.titoloFonteSelezionata != oldWidget.titoloFonteSelezionata;
 
     if (idsCambiati || titoloCambiato) {
       final chatService = context.read<ChatService>();
@@ -129,7 +130,7 @@ class _ChatWidgetState extends State<ChatWidget> {
 
         chatService.aggiungiMessaggio(
           MessaggioChat(
-            testo: 'Fonti sbloccate',
+            testo: 'Modalità Smart',
             isUtente: false,
             timestamp: DateTime.now(),
             isSystem: true,
@@ -139,7 +140,7 @@ class _ChatWidgetState extends State<ChatWidget> {
         chatService.aggiungiMessaggio(
           MessaggioChat(
             testo:
-            'Nessun manoscritto selezionato.\n'
+                'Nessun manoscritto selezionato.\n'
                 'Chat in modalità smart.',
             isUtente: false,
             timestamp: DateTime.now(),
@@ -171,9 +172,9 @@ class _ChatWidgetState extends State<ChatWidget> {
   }
 
   Future<void> _inizializzaContextSession(
-      List<String> ids,
-      String nomeContesto,
-      ) async {
+    List<String> ids,
+    String nomeContesto,
+  ) async {
     final chatService = context.read<ChatService>();
 
     if (!mounted) return;
@@ -184,7 +185,7 @@ class _ChatWidgetState extends State<ChatWidget> {
 
     chatService.aggiungiMessaggio(
       MessaggioChat(
-        testo: '$nomeContesto',
+        testo: nomeContesto,
         isUtente: false,
         timestamp: DateTime.now(),
         isSystem: true,
@@ -214,9 +215,9 @@ class _ChatWidgetState extends State<ChatWidget> {
       MessaggioChat(
         testo: successo
             ? 'Fonti recuperate con successo! Ora le mie risposte '
-            'saranno limitate a questa selezione.'
+                  'saranno limitate a questa selezione.'
             : 'Si è verificato un problema col recupero delle fonti, '
-            'ma proverò comunque ad aiutarti (modalità fallback).',
+                  'ma proverò comunque ad aiutarti.',
         isUtente: false,
         timestamp: DateTime.now(),
       ),
@@ -316,6 +317,8 @@ class ChatHeaderBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
+    final isSmartMode = titoloFonte == null || titoloFonte!.isEmpty;
+    final testoVisualizzato = isSmartMode ? 'Modalità Smart' : '$titoloFonte';
 
     return Container(
       width: double.infinity,
@@ -334,7 +337,9 @@ class ChatHeaderBar extends StatelessWidget {
             )
           else
             Icon(
-              creata ? Icons.check_circle : Icons.cancel,
+              creata
+                  ? Icons.check_circle
+                  : (isSmartMode ? Icons.auto_awesome : Icons.cancel),
               size: 14,
               color: Colors.orange,
             ),
@@ -343,7 +348,7 @@ class ChatHeaderBar extends StatelessWidget {
 
           Expanded(
             child: Text(
-              titoloFonte != null ? '$titoloFonte' : 'Nessun manoscritto',
+              testoVisualizzato,
               style: TextStyle(
                 fontSize: 12,
                 color: colorScheme.onSecondaryContainer,

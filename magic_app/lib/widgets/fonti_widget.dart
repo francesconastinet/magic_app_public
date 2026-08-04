@@ -1,21 +1,19 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
-import '../app_state.dart';
 import '../models.dart';
-import '../opera_repository.dart';
+import '../opera_repository.dart'; // TODO: rimuovere opere hardcodate
 
 // ==========================================
 // SCHERMATA
 // ==========================================
 
 class FontiSelectionSheet extends StatefulWidget {
-  final String? titoloFonteAttuale;
   final void Function(String? titolo, List<String>? ids) onFonteSelezionata;
+  final List<String>? idsFonteIniziale;
 
   const FontiSelectionSheet({
     super.key,
-    required this.titoloFonteAttuale,
     required this.onFonteSelezionata,
+    this.idsFonteIniziale,
   });
 
   @override
@@ -23,17 +21,25 @@ class FontiSelectionSheet extends StatefulWidget {
 }
 
 class _FontiSelectionSheetState extends State<FontiSelectionSheet> {
-  late Future<List<CollectionV2Model>> _collezioniFuture;
-  final TextEditingController _searchController = TextEditingController();
+  late Future<List<CollectionV2Model>> _collezioni;
 
+  final TextEditingController _searchController = TextEditingController();
   String _searchQuery = '';
+
+  late Set<String> _selectedBookIds;
   String? _selectedCollectionId;
+  List<CollectionV2Model> _collezioniCache = [];
 
   @override
   void initState() {
     super.initState();
-    // TODO: modificare quando disponibile dataset (come nel vecchio drawer)
-    _collezioniFuture = _caricaCollezioni();
+    _selectedBookIds = Set<String>.from(widget.idsFonteIniziale ?? []);
+
+    // TODO: modificare quando disponibile dataset
+    _collezioni = _caricaCollezioni().then((collezioni) {
+      _collezioniCache = collezioni;
+      return collezioni;
+    });
   }
 
   @override
@@ -46,17 +52,20 @@ class _FontiSelectionSheetState extends State<FontiSelectionSheet> {
   @override
   Widget build(BuildContext context) {
     return FractionallySizedBox(
-      heightFactor: 0.9,
+      heightFactor: 0.8,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           FontiHeaderSection(
-            titoloFonteAttuale: widget.titoloFonteAttuale,
             onReset: () {
+              setState(() => _selectedBookIds.clear());
               widget.onFonteSelezionata(null, null);
               Navigator.pop(context);
             },
             onClose: () => Navigator.pop(context),
+            haSelezioni:
+                widget.idsFonteIniziale != null &&
+                widget.idsFonteIniziale!.isNotEmpty,
           ),
 
           FontiSearchBar(
@@ -74,25 +83,85 @@ class _FontiSelectionSheetState extends State<FontiSelectionSheet> {
               padding: EdgeInsets.zero,
               children: [
                 FontiCollectionsSection(
-                  collezioniFuture: _collezioniFuture,
+                  collezioni: _collezioni,
                   selectedCollectionId: _selectedCollectionId,
                   onCollectionSelected: (id) {
                     setState(() => _selectedCollectionId = id);
                   },
                 ),
 
+                if (_selectedCollectionId != null &&
+                    _collezioniCache.isNotEmpty)
+                  Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16.0,
+                      vertical: 8.0,
+                    ),
+                    child: Builder(
+                      builder: (context) {
+                        final activeColl = _collezioniCache.firstWhere(
+                          (c) => c.id == _selectedCollectionId,
+                        );
+
+                        final allSelected = activeColl.bookIds.every(
+                          (id) => _selectedBookIds.contains(id),
+                        );
+
+                        return OutlinedButton.icon(
+                          icon: Icon(
+                            allSelected ? Icons.deselect : Icons.select_all,
+                          ),
+                          label: Text(
+                            allSelected
+                                ? 'Deseleziona tutta la collezione'
+                                : 'Seleziona tutta la collezione',
+                          ),
+                          onPressed: () =>
+                              _toggleCollectionSelection(activeColl),
+                        );
+                      },
+                    ),
+                  ),
+
                 FontiBooksSection(
                   searchQuery: _searchQuery,
                   selectedCollectionId: _selectedCollectionId,
-                  titoloFonteAttuale: widget.titoloFonteAttuale,
-                  collezioniFuture: _collezioniFuture,
-                  onFonteSelezionata: widget.onFonteSelezionata,
+                  selectedBookIds: _selectedBookIds,
+                  collezioni: _collezioni,
+                  onBookToggled: (id, isSelected) {
+                    setState(() {
+                      if (isSelected) {
+                        _selectedBookIds.add(id);
+                      } else {
+                        _selectedBookIds.remove(id);
+                      }
+                    });
+                  },
                 ),
 
                 FontiEmptySearchResults(
                   searchQuery: _searchQuery,
                   selectedCollectionId: _selectedCollectionId,
-                  collezioniFuture: _collezioniFuture,
+                  collezioni: _collezioni,
+                ),
+              ],
+            ),
+          ),
+
+          Container(
+            padding: const EdgeInsets.all(16),
+            color: Theme.of(context).colorScheme.surface,
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  '${_selectedBookIds.length} selezionati',
+                  style: const TextStyle(fontWeight: FontWeight.bold),
+                ),
+
+                FilledButton(
+                  onPressed: _applicaSelezione,
+                  child: const Text('Applica'),
                 ),
               ],
             ),
@@ -120,6 +189,50 @@ class _FontiSelectionSheetState extends State<FontiSelectionSheet> {
       ),
     ];
   }
+
+  void _applicaSelezione() {
+    if (_selectedBookIds.isEmpty) {
+      widget.onFonteSelezionata(null, null);
+    } else if (_selectedBookIds.length == 1) {
+      final idSingolo = _selectedBookIds.first;
+      final opera = OperaRepository.tutteLeOpere().firstWhere(
+        (o) => o.id == idSingolo,
+      );
+      widget.onFonteSelezionata(opera.titolo, [idSingolo]);
+    } else {
+      String? nomeCollezioneCorrispondente;
+      for (var coll in _collezioniCache) {
+        if (coll.bookIds.length == _selectedBookIds.length &&
+            coll.bookIds.every((id) => _selectedBookIds.contains(id))) {
+          nomeCollezioneCorrispondente = coll.name;
+          break;
+        }
+      }
+      if (nomeCollezioneCorrispondente != null) {
+        widget.onFonteSelezionata(
+          nomeCollezioneCorrispondente,
+          _selectedBookIds.toList(),
+        );
+      } else {
+        widget.onFonteSelezionata('Miscellanea', _selectedBookIds.toList());
+      }
+    }
+
+    Navigator.pop(context);
+  }
+
+  void _toggleCollectionSelection(CollectionV2Model collezione) {
+    setState(() {
+      bool allSelected = collezione.bookIds.every(
+        (id) => _selectedBookIds.contains(id),
+      );
+      if (allSelected) {
+        _selectedBookIds.removeAll(collezione.bookIds);
+      } else {
+        _selectedBookIds.addAll(collezione.bookIds);
+      }
+    });
+  }
 }
 
 // ==========================================
@@ -128,15 +241,15 @@ class _FontiSelectionSheetState extends State<FontiSelectionSheet> {
 
 // --- HEADER FONTI ---
 class FontiHeaderSection extends StatelessWidget {
-  final String? titoloFonteAttuale;
   final VoidCallback onReset;
   final VoidCallback onClose;
+  final bool haSelezioni;
 
   const FontiHeaderSection({
     super.key,
-    required this.titoloFonteAttuale,
     required this.onReset,
     required this.onClose,
+    required this.haSelezioni,
   });
 
   @override
@@ -170,14 +283,14 @@ class FontiHeaderSection extends StatelessWidget {
             ],
           ),
 
-          if (titoloFonteAttuale != null)
+          if (haSelezioni)
             Padding(
               padding: const EdgeInsets.only(top: 12.0),
               child: TextButton.icon(
                 onPressed: onReset,
-                icon: const Icon(Icons.lock_open, size: 14),
+                icon: const Icon(Icons.auto_awesome, size: 14),
                 label: const Text(
-                  'Sblocca le fonti',
+                  'Modalità Smart',
                   style: TextStyle(fontSize: 12),
                 ),
                 style: TextButton.styleFrom(
@@ -250,13 +363,13 @@ class FontiSearchBar extends StatelessWidget {
 
 // --- FILTRO COLLEZIONI ---
 class FontiCollectionsSection extends StatelessWidget {
-  final Future<List<CollectionV2Model>> collezioniFuture;
+  final Future<List<CollectionV2Model>> collezioni;
   final String? selectedCollectionId;
   final ValueChanged<String?> onCollectionSelected;
 
   const FontiCollectionsSection({
     super.key,
-    required this.collezioniFuture,
+    required this.collezioni,
     required this.selectedCollectionId,
     required this.onCollectionSelected,
   });
@@ -266,7 +379,7 @@ class FontiCollectionsSection extends StatelessWidget {
     final colorScheme = Theme.of(context).colorScheme;
 
     return FutureBuilder<List<CollectionV2Model>>(
-      future: collezioniFuture,
+      future: this.collezioni,
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const SizedBox(
@@ -337,17 +450,17 @@ class FontiCollectionsSection extends StatelessWidget {
 class FontiBooksSection extends StatelessWidget {
   final String searchQuery;
   final String? selectedCollectionId;
-  final String? titoloFonteAttuale;
-  final Future<List<CollectionV2Model>> collezioniFuture;
-  final void Function(String? titolo, List<String>? ids) onFonteSelezionata;
+  final Set<String> selectedBookIds;
+  final Future<List<CollectionV2Model>> collezioni;
+  final void Function(String id, bool isSelected) onBookToggled;
 
   const FontiBooksSection({
     super.key,
     required this.searchQuery,
     required this.selectedCollectionId,
-    required this.titoloFonteAttuale,
-    required this.collezioniFuture,
-    required this.onFonteSelezionata,
+    required this.selectedBookIds,
+    required this.collezioni,
+    required this.onBookToggled,
   });
 
   @override
@@ -355,7 +468,7 @@ class FontiBooksSection extends StatelessWidget {
     final colorScheme = Theme.of(context).colorScheme;
 
     return FutureBuilder<List<CollectionV2Model>>(
-      future: collezioniFuture,
+      future: collezioni,
       builder: (context, snapshot) {
         if (!snapshot.hasData) return const SizedBox.shrink();
 
@@ -389,14 +502,6 @@ class FontiBooksSection extends StatelessWidget {
 
         if (opere.isEmpty) return const SizedBox.shrink();
 
-        if (titoloFonteAttuale != null) {
-          opere.sort((a, b) {
-            if (a.titolo == titoloFonteAttuale) return -1;
-            if (b.titolo == titoloFonteAttuale) return 1;
-            return 0;
-          });
-        }
-
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -412,10 +517,10 @@ class FontiBooksSection extends StatelessWidget {
               ),
             ),
             ...opere.map((opera) {
-              final isAttiva = opera.titolo == titoloFonteAttuale;
+              final isAttiva = selectedBookIds.contains(opera.id);
 
-              return ListTile(
-                leading: Icon(
+              return CheckboxListTile(
+                secondary: Icon(
                   Icons.menu_book,
                   color: isAttiva ? colorScheme.primary : null,
                 ),
@@ -436,18 +541,11 @@ class FontiBooksSection extends StatelessWidget {
                         : null,
                   ),
                 ),
-                trailing: isAttiva
-                    ? Icon(
-                        Icons.check_circle,
-                        color: colorScheme.primary,
-                        size: 20,
-                      )
-                    : null,
-                onTap: () {
-                  context.read<AppState>().selezionaOpera(opera);
-                  Navigator.pop(context);
-                  onFonteSelezionata(opera.titolo, [opera.id]);
+                value: isAttiva,
+                onChanged: (bool? value) {
+                  onBookToggled(opera.id, value ?? false);
                 },
+                controlAffinity: ListTileControlAffinity.trailing,
               );
             }),
           ],
@@ -461,19 +559,19 @@ class FontiBooksSection extends StatelessWidget {
 class FontiEmptySearchResults extends StatelessWidget {
   final String searchQuery;
   final String? selectedCollectionId;
-  final Future<List<CollectionV2Model>> collezioniFuture;
+  final Future<List<CollectionV2Model>> collezioni;
 
   const FontiEmptySearchResults({
     super.key,
     required this.searchQuery,
     required this.selectedCollectionId,
-    required this.collezioniFuture,
+    required this.collezioni,
   });
 
   @override
   Widget build(BuildContext context) {
     return FutureBuilder<List<CollectionV2Model>>(
-      future: collezioniFuture,
+      future: collezioni,
       builder: (context, snapshot) {
         if (!snapshot.hasData) return const SizedBox.shrink();
 

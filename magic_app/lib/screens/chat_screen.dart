@@ -55,7 +55,7 @@ class _ChatScreenState extends State<ChatScreen> {
             builder: (BuildContext context) {
               return IconButton(
                 icon: const Icon(Icons.menu),
-                tooltip: 'Apri menu principale',
+                tooltip: 'Apri Menu Principale',
                 onPressed: () {
                   Scaffold.of(context).openEndDrawer();
                 },
