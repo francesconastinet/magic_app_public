@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../models.dart';
 import '../opera_repository.dart'; // TODO: rimuovere opere hardcodate
+import '../screens/book_detail_screen.dart';
 
 // ==========================================
 // SCHERMATA
@@ -520,9 +521,23 @@ class FontiBooksSection extends StatelessWidget {
               final isAttiva = selectedBookIds.contains(opera.id);
 
               return CheckboxListTile(
-                secondary: Icon(
-                  Icons.menu_book,
-                  color: isAttiva ? colorScheme.primary : null,
+                secondary: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    IconButton(
+                      icon: const Icon(Icons.info_outline),
+                      tooltip: 'Dettagli Manoscritto',
+                      color: colorScheme.primary,
+                      onPressed: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => BookDetailScreen(book: opera),
+                          ),
+                        );
+                      },
+                    ),
+                  ],
                 ),
                 title: Text(
                   opera.titolo,
