@@ -161,9 +161,10 @@ class ChatService extends ChangeNotifier {
     }
   }
 
-  // Torna a fonti libere
   void resetContextSession() {
     _contextSessionId = null;
+    fontiTotali.clear(); // Svuota la lista delle fonti consultate finora
+    notifyListeners(); // Aggiorna l'interfaccia (il Dialog risulterà vuoto)
     debugPrint('[CHAT] Context session resettata — modalità fonti libere');
   }
 
@@ -222,6 +223,51 @@ class ChatService extends ChangeNotifier {
       throw Exception('Errore imprevisto nella lettura della risposta.');
     }
   }
+
+  // SIMULAZIONE CHAT
+  // Future<MessaggioChat> inviaMessaggio(String domanda) async {
+  //   debugPrint('[CHAT MOCK] Domanda ricevuta: $domanda');
+  //   debugPrint('[CHAT MOCK] Sessione: $_sessionId');
+  //   debugPrint('[CHAT MOCK] Context Session (null = sbloccate): $_contextSessionId');
+  //
+  //   // 1. Simula il tempo di elaborazione del server (2 secondi)
+  //   await Future.delayed(const Duration(seconds: 1));
+  //
+  //   // 2. Creiamo un paio di fonti fittizie per testare la UI della bottom sheet
+  //   final mockFonti = [
+  //     FonteChat(
+  //       workId: '001',
+  //       identifier: 'ms_001',
+  //       title: 'Manoscritto di Test 1',
+  //       author: 'Anonimo',
+  //       date: 'Secolo XIII',
+  //       rilevanza: 0.85,
+  //       chunksCount: 3,
+  //     ),
+  //     FonteChat(
+  //       workId: '003',
+  //       identifier: 'ms_003',
+  //       title: 'Codice Miniato Finto',
+  //       author: 'Amanuense Ignoto',
+  //       date: 'Secolo XV',
+  //       rilevanza: 0.60,
+  //       chunksCount: 1,
+  //     ),
+  //   ];
+  //
+  //   // 3. Prepariamo il testo della risposta
+  //   final testoRisposta = 'Rismosta simulata in modalità smart.'
+  //
+  //   debugPrint('[CHAT MOCK] Risposta generata con successo.');
+  //
+  //   // 4. Restituiamo il messaggio formattato
+  //   return MessaggioChat(
+  //     testo: testoRisposta,
+  //     isUtente: false,
+  //     timestamp: DateTime.now(),
+  //     fonti: mockFonti,
+  //   );
+  // }
 
   // Recupera dettagli libro tramite identifier
   // GET /book/{identifier}

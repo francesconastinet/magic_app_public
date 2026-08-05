@@ -61,6 +61,13 @@ class _ChatWidgetState extends State<ChatWidget> {
           titoloFonte: widget.titoloFonteSelezionata,
           inCorso: _contextSessionInCorso,
           creata: _contextSessionCreata,
+          onMostraFontiConsultate: () {
+            showDialog(
+              context: context,
+              builder: (ctx) =>
+                  FontiConsultateDialog(fonteTotali: chatService.fontiTotali),
+            );
+          },
         ),
 
         Expanded(
@@ -336,29 +343,94 @@ class _ChatWidgetState extends State<ChatWidget> {
 // ==========================================
 
 // --- BARRA SUPERIORE ---
+// class ChatHeaderBar extends StatelessWidget {
+//   final String? titoloFonte;
+//   final bool inCorso;
+//   final bool creata;
+//
+//   const ChatHeaderBar({
+//     super.key,
+//     this.titoloFonte,
+//     required this.inCorso,
+//     required this.creata,
+//   });
+//
+//   @override
+//   Widget build(BuildContext context) {
+//     final colorScheme = Theme.of(context).colorScheme;
+//     final isSmartMode = titoloFonte == null || titoloFonte!.isEmpty;
+//     final testoVisualizzato = isSmartMode ? 'Modalità Smart' : '$titoloFonte';
+//
+//     return Container(
+//       width: double.infinity,
+//       padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+//       color: colorScheme.secondaryContainer,
+//       child: Row(
+//         children: [
+//           if (inCorso)
+//             SizedBox(
+//               width: 12,
+//               height: 12,
+//               child: CircularProgressIndicator(
+//                 strokeWidth: 2,
+//                 color: colorScheme.onSecondaryContainer,
+//               ),
+//             )
+//           else
+//             Icon(
+//               creata
+//                   ? Icons.check_circle
+//                   : (isSmartMode ? Icons.auto_awesome : Icons.cancel),
+//               size: 14,
+//               color: Colors.orange,
+//             ),
+//
+//           const SizedBox(width: 6),
+//
+//           Expanded(
+//             child: Text(
+//               testoVisualizzato,
+//               style: TextStyle(
+//                 fontSize: 12,
+//                 color: colorScheme.onSecondaryContainer,
+//                 fontWeight: FontWeight.bold,
+//               ),
+//             ),
+//           ),
+//         ],
+//       ),
+//     );
+//   }
+// }
+
 class ChatHeaderBar extends StatelessWidget {
   final String? titoloFonte;
   final bool inCorso;
   final bool creata;
+  final VoidCallback onMostraFontiConsultate;
 
   const ChatHeaderBar({
     super.key,
     this.titoloFonte,
     required this.inCorso,
     required this.creata,
+    required this.onMostraFontiConsultate,
   });
 
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
-    final isSmartMode = titoloFonte == null || titoloFonte!.isEmpty;
+    final isSmartMode =
+        titoloFonte == null || titoloFonte!.isEmpty || titoloFonte == 'Misti';
     final testoVisualizzato = isSmartMode ? 'Modalità Smart' : '$titoloFonte';
 
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+      height: 32,
+      padding: const EdgeInsets.symmetric(horizontal: 12),
       color: colorScheme.secondaryContainer,
       child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           if (inCorso)
             SizedBox(
@@ -375,7 +447,7 @@ class ChatHeaderBar extends StatelessWidget {
                   ? Icons.check_circle
                   : (isSmartMode ? Icons.auto_awesome : Icons.cancel),
               size: 14,
-              color: Colors.orange,
+              color: isSmartMode ? colorScheme.primary : Colors.orange,
             ),
 
           const SizedBox(width: 6),
@@ -390,7 +462,250 @@ class ChatHeaderBar extends StatelessWidget {
               ),
             ),
           ),
+
+          if (isSmartMode)
+            SizedBox(
+              width: 24,
+              height: 24,
+              child: IconButton.filledTonal(
+                onPressed: onMostraFontiConsultate,
+                icon: const Icon(Icons.saved_search, size: 20),
+                tooltip: 'Fonti Consultate',
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints(),
+              ),
+            ),
         ],
+      ),
+    );
+  }
+}
+
+// --- PANNELLO FONTI CONSULTATE SMART ---
+// class FontiBottomSheet extends StatelessWidget {
+//   final List<FonteChat> fonteTotali;
+//
+//   const FontiBottomSheet({super.key, required this.fonteTotali});
+//
+//   @override
+//   Widget build(BuildContext context) {
+//     final colorScheme = Theme.of(context).colorScheme;
+//
+//     return FractionallySizedBox(
+//       heightFactor: 0.8,
+//       child: Column(
+//         crossAxisAlignment: CrossAxisAlignment.start,
+//         children: [
+//           Container(
+//             width: double.infinity,
+//             padding: const EdgeInsets.all(16),
+//             color: colorScheme.primaryContainer,
+//             child: Column(
+//               crossAxisAlignment: CrossAxisAlignment.start,
+//               children: [
+//                 Text(
+//                   'Manoscritti consultati',
+//                   style: TextStyle(
+//                     fontSize: 18,
+//                     fontWeight: FontWeight.bold,
+//                     color: colorScheme.onPrimaryContainer,
+//                   ),
+//                 ),
+//
+//                 const SizedBox(height: 4),
+//
+//                 Text(
+//                   'Usati: ${fonteTotali.length}',
+//                   style: TextStyle(
+//                     fontSize: 13,
+//                     color: colorScheme.onPrimaryContainer.withValues(
+//                       alpha: 0.8,
+//                     ),
+//                   ),
+//                 ),
+//               ],
+//             ),
+//           ),
+//
+//           Expanded(
+//             child: fonteTotali.isEmpty
+//                 ? Center(
+//                     child: Padding(
+//                       padding: const EdgeInsets.all(24),
+//                       child: Text(
+//                         'Fai una domanda per vedere i manoscritti consultati.',
+//                         textAlign: TextAlign.center,
+//                         style: TextStyle(color: colorScheme.onSurfaceVariant),
+//                       ),
+//                     ),
+//                   )
+//                 : ListView.builder(
+//                     padding: const EdgeInsets.all(8),
+//                     itemCount: fonteTotali.length,
+//                     itemBuilder: (context, index) {
+//                       final fonte = fonteTotali[index];
+//                       return Card(
+//                         child: Padding(
+//                           padding: const EdgeInsets.all(12),
+//                           child: Column(
+//                             crossAxisAlignment: CrossAxisAlignment.start,
+//                             children: [
+//                               Text(
+//                                 fonte.title.isNotEmpty
+//                                     ? fonte.title
+//                                     : fonte.identifier,
+//                                 style: const TextStyle(
+//                                   fontWeight: FontWeight.bold,
+//                                   fontSize: 14,
+//                                 ),
+//                               ),
+//
+//                               if (fonte.author.isNotEmpty) ...[
+//                                 const SizedBox(height: 4),
+//                                 Text(
+//                                   fonte.author,
+//                                   style: TextStyle(
+//                                     fontSize: 12,
+//                                     color: colorScheme.onSurfaceVariant,
+//                                   ),
+//                                 ),
+//                               ],
+//
+//                               if (fonte.date.isNotEmpty) ...[
+//                                 const SizedBox(height: 2),
+//                                 Text(
+//                                   fonte.date,
+//                                   style: TextStyle(
+//                                     fontSize: 11,
+//                                     color: colorScheme.onSurfaceVariant,
+//                                   ),
+//                                 ),
+//                               ],
+//                             ],
+//                           ),
+//                         ),
+//                       );
+//                     },
+//                   ),
+//           ),
+//         ],
+//       ),
+//     );
+//   }
+// }
+
+class FontiConsultateDialog extends StatelessWidget {
+  final List<FonteChat> fonteTotali;
+
+  const FontiConsultateDialog({super.key, required this.fonteTotali});
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+
+    return AlertDialog(
+      titlePadding: EdgeInsets.zero,
+      clipBehavior: Clip.hardEdge,
+      title: Container(
+        padding: const EdgeInsets.all(16),
+        color: colorScheme.primaryContainer,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  'Manoscritti consultati',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: colorScheme.onPrimaryContainer,
+                  ),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.close),
+                  onPressed: () => Navigator.pop(context),
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(),
+                ),
+              ],
+            ),
+            Text(
+              'Usati: ${fonteTotali.length}',
+              style: TextStyle(
+                fontSize: 13,
+                color: colorScheme.onPrimaryContainer.withValues(alpha: 0.8),
+              ),
+            ),
+          ],
+        ),
+      ),
+      contentPadding: EdgeInsets.zero,
+      content: SizedBox(
+        width: double.maxFinite,
+        height: 400,
+        child: fonteTotali.isEmpty
+            ? Center(
+                child: Padding(
+                  padding: const EdgeInsets.all(24),
+                  child: Text(
+                    'Fai una domanda per vedere i manoscritti consultati.',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(color: colorScheme.onSurfaceVariant),
+                  ),
+                ),
+              )
+            : ListView.builder(
+                padding: const EdgeInsets.all(8),
+                itemCount: fonteTotali.length,
+                itemBuilder: (context, index) {
+                  final fonte = fonteTotali[index];
+                  return Card(
+                    margin: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 4,
+                    ),
+                    child: Padding(
+                      padding: const EdgeInsets.all(12),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            fonte.title.isNotEmpty
+                                ? fonte.title
+                                : fonte.identifier,
+                            style: const TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 14,
+                            ),
+                          ),
+                          if (fonte.author.isNotEmpty) ...[
+                            const SizedBox(height: 4),
+                            Text(
+                              fonte.author,
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: colorScheme.onSurfaceVariant,
+                              ),
+                            ),
+                          ],
+                          if (fonte.date.isNotEmpty) ...[
+                            const SizedBox(height: 2),
+                            Text(
+                              fonte.date,
+                              style: TextStyle(
+                                fontSize: 11,
+                                color: colorScheme.onSurfaceVariant,
+                              ),
+                            ),
+                          ],
+                        ],
+                      ),
+                    ),
+                  );
+                },
+              ),
       ),
     );
   }
@@ -597,119 +912,6 @@ class ChatMessageBubble extends StatelessWidget {
               painter: ChatTailPainter(bgColor: bgColor, isUtente: true),
               size: const Size(6, 12),
             ),
-        ],
-      ),
-    );
-  }
-}
-
-// --- PANNELLO FONTI CONSULTATE ---
-class FontiBottomSheet extends StatelessWidget {
-  final List<FonteChat> fonteTotali;
-
-  const FontiBottomSheet({super.key, required this.fonteTotali});
-
-  @override
-  Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-
-    return FractionallySizedBox(
-      heightFactor: 0.8,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.all(16),
-            color: colorScheme.primaryContainer,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Manoscritti consultati',
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    color: colorScheme.onPrimaryContainer,
-                  ),
-                ),
-
-                const SizedBox(height: 4),
-
-                Text(
-                  'Usati: ${fonteTotali.length}',
-                  style: TextStyle(
-                    fontSize: 13,
-                    color: colorScheme.onPrimaryContainer.withValues(
-                      alpha: 0.8,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-
-          Expanded(
-            child: fonteTotali.isEmpty
-                ? Center(
-                    child: Padding(
-                      padding: const EdgeInsets.all(24),
-                      child: Text(
-                        'Fai una domanda per vedere i manoscritti consultati.',
-                        textAlign: TextAlign.center,
-                        style: TextStyle(color: colorScheme.onSurfaceVariant),
-                      ),
-                    ),
-                  )
-                : ListView.builder(
-                    padding: const EdgeInsets.all(8),
-                    itemCount: fonteTotali.length,
-                    itemBuilder: (context, index) {
-                      final fonte = fonteTotali[index];
-                      return Card(
-                        child: Padding(
-                          padding: const EdgeInsets.all(12),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                fonte.title.isNotEmpty
-                                    ? fonte.title
-                                    : fonte.identifier,
-                                style: const TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 14,
-                                ),
-                              ),
-
-                              if (fonte.author.isNotEmpty) ...[
-                                const SizedBox(height: 4),
-                                Text(
-                                  fonte.author,
-                                  style: TextStyle(
-                                    fontSize: 12,
-                                    color: colorScheme.onSurfaceVariant,
-                                  ),
-                                ),
-                              ],
-
-                              if (fonte.date.isNotEmpty) ...[
-                                const SizedBox(height: 2),
-                                Text(
-                                  fonte.date,
-                                  style: TextStyle(
-                                    fontSize: 11,
-                                    color: colorScheme.onSurfaceVariant,
-                                  ),
-                                ),
-                              ],
-                            ],
-                          ),
-                        ),
-                      );
-                    },
-                  ),
-          ),
         ],
       ),
     );

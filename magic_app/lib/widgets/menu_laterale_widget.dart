@@ -8,9 +8,7 @@ import '../services/chat_service.dart';
 // ==========================================
 
 class DrawerWidget extends StatefulWidget {
-  const DrawerWidget({
-    super.key,
-  });
+  const DrawerWidget({super.key});
 
   @override
   State<DrawerWidget> createState() => _DrawerWidgetState();

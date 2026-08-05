@@ -215,7 +215,10 @@ class _FontiSelectionSheetState extends State<FontiSelectionSheet> {
           _selectedBookIds.toList(),
         );
       } else {
-        widget.onFonteSelezionata('Miscellanea', _selectedBookIds.toList());
+        widget.onFonteSelezionata(
+          'Manoscritti vari',
+          _selectedBookIds.toList(),
+        );
       }
     }
 
