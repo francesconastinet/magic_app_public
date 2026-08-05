@@ -49,7 +49,6 @@ class _ChatScreenState extends State<ChatScreen> {
         backgroundColor: colorScheme.primary,
         foregroundColor: colorScheme.onPrimary,
         centerTitle: true,
-        leading: const SizedBox.shrink(),
         actions: [
           Builder(
             builder: (BuildContext context) {
