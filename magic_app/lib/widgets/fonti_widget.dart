@@ -60,13 +60,9 @@ class _FontiSelectionSheetState extends State<FontiSelectionSheet> {
           FontiHeaderSection(
             onReset: () {
               setState(() => _selectedBookIds.clear());
-              widget.onFonteSelezionata(null, null);
-              Navigator.pop(context);
             },
             onClose: () => Navigator.pop(context),
-            haSelezioni:
-                widget.idsFonteIniziale != null &&
-                widget.idsFonteIniziale!.isNotEmpty,
+            haSelezioni: _selectedBookIds.isNotEmpty,
           ),
 
           FontiSearchBar(
@@ -292,9 +288,9 @@ class FontiHeaderSection extends StatelessWidget {
               padding: const EdgeInsets.only(top: 12.0),
               child: TextButton.icon(
                 onPressed: onReset,
-                icon: const Icon(Icons.auto_awesome, size: 14),
+                icon: const Icon(Icons.deselect, size: 14),
                 label: const Text(
-                  'Modalità Smart',
+                  'Annulla selezione',
                   style: TextStyle(fontSize: 12),
                 ),
                 style: TextButton.styleFrom(
