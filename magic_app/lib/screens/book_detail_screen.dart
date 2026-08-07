@@ -5,7 +5,6 @@ import '../app_state.dart';
 import '../models.dart';
 import '../services/media_service.dart';
 import '../widgets/audio_book_widget.dart';
-import '../widgets/chat_widget.dart';
 
 class BookDetailScreen extends StatelessWidget {
   final BookModel book;
@@ -62,28 +61,28 @@ class BookDetailScreen extends StatelessWidget {
           'Dettaglio',
           style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
         ),
-        actions: [
-          // Bottone Assistente Virtuale
-          // TODO: si deve aprire chat screen e si deve passare la fonte
-          IconButton(
-            icon: const Icon(Icons.chat_bubble_outline),
-            tooltip: 'Assistente Virtuale',
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (_) => Scaffold(
-                    appBar: AppBar(title: Text('Chat')),
-                    body: ChatWidget(
-                      titoloFonteSelezionata: book.titolo,
-                      bookIds: [book.id],
-                    ),
-                  ),
-                ),
-              );
-            },
-          ),
-        ],
+        // RIMOSSO: per andare alla chat basta il pulsante indietro
+        // actions: [
+        //   // Bottone Assistente Virtuale
+        //   IconButton(
+        //     icon: const Icon(Icons.chat_bubble_outline),
+        //     tooltip: 'Assistente Virtuale',
+        //     onPressed: () {
+        //       Navigator.push(
+        //         context,
+        //         MaterialPageRoute(
+        //           builder: (_) => Scaffold(
+        //             appBar: AppBar(title: Text('Chat')),
+        //             body: ChatWidget(
+        //               titoloFonteSelezionata: book.titolo,
+        //               bookIds: [book.id],
+        //             ),
+        //           ),
+        //         ),
+        //       );
+        //     },
+        //   ),
+        // ],
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),

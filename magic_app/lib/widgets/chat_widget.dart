@@ -444,8 +444,8 @@ class ChatHeaderBar extends StatelessWidget {
           else
             Icon(
               creata
-                  ? Icons.check
-                  : (isSmartMode ? Icons.auto_awesome : Icons.clear),
+                  ? Icons.check_circle
+                  : (isSmartMode ? Icons.info : Icons.warning),
               size: 14,
               color: colorScheme.primary,
             ),

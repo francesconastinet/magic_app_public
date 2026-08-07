@@ -234,11 +234,11 @@ class ChatService extends ChangeNotifier {
   //   await Future.delayed(const Duration(seconds: 1));
   //
   //   // 2. Creiamo un paio di fonti fittizie per testare la UI della bottom sheet
-  //   final mockFonti = [
+  //   final mockFonti1 = [
   //     FonteChat(
   //       workId: '001',
   //       identifier: 'ms_001',
-  //       title: 'Manoscritto di Test 1',
+  //       title: 'Promessi Sposi',
   //       author: 'Anonimo',
   //       date: 'Secolo XIII',
   //       rilevanza: 0.85,
@@ -247,7 +247,28 @@ class ChatService extends ChangeNotifier {
   //     FonteChat(
   //       workId: '003',
   //       identifier: 'ms_003',
-  //       title: 'Codice Miniato Finto',
+  //       title: 'Codice Miniato',
+  //       author: 'Amanuense Ignoto',
+  //       date: 'Secolo XV',
+  //       rilevanza: 0.60,
+  //       chunksCount: 1,
+  //     ),
+  //   ];
+  //
+  //   final mockFonti2 = [
+  //     FonteChat(
+  //       workId: '002',
+  //       identifier: 'ms_001',
+  //       title: 'Divina Commedia',
+  //       author: 'Anonimo',
+  //       date: 'Secolo XIII',
+  //       rilevanza: 0.85,
+  //       chunksCount: 3,
+  //     ),
+  //     FonteChat(
+  //       workId: '004',
+  //       identifier: 'ms_003',
+  //       title: 'Antifonario',
   //       author: 'Amanuense Ignoto',
   //       date: 'Secolo XV',
   //       rilevanza: 0.60,
@@ -256,17 +277,27 @@ class ChatService extends ChangeNotifier {
   //   ];
   //
   //   // 3. Prepariamo il testo della risposta
-  //   final testoRisposta = 'Rismosta simulata in modalità smart.'
+  //   final testoRisposta = 'Rismosta simulata in modalità smart.';
   //
   //   debugPrint('[CHAT MOCK] Risposta generata con successo.');
   //
   //   // 4. Restituiamo il messaggio formattato
-  //   return MessaggioChat(
-  //     testo: testoRisposta,
-  //     isUtente: false,
-  //     timestamp: DateTime.now(),
-  //     fonti: mockFonti,
-  //   );
+  //   if (domanda.length > 5) {
+  //     return MessaggioChat(
+  //       testo: testoRisposta,
+  //       isUtente: false,
+  //       timestamp: DateTime.now(),
+  //       fonti: mockFonti1,
+  //     );
+  //   }
+  //   else {
+  //     return MessaggioChat(
+  //       testo: testoRisposta,
+  //       isUtente: false,
+  //       timestamp: DateTime.now(),
+  //       fonti: mockFonti2,
+  //     );
+  //   }
   // }
 
   // Recupera dettagli libro tramite identifier
