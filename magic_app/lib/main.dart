@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
+import 'models.dart';
+import 'screens/book_detail_screen.dart';
 import 'screens/chat_screen.dart';
 import 'screens/camera_screen.dart';
 import 'screens/collection_screen.dart';
 import 'screens/ar_screen.dart';
-import 'screens/dettaglio_screen.dart';
 import 'app_state.dart';
 import 'services/chat_service.dart';
 import 'services/auth_service.dart';
@@ -31,8 +32,8 @@ final router = GoRouter(
     GoRoute(
       path: '/opera/:id',
       builder: (context, state) {
-        final id = state.pathParameters['id']!;
-        return DettaglioScreen(id: id);
+        final book = state.extra as BookModel;
+        return BookDetailScreen(book: book);
       },
     ),
   ],

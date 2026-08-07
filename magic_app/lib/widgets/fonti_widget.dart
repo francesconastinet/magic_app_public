@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import '../models.dart';
 import '../opera_repository.dart'; // TODO: rimuovere opere hardcodate
-import '../screens/book_detail_screen.dart';
 
 // ==========================================
 // SCHERMATA
@@ -528,12 +528,8 @@ class FontiBooksSection extends StatelessWidget {
                       tooltip: 'Dettagli Manoscritto',
                       color: colorScheme.primary,
                       onPressed: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => BookDetailScreen(book: opera),
-                          ),
-                        );
+                        Navigator.pop(context);
+                        context.push('/opera/${opera.id}', extra: opera);
                       },
                     ),
                   ],
