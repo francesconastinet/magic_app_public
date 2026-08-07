@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import '../app_config.dart';
+import '../models.dart';
 import '../widgets/chat_widget.dart';
 import '../services/package_service.dart';
 import '../services/package_storage.dart';
@@ -26,6 +28,7 @@ class _ChatScreenState extends State<ChatScreen> {
   bool _syncInCorso = false;
   String? _titoloFonteSelezionata;
   List<String>? _idsFonteSelezionata;
+  BookModel? _operaRiconosciutaAR;
 
   @override
   void initState() {
@@ -94,6 +97,39 @@ class _ChatScreenState extends State<ChatScreen> {
   }
 
   // --- LOGICA ---
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+
+    try {
+      final extra = GoRouterState.of(context).extra;
+
+      if (extra is BookModel && extra != _operaRiconosciutaAR) {
+        _operaRiconosciutaAR = extra;
+
+        final isDifferent =
+            _idsFonteSelezionata == null ||
+            !_idsFonteSelezionata!.contains(extra.id);
+
+        if (isDifferent) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (mounted) {
+              setState(() {
+                _titoloFonteSelezionata = extra.titolo;
+                _idsFonteSelezionata = [extra.id];
+              });
+            }
+          });
+        }
+      }
+    } catch (e) {
+      debugPrint(
+        '[ChatScreen] Impossibile recuperare GoRouterState '
+        'in didChangeDependencies: $e',
+      );
+    }
+  }
+
   Future<void> _sincronizzaPacchettoInBackground() async {
     try {
       final updateService = UpdateService();

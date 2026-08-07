@@ -1,9 +1,10 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:camera/camera.dart';
+import 'package:go_router/go_router.dart';
+import 'package:magic_app/opera_repository.dart';
 import 'package:provider/provider.dart';
 import '../app_state.dart';
-import 'chat_screen.dart';
 import '../services/media_service.dart';
 import '../models.dart';
 import '../widgets/ar/audio_widget.dart';
@@ -727,15 +728,7 @@ class ARChatButton extends StatelessWidget {
               elevation: 4,
               shape: const CircleBorder(),
               onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => ChatScreen(
-                      titoloFonteIniziale: opera.titolo,
-                      idsFonteIniziale: [opera.id],
-                    ),
-                  ),
-                );
+                context.go('/', extra: opera);
               },
               child: Icon(Icons.chat_bubble, size: layout.chatIconSize),
             ),
@@ -827,106 +820,27 @@ class ARDebugMenu extends StatelessWidget {
 
               _buildButton(
                 context: context,
-                color: Colors.cyan.shade800,
-                label: 'Divina Commedia',
-                book: BookModel(
-                  id: 'xyz',
-                  titolo: 'Divina Commedia',
-                  autore: 'Dante Alighieri',
-                  anno: '1321',
-                  multimedia: [
-                    MediaItem(
-                      tipo: 'video',
-                      titolo: 'Spiegazione in 2 minuti',
-                      url: 'assets/media/video_01.mp4',
-                      descrizione: '',
-                    ),
-                    MediaItem(
-                      tipo: 'audio',
-                      titolo: 'Lettura Canto I',
-                      url: 'assets/media/audio_01.mp3',
-                      descrizione: '',
-                    ),
-                    MediaItem(
-                      tipo: 'testo',
-                      titolo: 'Riassunto trama',
-                      url: 'assets/media/testo_01.txt',
-                      descrizione: '',
-                    ),
-                    MediaItem(
-                      tipo: 'immagine',
-                      titolo: 'Copertina del libro',
-                      url: 'assets/media/immagine_01.png',
-                      descrizione: '',
-                    ),
-                    MediaItem(
-                      tipo: 'immagine',
-                      titolo: 'Struttura Inferno',
-                      url: 'assets/media/immagine_02.png',
-                      descrizione: '',
-                    ),
-                    MediaItem(
-                      tipo: 'pdf',
-                      titolo: 'Pdf Canto I',
-                      url: 'assets/media/pdf_01.pdf',
-                      descrizione: '',
-                    ),
-                    MediaItem(
-                      tipo: 'link_esterno',
-                      titolo: 'Parafrasi Divina Commedia',
-                      url: 'https://divinacommedia.weebly.com/',
-                      descrizione: '',
-                    ),
-                  ],
-                ),
+                color: Colors.pink.shade800,
+                label: 'Antifonario',
+                book: OperaRepository.tutteLeOpere().elementAt(2),
               ),
 
               const SizedBox(height: 8),
+
+              _buildButton(
+                context: context,
+                color: Colors.cyan.shade800,
+                label: 'Divina Commedia',
+                book: OperaRepository.tutteLeOpere().elementAt(3),
+              ),
+
+              const SizedBox(height: 8),
+
               _buildButton(
                 context: context,
                 color: Colors.lime.shade800,
                 label: 'Promessi Sposi',
-                book: BookModel(
-                  id: 'abc',
-                  titolo: 'Promessi Sposi',
-                  autore: 'Alessandro Manzoni',
-                  anno: '1827',
-                  multimedia: [
-                    MediaItem(
-                      tipo: 'audio',
-                      titolo: 'Lettura Capitolo 1',
-                      url: 'assets/media/audio_01.mp3',
-                      descrizione: '',
-                    ),
-                    for (var i = 1; i <= 10; i++)
-                      MediaItem(
-                        tipo: 'testo',
-                        titolo: 'Riassunto Capitolo $i',
-                        url: 'assets/media/testo_01.txt',
-                        descrizione: '',
-                      ),
-                    MediaItem(
-                      tipo: 'pdf',
-                      titolo: 'Pdf Capitolo 1',
-                      url: 'assets/media/pdf_01.pdf',
-                      descrizione: '',
-                    ),
-                  ],
-                ),
-              ),
-
-              const SizedBox(height: 8),
-              _buildButton(
-                context: context,
-                color: Colors.pink.shade800,
-                label: 'Antifonario',
-                book: BookModel(
-                  id: '123',
-                  titolo: 'Antifonario',
-                  autore: 'Anonimo sec. XIV',
-                  anno: 'Sec. XIV',
-                  multimedia: [],
-                ),
+                book: OperaRepository.tutteLeOpere().elementAt(4),
               ),
             ],
           ),
