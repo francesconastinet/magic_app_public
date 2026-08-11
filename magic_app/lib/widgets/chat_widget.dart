@@ -343,65 +343,6 @@ class _ChatWidgetState extends State<ChatWidget> {
 // ==========================================
 
 // --- BARRA SUPERIORE ---
-// class ChatHeaderBar extends StatelessWidget {
-//   final String? titoloFonte;
-//   final bool inCorso;
-//   final bool creata;
-//
-//   const ChatHeaderBar({
-//     super.key,
-//     this.titoloFonte,
-//     required this.inCorso,
-//     required this.creata,
-//   });
-//
-//   @override
-//   Widget build(BuildContext context) {
-//     final colorScheme = Theme.of(context).colorScheme;
-//     final isSmartMode = titoloFonte == null || titoloFonte!.isEmpty;
-//     final testoVisualizzato = isSmartMode ? 'Modalità Smart' : '$titoloFonte';
-//
-//     return Container(
-//       width: double.infinity,
-//       padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
-//       color: colorScheme.secondaryContainer,
-//       child: Row(
-//         children: [
-//           if (inCorso)
-//             SizedBox(
-//               width: 12,
-//               height: 12,
-//               child: CircularProgressIndicator(
-//                 strokeWidth: 2,
-//                 color: colorScheme.onSecondaryContainer,
-//               ),
-//             )
-//           else
-//             Icon(
-//               creata
-//                   ? Icons.check_circle
-//                   : (isSmartMode ? Icons.auto_awesome : Icons.cancel),
-//               size: 14,
-//               color: Colors.orange,
-//             ),
-//
-//           const SizedBox(width: 6),
-//
-//           Expanded(
-//             child: Text(
-//               testoVisualizzato,
-//               style: TextStyle(
-//                 fontSize: 12,
-//                 color: colorScheme.onSecondaryContainer,
-//                 fontWeight: FontWeight.bold,
-//               ),
-//             ),
-//           ),
-//         ],
-//       ),
-//     );
-//   }
-// }
 
 class ChatHeaderBar extends StatelessWidget {
   final String? titoloFonte;
@@ -417,6 +358,22 @@ class ChatHeaderBar extends StatelessWidget {
     required this.onMostraFontiConsultate,
   });
 
+  void _mostraInfoDialog(
+    BuildContext context,
+    bool isSmartMode,
+    String titolo,
+  ) {
+    showDialog(
+      context: context,
+      builder: (ctx) => InfoStatoDialog(
+        isSmartMode: isSmartMode,
+        titoloFonte: titolo,
+        inCorso: inCorso,
+        creata: creata,
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
@@ -427,52 +384,89 @@ class ChatHeaderBar extends StatelessWidget {
     return Container(
       width: double.infinity,
       height: 32,
-      padding: const EdgeInsets.symmetric(horizontal: 12),
       color: colorScheme.secondaryContainer,
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.center,
+      child: Stack(
+        alignment: Alignment.center,
         children: [
-          if (inCorso)
-            SizedBox(
-              width: 12,
-              height: 12,
-              child: CircularProgressIndicator(
-                strokeWidth: 2,
-                color: colorScheme.onSecondaryContainer,
-              ),
-            )
-          else
-            Icon(
-              creata
-                  ? Icons.check_circle
-                  : (isSmartMode ? Icons.info : Icons.warning),
-              size: 14,
-              color: colorScheme.primary,
-            ),
+          Material(
+            color: Colors.transparent,
+            child: InkWell(
+              onTap: () =>
+                  _mostraInfoDialog(context, isSmartMode, testoVisualizzato),
+              borderRadius: BorderRadius.circular(16),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12.0,
+                  vertical: 4.0,
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    if (inCorso)
+                      SizedBox(
+                        width: 14,
+                        height: 14,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: colorScheme.onSecondaryContainer,
+                        ),
+                      )
+                    else
+                      Icon(
+                        creata
+                            ? Icons.check_circle
+                            : (isSmartMode
+                                  ? Icons.auto_awesome
+                                  : Icons.error_outline),
+                        size: 16,
+                        color: isSmartMode
+                            ? Colors.orange
+                            : (creata ? Colors.green : colorScheme.error),
+                      ),
 
-          const SizedBox(width: 6),
+                    const SizedBox(width: 6),
 
-          Expanded(
-            child: Text(
-              testoVisualizzato,
-              style: TextStyle(
-                fontSize: 12,
-                color: colorScheme.onSecondaryContainer,
-                fontWeight: FontWeight.bold,
+                    Flexible(
+                      child: Text(
+                        testoVisualizzato,
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: colorScheme.onSecondaryContainer,
+                          fontWeight: FontWeight.bold,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+
+                    const SizedBox(width: 4),
+
+                    Icon(
+                      Icons.keyboard_arrow_down,
+                      size: 16,
+                      color: colorScheme.onSecondaryContainer.withValues(
+                        alpha: 0.7,
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
           ),
 
           if (isSmartMode)
-            SizedBox(
-              width: 24,
-              height: 24,
-              child: IconButton.filledTonal(
-                onPressed: onMostraFontiConsultate,
-                icon: const Icon(Icons.saved_search, size: 20),
-                tooltip: 'Fonti Consultate',
-                padding: EdgeInsets.zero,
-                constraints: const BoxConstraints(),
+            Positioned(
+              right: 12,
+              child: SizedBox(
+                width: 24,
+                height: 24,
+                child: IconButton.filledTonal(
+                  onPressed: onMostraFontiConsultate,
+                  icon: const Icon(Icons.saved_search, size: 20),
+                  tooltip: 'Fonti Consultate',
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(),
+                ),
               ),
             ),
         ],
@@ -482,117 +476,6 @@ class ChatHeaderBar extends StatelessWidget {
 }
 
 // --- PANNELLO FONTI CONSULTATE SMART ---
-// class FontiBottomSheet extends StatelessWidget {
-//   final List<FonteChat> fonteTotali;
-//
-//   const FontiBottomSheet({super.key, required this.fonteTotali});
-//
-//   @override
-//   Widget build(BuildContext context) {
-//     final colorScheme = Theme.of(context).colorScheme;
-//
-//     return FractionallySizedBox(
-//       heightFactor: 0.8,
-//       child: Column(
-//         crossAxisAlignment: CrossAxisAlignment.start,
-//         children: [
-//           Container(
-//             width: double.infinity,
-//             padding: const EdgeInsets.all(16),
-//             color: colorScheme.primaryContainer,
-//             child: Column(
-//               crossAxisAlignment: CrossAxisAlignment.start,
-//               children: [
-//                 Text(
-//                   'Manoscritti consultati',
-//                   style: TextStyle(
-//                     fontSize: 18,
-//                     fontWeight: FontWeight.bold,
-//                     color: colorScheme.onPrimaryContainer,
-//                   ),
-//                 ),
-//
-//                 const SizedBox(height: 4),
-//
-//                 Text(
-//                   'Usati: ${fonteTotali.length}',
-//                   style: TextStyle(
-//                     fontSize: 13,
-//                     color: colorScheme.onPrimaryContainer.withValues(
-//                       alpha: 0.8,
-//                     ),
-//                   ),
-//                 ),
-//               ],
-//             ),
-//           ),
-//
-//           Expanded(
-//             child: fonteTotali.isEmpty
-//                 ? Center(
-//                     child: Padding(
-//                       padding: const EdgeInsets.all(24),
-//                       child: Text(
-//                         'Fai una domanda per vedere i manoscritti consultati.',
-//                         textAlign: TextAlign.center,
-//                         style: TextStyle(color: colorScheme.onSurfaceVariant),
-//                       ),
-//                     ),
-//                   )
-//                 : ListView.builder(
-//                     padding: const EdgeInsets.all(8),
-//                     itemCount: fonteTotali.length,
-//                     itemBuilder: (context, index) {
-//                       final fonte = fonteTotali[index];
-//                       return Card(
-//                         child: Padding(
-//                           padding: const EdgeInsets.all(12),
-//                           child: Column(
-//                             crossAxisAlignment: CrossAxisAlignment.start,
-//                             children: [
-//                               Text(
-//                                 fonte.title.isNotEmpty
-//                                     ? fonte.title
-//                                     : fonte.identifier,
-//                                 style: const TextStyle(
-//                                   fontWeight: FontWeight.bold,
-//                                   fontSize: 14,
-//                                 ),
-//                               ),
-//
-//                               if (fonte.author.isNotEmpty) ...[
-//                                 const SizedBox(height: 4),
-//                                 Text(
-//                                   fonte.author,
-//                                   style: TextStyle(
-//                                     fontSize: 12,
-//                                     color: colorScheme.onSurfaceVariant,
-//                                   ),
-//                                 ),
-//                               ],
-//
-//                               if (fonte.date.isNotEmpty) ...[
-//                                 const SizedBox(height: 2),
-//                                 Text(
-//                                   fonte.date,
-//                                   style: TextStyle(
-//                                     fontSize: 11,
-//                                     color: colorScheme.onSurfaceVariant,
-//                                   ),
-//                                 ),
-//                               ],
-//                             ],
-//                           ),
-//                         ),
-//                       );
-//                     },
-//                   ),
-//           ),
-//         ],
-//       ),
-//     );
-//   }
-// }
 
 class FontiConsultateDialog extends StatelessWidget {
   final List<FonteChat> fonteTotali;
@@ -623,6 +506,7 @@ class FontiConsultateDialog extends StatelessWidget {
                     color: colorScheme.onPrimaryContainer,
                   ),
                 ),
+
                 IconButton(
                   icon: const Icon(Icons.close),
                   onPressed: () => Navigator.pop(context),
@@ -631,6 +515,7 @@ class FontiConsultateDialog extends StatelessWidget {
                 ),
               ],
             ),
+
             Text(
               'Usati: ${fonteTotali.length}',
               style: TextStyle(
@@ -680,6 +565,7 @@ class FontiConsultateDialog extends StatelessWidget {
                               fontSize: 14,
                             ),
                           ),
+
                           if (fonte.author.isNotEmpty) ...[
                             const SizedBox(height: 4),
                             Text(
@@ -690,6 +576,7 @@ class FontiConsultateDialog extends StatelessWidget {
                               ),
                             ),
                           ],
+
                           if (fonte.date.isNotEmpty) ...[
                             const SizedBox(height: 2),
                             Text(
@@ -707,6 +594,159 @@ class FontiConsultateDialog extends StatelessWidget {
                 },
               ),
       ),
+    );
+  }
+}
+
+// --- INFORMAZIONI STATO CHAT ---
+class InfoStatoDialog extends StatelessWidget {
+  final bool isSmartMode;
+  final String titoloFonte;
+  final bool inCorso;
+  final bool creata;
+
+  const InfoStatoDialog({
+    super.key,
+    required this.isSmartMode,
+    required this.titoloFonte,
+    required this.inCorso,
+    required this.creata,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+
+    String statoTitolo;
+    String statoDescrizione;
+    IconData statoIcona;
+    Color statoColore;
+
+    if (inCorso) {
+      statoTitolo = 'Caricamento in corso...';
+      statoDescrizione =
+          'Sto recuperando e indicizzando le fonti richieste. '
+          'Potrebbe volerci qualche istante.';
+      statoIcona = Icons.sync;
+      statoColore = colorScheme.primary;
+    } else if (isSmartMode) {
+      statoTitolo = 'Modalità Smart Attiva';
+      statoDescrizione =
+          'Non hai selezionato nessun manoscritto. '
+          'L\'intelligenza artificiale sceglierà automaticamente '
+          'le fonti più pertinenti dall\'intero catalogo '
+          'per rispondere alle tue domande.';
+      statoIcona = Icons.auto_awesome;
+      statoColore = Colors.orange;
+    } else if (creata) {
+      statoTitolo = 'Fonti Caricate';
+      statoDescrizione =
+          'La chat è stata limitata ai manoscritti selezionati. '
+          'Tutte le risposte si baseranno solo su questi testi.';
+      statoIcona = Icons.check_circle;
+      statoColore = Colors.green;
+    } else {
+      statoTitolo = 'Errore di Caricamento';
+      statoDescrizione =
+          'Si è verificato un problema nel caricamento '
+          'delle fonti selezionate. '
+          'L\'assistente proverà comunque a rispondere.';
+      statoIcona = Icons.error_outline;
+      statoColore = colorScheme.error;
+    }
+
+    return AlertDialog(
+      titlePadding: const EdgeInsets.all(20),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 20),
+      title: Row(
+        children: [
+          Icon(Icons.info_outline, color: colorScheme.onSurface),
+          const SizedBox(width: 12),
+          const Text('Stato della Chat', style: TextStyle(fontSize: 18)),
+        ],
+      ),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'MANOSCRITTI SELEZIONATI:',
+            style: TextStyle(
+              fontWeight: FontWeight.bold,
+              color: colorScheme.onSurfaceVariant,
+              fontSize: 11,
+              letterSpacing: 1.2,
+            ),
+          ),
+
+          const SizedBox(height: 6),
+
+          Text(
+            isSmartMode ? 'Nessuno' : titoloFonte,
+            style: const TextStyle(fontSize: 14),
+          ),
+
+          const Padding(
+            padding: EdgeInsets.symmetric(vertical: 16.0),
+            child: Divider(height: 1),
+          ),
+
+          Text(
+            'STATO CONNESSIONE:',
+            style: TextStyle(
+              fontWeight: FontWeight.bold,
+              color: colorScheme.onSurfaceVariant,
+              fontSize: 11,
+              letterSpacing: 1.2,
+            ),
+          ),
+
+          const SizedBox(height: 12),
+
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Icon(statoIcona, color: statoColore, size: 28),
+
+              const SizedBox(width: 12),
+
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      statoTitolo,
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        color: statoColore,
+                        fontSize: 14,
+                      ),
+                    ),
+
+                    const SizedBox(height: 4),
+
+                    Text(
+                      statoDescrizione,
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+
+          const SizedBox(height: 8),
+        ],
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('Chiudi'),
+        ),
+      ],
     );
   }
 }
@@ -754,7 +794,9 @@ class ChatInputArea extends StatelessWidget {
               enabled: !isWriting,
             ),
           ),
+
           const SizedBox(width: 8),
+
           FloatingActionButton.small(
             heroTag: 'chat_send_btn',
             elevation: 0,
@@ -813,7 +855,9 @@ class ChatTypingIndicator extends StatelessWidget {
                     color: colorScheme.primary,
                   ),
                 ),
+
                 const SizedBox(width: 8),
+
                 Text(
                   'Sto elaborando...',
                   style: TextStyle(

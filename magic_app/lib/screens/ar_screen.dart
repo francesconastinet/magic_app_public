@@ -822,7 +822,9 @@ class ARDebugMenu extends StatelessWidget {
                 context: context,
                 color: Colors.pink.shade800,
                 label: 'Antifonario',
-                book: OperaRepository.tutteLeOpere().elementAt(2),
+                book: OperaRepository.tutteLeOpere().firstWhere(
+                  (opera) => opera.titolo == 'Antifonario',
+                ),
               ),
 
               const SizedBox(height: 8),
@@ -831,7 +833,9 @@ class ARDebugMenu extends StatelessWidget {
                 context: context,
                 color: Colors.cyan.shade800,
                 label: 'Divina Commedia',
-                book: OperaRepository.tutteLeOpere().elementAt(3),
+                book: OperaRepository.tutteLeOpere().firstWhere(
+                  (opera) => opera.titolo == 'Divina Commedia',
+                ),
               ),
 
               const SizedBox(height: 8),
@@ -840,7 +844,9 @@ class ARDebugMenu extends StatelessWidget {
                 context: context,
                 color: Colors.lime.shade800,
                 label: 'Promessi Sposi',
-                book: OperaRepository.tutteLeOpere().elementAt(4),
+                book: OperaRepository.tutteLeOpere().firstWhere(
+                  (opera) => opera.titolo == 'Promessi Sposi',
+                ),
               ),
             ],
           ),

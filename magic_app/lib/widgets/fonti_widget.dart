@@ -124,6 +124,9 @@ class _FontiSelectionSheetState extends State<FontiSelectionSheet> {
                   searchQuery: _searchQuery,
                   selectedCollectionId: _selectedCollectionId,
                   selectedBookIds: _selectedBookIds,
+                  initialSelectedIds: Set<String>.from(
+                    widget.idsFonteIniziale ?? [],
+                  ),
                   collezioni: _collezioni,
                   onBookToggled: (id, isSelected) {
                     setState(() {
@@ -451,6 +454,7 @@ class FontiBooksSection extends StatelessWidget {
   final String searchQuery;
   final String? selectedCollectionId;
   final Set<String> selectedBookIds;
+  final Set<String> initialSelectedIds;
   final Future<List<CollectionV2Model>> collezioni;
   final void Function(String id, bool isSelected) onBookToggled;
 
@@ -459,6 +463,7 @@ class FontiBooksSection extends StatelessWidget {
     required this.searchQuery,
     required this.selectedCollectionId,
     required this.selectedBookIds,
+    required this.initialSelectedIds,
     required this.collezioni,
     required this.onBookToggled,
   });
@@ -502,6 +507,16 @@ class FontiBooksSection extends StatelessWidget {
 
         if (opere.isEmpty) return const SizedBox.shrink();
 
+        opere.sort((a, b) {
+          final aSelezionato = initialSelectedIds.contains(a.id);
+          final bSelezionato = initialSelectedIds.contains(b.id);
+
+          if (aSelezionato && !bSelezionato) return -1;
+          if (!aSelezionato && bSelezionato) return 1;
+
+          return a.titolo.compareTo(b.titolo);
+        });
+
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -516,6 +531,7 @@ class FontiBooksSection extends StatelessWidget {
                 ),
               ),
             ),
+
             ...opere.map((opera) {
               final isAttiva = selectedBookIds.contains(opera.id);
 
@@ -529,7 +545,9 @@ class FontiBooksSection extends StatelessWidget {
                       color: colorScheme.primary,
                       onPressed: () {
                         Navigator.pop(context);
-                        context.push('/opera/${opera.id}', extra: opera);
+                        GoRouter.of(
+                          context,
+                        ).push('/opera/${opera.id}', extra: opera);
                       },
                     ),
                   ],
