@@ -31,61 +31,78 @@ class _DrawerWidgetState extends State<DrawerWidget> {
   // --- RENDERING ---
   @override
   Widget build(BuildContext context) {
+    final safePadding = MediaQuery.paddingOf(context);
+
     return Drawer(
-      child: SafeArea(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(16),
-              color: Theme.of(context).colorScheme.primaryContainer,
-              child: Text(
-                'Menu Principale',
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  color: Theme.of(context).colorScheme.onPrimaryContainer,
-                ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            width: double.infinity,
+            padding: EdgeInsets.only(
+              top: safePadding.top + 24,
+              bottom: 24,
+              left: 16,
+              right: 16,
+            ),
+            color: Colors.white,
+            child: Center(
+              child: Image.asset(
+                'assets/magic-logo.png',
+                height: 40,
+                fit: BoxFit.contain,
+                color: Theme.of(context).colorScheme.primary,
               ),
             ),
+          ),
 
-            const SizedBox(height: 16),
-            DrawerSectionTitle(titolo: 'Chat'),
-            const ShareChatTile(),
-            const RestoreChatTile(),
+          const Spacer(),
 
-            const Divider(height: 1, indent: 16, endIndent: 16),
-            const SizedBox(height: 8),
+          Container(
+            width: double.infinity,
+            color: Colors.white,
+            padding: EdgeInsets.only(top: 8, bottom: safePadding.bottom + 8),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const ShareChatTile(),
 
-            DrawerSectionTitle(titolo: 'Profilo'),
-            ProfileSection(
-              mockLoggedUser: _mockLoggedUser,
-              onLogin: (user) {
-                setState(() => _mockLoggedUser = user);
-                Navigator.pop(context);
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text(
-                      'Benvenuto, $_mockLoggedUser!',
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    duration: const Duration(seconds: 2),
-                  ),
-                );
-              },
-              onLogout: () {
-                setState(() => _mockLoggedUser = null);
-                Navigator.pop(context);
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Logout effettuato')),
-                );
-              },
+                const RestoreChatTile(),
+
+                const Padding(
+                  padding: EdgeInsets.symmetric(vertical: 8.0),
+                  child: Divider(height: 1),
+                ),
+
+                ProfileSection(
+                  mockLoggedUser: _mockLoggedUser,
+                  onLogin: (user) {
+                    setState(() => _mockLoggedUser = user);
+                    Navigator.pop(context);
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text(
+                          'Benvenuto, $_mockLoggedUser!',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        duration: const Duration(seconds: 2),
+                      ),
+                    );
+                  },
+                  onLogout: () {
+                    setState(() => _mockLoggedUser = null);
+                    Navigator.pop(context);
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Logout effettuato')),
+                    );
+                  },
+                ),
+              ],
             ),
-            const Spacer(),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
@@ -533,6 +550,7 @@ class ProfileSection extends StatelessWidget {
 }
 
 // --- MOCK LOGIN ---
+// TODO: Sostituire con login di AuthService
 class LoginDialog extends StatefulWidget {
   final ValueChanged<String> onLogin;
 
