@@ -3,7 +3,7 @@ import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import 'models.dart';
 import 'screens/book_detail_screen.dart';
-import 'screens/chat_screen.dart';
+import 'screens/home_screen.dart';
 import 'screens/camera_screen.dart';
 import 'screens/collection_screen.dart';
 import 'screens/ar_screen.dart';
@@ -22,11 +22,12 @@ final router = GoRouter(
       path: '/collezioni',
       builder: (context, state) => const CollectionScreen(),
     ),
+    GoRoute(path: '/ar', builder: (context, state) => const ARScreen()),
     GoRoute(
       path: '/ar/:nome',
       builder: (context, state) {
-        final nome = state.pathParameters['nome']!;
-        return ARScreen(nomeOpera: nome);
+        final nome = state.pathParameters['nome'];
+        return ARScreen(nomeOperaIniziale: nome);
       },
     ),
     GoRoute(

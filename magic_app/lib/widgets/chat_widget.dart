@@ -120,14 +120,16 @@ class _ChatWidgetState extends State<ChatWidget> {
                       },
                       child: const Icon(Icons.library_books, size: 25),
                     ),
+
                     const SizedBox(height: 12),
+
                     FloatingActionButton.small(
                       heroTag: 'fab_camera',
                       backgroundColor: colorScheme.secondaryContainer,
                       foregroundColor: colorScheme.onSecondaryContainer,
                       elevation: 2,
                       tooltip: 'Riconosci Manoscritto',
-                      onPressed: () => context.push('/camera'),
+                      onPressed: () => context.push('/ar'),
                       child: const Icon(Icons.camera_alt, size: 25),
                     ),
                   ],

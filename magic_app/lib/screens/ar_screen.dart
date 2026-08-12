@@ -1,12 +1,14 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:camera/camera.dart';
-import 'package:go_router/go_router.dart';
-import 'package:magic_app/opera_repository.dart';
 import 'package:provider/provider.dart';
+import 'package:go_router/go_router.dart';
+import 'package:camera/camera.dart';
+import 'package:permission_handler/permission_handler.dart';
+import 'package:magic_app/opera_repository.dart';
 import '../app_state.dart';
 import '../services/media_service.dart';
 import '../models.dart';
+import '../services/recognition_service.dart';
 import '../widgets/ar/audio_widget.dart';
 import '../widgets/ar/image_dialog.dart';
 import '../widgets/ar/pdf_dialog.dart';
@@ -96,14 +98,18 @@ class ARLayout {
 // ==========================================
 
 class ARScreen extends StatefulWidget {
-  final String nomeOpera;
-  const ARScreen({super.key, required this.nomeOpera});
+  final String? nomeOperaIniziale;
+  const ARScreen({super.key, this.nomeOperaIniziale});
 
   @override
   State<ARScreen> createState() => _ARScreenState();
 }
 
 class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
+  final _recognitionService = RecognitionService();
+  bool _elaborazione = false;
+  bool _isAutoScanning = false;
+  String? _errore;
   bool _overlayVisibile = false;
   CameraController? _camController;
   bool _cameraReady = false;
@@ -118,6 +124,7 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
   @override
   void initState() {
     super.initState();
+    _recognitionService.inizializza();
 
     _fadeController = AnimationController(
       vsync: this,
@@ -143,9 +150,11 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
 
   @override
   void dispose() {
+    _fermaScansioneAutomatica();
     _camController?.dispose();
     _fadeController.dispose();
     _scanController.dispose();
+    _recognitionService.dispose();
     super.dispose();
   }
 
@@ -153,19 +162,35 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
   @override
   Widget build(BuildContext context) {
     final opera = context.watch<AppState>().operaSelezionata;
-
     final isLandscape =
         MediaQuery.orientationOf(context) == Orientation.landscape;
+    final colorScheme = Theme.of(context).colorScheme;
 
     return Scaffold(
       appBar: isLandscape
           ? null
-          : AppBar(title: const Text('Realtà Aumentata')),
+          : AppBar(
+              backgroundColor: colorScheme.primary,
+              foregroundColor: colorScheme.onPrimary,
+              title: const Text(
+                'Realtà Aumentata',
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              ),
+            ),
       body: _buildBody(opera),
     );
   }
 
   Widget _buildBody(BookModel? opera) {
+    if (_errore != null) {
+      return Center(
+        child: Text(
+          _errore!,
+          style: const TextStyle(color: Colors.redAccent, fontSize: 18),
+        ),
+      );
+    }
+
     if (!_cameraReady) {
       return const Center(child: CircularProgressIndicator());
     }
@@ -178,17 +203,10 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
         ARCameraFeed(controller: _camController!, layout: layout),
 
         if (!_overlayVisibile)
-          ARCameraViewfinder(scanAnimation: _scanAnimation, layout: layout),
-
-        if (kDebugMode)
-          ARDebugMenu(
+          ARCameraViewfinder(
+            scanAnimation: _scanAnimation,
             layout: layout,
-            onSimulate: () {
-              setState(() {
-                _audioInEsecuzione = null;
-              });
-              _mostraOverlay();
-            },
+            isScanning: _elaborazione,
           ),
 
         if (_overlayVisibile && opera != null) ...[
@@ -197,37 +215,30 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
             fadeAnimation: _fadeAnimation,
             layout: layout,
           ),
-
           ARChatButton(
             opera: opera,
             overlayVisibile: _overlayVisibile,
             fadeAnimation: _fadeAnimation,
             layout: layout,
           ),
-
           ARCloseButton(
             overlayVisibile: _overlayVisibile,
             fadeAnimation: _fadeAnimation,
             layout: layout,
             onClose: _nascondiOverlay,
           ),
-
           ARMediaBubblesPanel(
             opera: opera,
             fadeAnimation: _fadeAnimation,
             layout: layout,
             audioInEsecuzione: _audioInEsecuzione,
-            onPlayAudio: (item) {
-              setState(() {
-                _audioInEsecuzione = item;
-                _audioMinimizzato = false;
-              });
-            },
-            onReopenAudio: () {
-              setState(() {
-                _audioMinimizzato = false;
-              });
-            },
+            onPlayAudio: (item) => setState(() {
+              _audioInEsecuzione = item;
+              _audioMinimizzato = false;
+            }),
+            onReopenAudio: () => setState(() {
+              _audioMinimizzato = false;
+            }),
           ),
 
           if (_audioInEsecuzione != null)
@@ -235,32 +246,133 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
               titolo: _audioInEsecuzione!.titolo,
               audioPath: _audioInEsecuzione!.url,
               isMinimized: _audioMinimizzato,
-              onMinimizeToggle: () {
-                setState(() {
-                  _audioMinimizzato = true;
-                });
-              },
-              onClose: () {
-                setState(() {
-                  _audioInEsecuzione = null;
-                });
-              },
+              onMinimizeToggle: () => setState(() => _audioMinimizzato = true),
+              onClose: () => setState(() => _audioInEsecuzione = null),
             ),
         ],
+
+        if (layout.isLandscape)
+          Positioned(
+            top: layout.safePadding.top + 16.0,
+            left: layout.safePadding.left + 16.0,
+            child: SizedBox(
+              width: 48,
+              height: 48,
+              child: FloatingActionButton(
+                heroTag: 'btn_back_landscape',
+                backgroundColor: Colors.black.withValues(alpha: 0.75),
+                foregroundColor: Colors.white,
+                elevation: 0,
+                shape: const CircleBorder(
+                  side: BorderSide(color: Colors.white24, width: 1),
+                ),
+                onPressed: () => Navigator.pop(context),
+                child: const Icon(Icons.arrow_back),
+              ),
+            ),
+          ),
+
+        if (kDebugMode)
+          ARDebugMenu(
+            layout: layout,
+            onSimulate: () {
+              setState(() => _audioInEsecuzione = null);
+              _mostraOverlay();
+            },
+          ),
       ],
     );
   }
 
   // --- LOGICA ---
   Future<void> _inizializzaCamera() async {
+    final permesso = await Permission.camera.request();
+    if (!permesso.isGranted) {
+      setState(() => _errore = 'Permesso fotocamera negato');
+      return;
+    }
+
     final cameras = await availableCameras();
-    if (cameras.isEmpty) return;
+    if (cameras.isEmpty) {
+      setState(() => _errore = 'Nessuna fotocamera trovata');
+      return;
+    }
+
     _camController = CameraController(cameras.first, ResolutionPreset.medium);
     await _camController!.initialize();
 
     if (mounted) {
       setState(() => _cameraReady = true);
-      if (!_overlayVisibile) _mostraOverlay();
+
+      if (widget.nomeOperaIniziale != null) {
+        final operaTrovata = OperaRepository.tutteLeOpere().firstWhere(
+          (o) => o.titolo == widget.nomeOperaIniziale,
+          orElse: () => OperaRepository.tutteLeOpere().first,
+        );
+        context.read<AppState>().selezionaOpera(operaTrovata);
+        _mostraOverlay();
+      } else {
+        _avviaScansioneAutomatica();
+      }
+    }
+  }
+
+  void _avviaScansioneAutomatica() {
+    if (_isAutoScanning) return;
+    _isAutoScanning = true;
+    _loopScansione();
+  }
+
+  void _fermaScansioneAutomatica() {
+    _isAutoScanning = false;
+  }
+
+  Future<void> _loopScansione() async {
+    while (_isAutoScanning && mounted) {
+      if (_cameraReady && !_overlayVisibile && !_elaborazione) {
+        await _riconosci();
+      }
+      await Future.delayed(const Duration(seconds: 2));
+    }
+  }
+
+  Future<void> _riconosci() async {
+    setState(() => _elaborazione = true);
+
+    try {
+      final foto = await _camController!.takePicture();
+      final bytes = await foto.readAsBytes();
+      final risultato = await _recognitionService.riconosci(bytes);
+
+      if (mounted && !_overlayVisibile) {
+        if (risultato != null) {
+          if (risultato.isAffidabile) {
+            _fermaScansioneAutomatica();
+            context.read<AppState>().riconosciOpera(risultato.nomeOpera);
+            final operaTrovata = OperaRepository.trovaPerNomeML(
+              risultato.nomeOpera,
+            );
+            context.read<AppState>().selezionaOpera(operaTrovata);
+
+            _mostraOverlay();
+          } else {
+            ScaffoldMessenger.of(context).hideCurrentSnackBar();
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text(
+                  'Confidenza bassa. Avvicinati all\'opera e inquadrala bene.',
+                ),
+                backgroundColor: Colors.orange,
+                duration: Duration(seconds: 2),
+              ),
+            );
+          }
+        }
+      }
+    } catch (e) {
+      debugPrint('Errore Riconoscimento ML: $e');
+    } finally {
+      if (mounted) setState(() => _elaborazione = false);
     }
   }
 
@@ -276,6 +388,7 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
         setState(() => _overlayVisibile = false);
         setState(() => _audioInEsecuzione = null);
         _scanController.repeat(reverse: true);
+        _avviaScansioneAutomatica();
       }
     });
   }
@@ -286,7 +399,6 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
 // ==========================================
 
 // --- FLUSSO VIDEO FOTOCAMERA ---
-// TODO: colleagre a RecognitionService
 class ARCameraFeed extends StatelessWidget {
   final CameraController controller;
   final ARLayout layout;
@@ -324,11 +436,13 @@ class ARCameraFeed extends StatelessWidget {
 class ARCameraViewfinder extends StatelessWidget {
   final Animation<double> scanAnimation;
   final ARLayout layout;
+  final bool isScanning;
 
   const ARCameraViewfinder({
     super.key,
     required this.scanAnimation,
     required this.layout,
+    required this.isScanning,
   });
 
   @override
@@ -352,9 +466,13 @@ class ARCameraViewfinder extends StatelessWidget {
             child: Center(
               child: Opacity(
                 opacity: 0.4 + scanAnimation.value * 0.6,
-                child: const Text(
-                  'Punta sulla copertina',
-                  style: TextStyle(color: Colors.white, fontSize: 14),
+                child: Text(
+                  isScanning ? 'Analisi in corso...' : 'Punta sulla copertina',
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w500,
+                  ),
                   textAlign: TextAlign.center,
                 ),
               ),
