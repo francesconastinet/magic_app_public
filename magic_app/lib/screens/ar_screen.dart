@@ -735,14 +735,17 @@ class ARMediaBubblesPanel extends StatelessWidget {
                       ),
                       onTap: () {
                         Navigator.pop(ctx);
+
                         if (item.tipo == 'audio') {
                           onPlayAudio(item);
                           return;
                         }
+
                         if (item.tipo == 'link_esterno') {
                           context.read<MediaService>().apriUrl(item.url);
                           return;
                         }
+
                         if (item.tipo == 'pdf') {
                           showDialog(
                             context: context,
@@ -754,6 +757,7 @@ class ARMediaBubblesPanel extends StatelessWidget {
                           );
                           return;
                         }
+
                         showDialog(
                           context: context,
                           builder: (_) {
@@ -763,16 +767,19 @@ class ARMediaBubblesPanel extends StatelessWidget {
                                   titolo: item.titolo,
                                   textPath: item.url,
                                 );
+
                               case 'immagine':
                                 return ImageDialog(
                                   immagini: mediaList,
                                   initialIndex: index,
                                 );
+
                               case 'video':
                                 return VideoDialog(
                                   titolo: item.titolo,
                                   videoPath: item.url,
                                 );
+
                               default:
                                 return const AlertDialog(
                                   title: Text('Formato non supportato'),

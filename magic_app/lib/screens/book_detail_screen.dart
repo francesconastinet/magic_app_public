@@ -32,32 +32,37 @@ class _BookDetailScreenState extends State<BookDetailScreen> {
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
 
-    return Scaffold(
-      appBar: _buildAppBar(colorScheme),
-      body: Stack(
+    return Material(
+      type: MaterialType.transparency,
+      child: Stack(
+        fit: StackFit.expand,
         children: [
-          SingleChildScrollView(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                _BookHeaderCard(book: widget.book),
+          Scaffold(
+            appBar: _buildAppBar(colorScheme),
+            floatingActionButton: _StartARButton(book: widget.book),
+            body: SingleChildScrollView(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _BookHeaderCard(book: widget.book),
 
-                const SizedBox(height: 16),
+                  const SizedBox(height: 16),
 
-                _MultimediaSection(
-                  book: widget.book,
-                  audioInEsecuzione: _audioInEsecuzione,
-                  onPlayAudio: (item) {
-                    setState(() {
-                      _audioInEsecuzione = item;
-                      _audioMinimizzato = false;
-                    });
-                  },
-                ),
+                  _MultimediaSection(
+                    book: widget.book,
+                    audioInEsecuzione: _audioInEsecuzione,
+                    onPlayAudio: (item) {
+                      setState(() {
+                        _audioInEsecuzione = item;
+                        _audioMinimizzato = false;
+                      });
+                    },
+                  ),
 
-                _StartARButton(book: widget.book),
-              ],
+                  const SizedBox(height: 80),
+                ],
+              ),
             ),
           ),
 
@@ -117,9 +122,7 @@ class _BookHeaderCard extends StatelessWidget {
                     color: colorScheme.onPrimaryContainer,
                   ),
                 ),
-
                 const SizedBox(width: 12),
-
                 Expanded(
                   child: Text(
                     book.titolo,
@@ -132,21 +135,48 @@ class _BookHeaderCard extends StatelessWidget {
               ],
             ),
 
-            const SizedBox(height: 8),
+            const Divider(height: 24),
 
-            Text(
-              book.autore,
-              style: TextStyle(color: colorScheme.onSurfaceVariant),
+            Row(
+              children: [
+                Icon(
+                  Icons.person_outline,
+                  size: 16,
+                  color: colorScheme.onSurfaceVariant,
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    book.autore,
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                ),
+              ],
             ),
 
-            const SizedBox(height: 4),
+            const SizedBox(height: 8),
 
-            Text(
-              book.anno,
-              style: TextStyle(
-                fontSize: 12,
-                color: colorScheme.onSurfaceVariant,
-              ),
+            Row(
+              children: [
+                Icon(
+                  Icons.calendar_today_outlined,
+                  size: 16,
+                  color: colorScheme.onSurfaceVariant,
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    book.anno,
+                    style: TextStyle(
+                      fontSize: 13,
+                      color: colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                ),
+              ],
             ),
           ],
         ),
@@ -169,12 +199,16 @@ class _MultimediaSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (book.multimedia.isEmpty) {
-      return const Padding(
-        padding: EdgeInsets.only(bottom: 16),
-        child: _EmptyMediaCard(),
-      );
-    }
+    final videoList = book.multimedia.where((m) => m.tipo == 'video').toList();
+    final audioList = book.multimedia.where((m) => m.tipo == 'audio').toList();
+    final immaginiList = book.multimedia
+        .where((m) => m.tipo == 'immagine')
+        .toList();
+    final pdfList = book.multimedia.where((m) => m.tipo == 'pdf').toList();
+    final testoList = book.multimedia.where((m) => m.tipo == 'testo').toList();
+    final linkList = book.multimedia
+        .where((m) => m.tipo == 'link_esterno')
+        .toList();
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -185,25 +219,61 @@ class _MultimediaSection extends StatelessWidget {
             context,
           ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
         ),
+        const SizedBox(height: 12),
 
-        const SizedBox(height: 8),
-
-        ...book.multimedia.map((media) {
-          return _MediaListItem(
-            media: media,
-            allMedia: book.multimedia,
-            audioInEsecuzione: audioInEsecuzione,
-            onPlayAudio: onPlayAudio,
-          );
-        }),
-
-        const SizedBox(height: 16),
+        if (book.multimedia.isEmpty)
+          const _EmptyMediaCard()
+        else ...[
+          if (videoList.isNotEmpty)
+            _buildGroup('Video', Icons.videocam, Colors.red, videoList),
+          if (audioList.isNotEmpty)
+            _buildGroup('Audio', Icons.audiotrack, Colors.purple, audioList),
+          if (immaginiList.isNotEmpty)
+            _buildGroup('Immagini', Icons.image, Colors.blue, immaginiList),
+          if (pdfList.isNotEmpty)
+            _buildGroup('PDF', Icons.picture_as_pdf, Colors.orange, pdfList),
+          if (testoList.isNotEmpty)
+            _buildGroup('Testi', Icons.article, Colors.brown, testoList),
+          if (linkList.isNotEmpty)
+            _buildGroup('Link', Icons.link, Colors.green, linkList),
+        ],
       ],
+    );
+  }
+
+  Widget _buildGroup(
+    String titolo,
+    IconData icona,
+    Color colore,
+    List<MediaItem> mediaList,
+  ) {
+    return Card(
+      margin: const EdgeInsets.only(bottom: 12),
+      clipBehavior: Clip.antiAlias,
+      child: ExpansionTile(
+        shape: const Border(),
+        collapsedShape: const Border(),
+        leading: Icon(icona, color: colore),
+        title: Text(
+          '$titolo (${mediaList.length})',
+          style: const TextStyle(fontWeight: FontWeight.bold),
+        ),
+        children: mediaList
+            .map(
+              (media) => _MediaListItem(
+                media: media,
+                allMedia: book.multimedia,
+                audioInEsecuzione: audioInEsecuzione,
+                onPlayAudio: onPlayAudio,
+              ),
+            )
+            .toList(),
+      ),
     );
   }
 }
 
-// --- ITEM ELEMENTO MULTIMEDIALE ---
+// --- ELEMENTO MULTIMEDIALE ---
 class _MediaListItem extends StatelessWidget {
   final MediaItem media;
   final List<MediaItem> allMedia;
@@ -217,110 +287,76 @@ class _MediaListItem extends StatelessWidget {
     required this.onPlayAudio,
   });
 
-  IconData _iconaPerTipo(String tipo) {
-    switch (tipo) {
-      case 'video':
-        return Icons.play_circle_outline;
-      case 'audio':
-        return Icons.headphones;
-      case 'immagine':
-        return Icons.image_outlined;
-      case 'pdf':
-        return Icons.picture_as_pdf_outlined;
-      case 'testo':
-        return Icons.article_outlined;
-      case 'link_esterno':
-        return Icons.open_in_new;
-      default:
-        return Icons.link;
-    }
-  }
-
-  Color _colorePerTipo(String tipo) {
-    switch (tipo) {
-      case 'video':
-        return Colors.red;
-      case 'audio':
-        return Colors.purple;
-      case 'immagine':
-        return Colors.blue;
-      case 'pdf':
-        return Colors.orange;
-      case 'testo':
-        return Colors.brown;
-      case 'link_esterno':
-        return Colors.green;
-      default:
-        return Colors.grey;
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     final isAudioActive = media.tipo == 'audio' && audioInEsecuzione == media;
+    final colorScheme = Theme.of(context).colorScheme;
 
-    return Card(
-      child: ListTile(
-        leading: CircleAvatar(
-          backgroundColor: _colorePerTipo(media.tipo).withValues(alpha: 0.15),
-          child: Icon(
-            isAudioActive ? Icons.graphic_eq : _iconaPerTipo(media.tipo),
-            color: _colorePerTipo(media.tipo),
-          ),
-        ),
-        title: Text(
-          media.titolo,
-          style: const TextStyle(fontWeight: FontWeight.bold),
-        ),
-        subtitle: media.descrizione.isNotEmpty ? Text(media.descrizione) : null,
-        trailing: const Icon(Icons.arrow_forward_ios, size: 14),
-        onTap: () {
-          switch (media.tipo) {
-            case 'audio':
-              onPlayAudio(media);
-              break;
-            case 'video':
-              showDialog(
-                context: context,
-                builder: (_) =>
-                    VideoDialog(titolo: media.titolo, videoPath: media.url),
-              );
-              break;
-            case 'pdf':
-              showDialog(
-                context: context,
-                useSafeArea: false,
-                builder: (_) =>
-                    PdfDialog(titolo: media.titolo, pdfPath: media.url),
-              );
-              break;
-            case 'testo':
-              showDialog(
-                context: context,
-                builder: (_) =>
-                    TextDialog(titolo: media.titolo, textPath: media.url),
-              );
-              break;
-            case 'immagine':
-              final immaginiList = allMedia
-                  .where((m) => m.tipo == 'immagine')
-                  .toList();
-              final imgIndex = immaginiList.indexOf(media);
-              showDialog(
-                context: context,
-                builder: (_) => ImageDialog(
-                  immagini: immaginiList,
-                  initialIndex: imgIndex >= 0 ? imgIndex : 0,
-                ),
-              );
-              break;
-            case 'link_esterno':
-            default:
-              context.read<MediaService>().apriUrl(media.url);
-              break;
-          }
-        },
+    return ListTile(
+      contentPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 0),
+      leading: Icon(
+        isAudioActive ? Icons.volume_up : Icons.arrow_right,
+        color: colorScheme.onSurfaceVariant,
+        size: isAudioActive ? 20 : 24,
       ),
+      title: Text(
+        media.titolo,
+        style: TextStyle(
+          fontSize: 14,
+          fontWeight: isAudioActive ? FontWeight.bold : FontWeight.normal,
+        ),
+      ),
+      onTap: () {
+        switch (media.tipo) {
+          case 'audio':
+            onPlayAudio(media);
+            break;
+
+          case 'video':
+            showDialog(
+              context: context,
+              builder: (_) =>
+                  VideoDialog(titolo: media.titolo, videoPath: media.url),
+            );
+            break;
+
+          case 'pdf':
+            showDialog(
+              context: context,
+              useSafeArea: false,
+              builder: (_) =>
+                  PdfDialog(titolo: media.titolo, pdfPath: media.url),
+            );
+            break;
+
+          case 'testo':
+            showDialog(
+              context: context,
+              builder: (_) =>
+                  TextDialog(titolo: media.titolo, textPath: media.url),
+            );
+            break;
+
+          case 'immagine':
+            final immaginiList = allMedia
+                .where((m) => m.tipo == 'immagine')
+                .toList();
+            final imgIndex = immaginiList.indexOf(media);
+            showDialog(
+              context: context,
+              builder: (_) => ImageDialog(
+                immagini: immaginiList,
+                initialIndex: imgIndex >= 0 ? imgIndex : 0,
+              ),
+            );
+            break;
+
+          case 'link_esterno':
+          default:
+            context.read<MediaService>().apriUrl(media.url);
+            break;
+        }
+      },
     );
   }
 }
@@ -334,21 +370,20 @@ class _EmptyMediaCard extends StatelessWidget {
     final colorScheme = Theme.of(context).colorScheme;
 
     return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Row(
-          children: [
-            Icon(Icons.info_outline, color: colorScheme.onSurfaceVariant),
-
-            const SizedBox(width: 12),
-
-            Expanded(
-              child: Text(
-                'Nessun contenuto multimediale disponibile',
-                style: TextStyle(color: colorScheme.onSurfaceVariant),
-              ),
-            ),
-          ],
+      margin: const EdgeInsets.only(bottom: 12),
+      clipBehavior: Clip.antiAlias,
+      child: ListTile(
+        leading: Icon(Icons.info_outline, color: colorScheme.onSurfaceVariant),
+        title: Text(
+          'Nessun contenuto',
+          style: TextStyle(
+            fontWeight: FontWeight.bold,
+            color: colorScheme.onSurfaceVariant,
+          ),
+        ),
+        subtitle: Text(
+          'Non ci sono file multimediali disponibili.',
+          style: TextStyle(color: colorScheme.onSurfaceVariant, fontSize: 13),
         ),
       ),
     );
@@ -365,21 +400,16 @@ class _StartARButton extends StatelessWidget {
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
 
-    return SizedBox(
-      width: double.infinity,
-      child: ElevatedButton.icon(
-        onPressed: () {
-          context.read<AppState>().selezionaOpera(book);
-          context.push('/ar/${book.titolo}');
-        },
-        icon: const Icon(Icons.view_in_ar),
-        label: const Text('Avvia Realtà Aumentata'),
-        style: ElevatedButton.styleFrom(
-          backgroundColor: colorScheme.primary,
-          foregroundColor: colorScheme.onPrimary,
-          padding: const EdgeInsets.symmetric(vertical: 16),
-        ),
-      ),
+    return FloatingActionButton.extended(
+      heroTag: 'btn_avvia_ar',
+      onPressed: () {
+        context.read<AppState>().selezionaOpera(book);
+        context.push('/ar/${book.titolo}');
+      },
+      backgroundColor: colorScheme.primary,
+      foregroundColor: colorScheme.onPrimary,
+      icon: const Icon(Icons.view_in_ar),
+      label: const Text('Avvia AR'),
     );
   }
 }
