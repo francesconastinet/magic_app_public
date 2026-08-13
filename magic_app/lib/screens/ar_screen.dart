@@ -665,11 +665,7 @@ class ARMediaBubblesPanel extends StatelessWidget {
           side: const BorderSide(color: Colors.white24, width: 1),
         ),
         onPressed: () {
-          if (tipo == 'Audio' && audioInEsecuzione != null) {
-            onReopenAudio();
-          } else {
-            _mostraListaMedia(context, tipo, mediaList);
-          }
+          _mostraListaMedia(context, tipo, mediaList);
         },
         child: Icon(icona, size: layout.bubblesIconSize),
       ),
@@ -698,19 +694,12 @@ class ARMediaBubblesPanel extends StatelessWidget {
                 child: Row(
                   children: [
                     Text(
-                      titoloTipo,
+                      '$titoloTipo (${mediaList.length})',
                       style: const TextStyle(
                         color: Colors.white,
                         fontSize: 18,
                         fontWeight: FontWeight.bold,
                       ),
-                    ),
-
-                    const Spacer(),
-
-                    Text(
-                      '${mediaList.length} elementi',
-                      style: const TextStyle(color: Colors.white54),
                     ),
                   ],
                 ),
@@ -724,69 +713,78 @@ class ARMediaBubblesPanel extends StatelessWidget {
                   itemCount: mediaList.length,
                   itemBuilder: (ctx, index) {
                     final item = mediaList[index];
+                    final isAudioActive =
+                        item.tipo == 'audio' && audioInEsecuzione == item;
+
                     return ListTile(
-                      leading: const Icon(
-                        Icons.arrow_right,
+                      leading: Icon(
+                        isAudioActive ? Icons.volume_up : Icons.arrow_right,
                         color: Colors.white70,
+                        size: isAudioActive ? 20 : 24,
                       ),
                       title: Text(
                         item.titolo,
-                        style: const TextStyle(color: Colors.white),
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontWeight: isAudioActive
+                              ? FontWeight.bold
+                              : FontWeight.normal,
+                        ),
                       ),
                       onTap: () {
                         Navigator.pop(ctx);
 
-                        if (item.tipo == 'audio') {
-                          onPlayAudio(item);
-                          return;
+                        switch (item.tipo) {
+                          case 'audio':
+                            onPlayAudio(item);
+                            break;
+
+                          case 'video':
+                            showDialog(
+                              context: context,
+                              builder: (_) => VideoDialog(
+                                titolo: item.titolo,
+                                videoPath: item.url,
+                              ),
+                            );
+                            break;
+
+                          case 'pdf':
+                            showDialog(
+                              context: context,
+                              useSafeArea: false,
+                              builder: (_) => PdfDialog(
+                                titolo: item.titolo,
+                                pdfPath: item.url,
+                              ),
+                            );
+                            break;
+
+                          case 'testo':
+                            showDialog(
+                              context: context,
+                              builder: (_) => TextDialog(
+                                titolo: item.titolo,
+                                textPath: item.url,
+                              ),
+                            );
+                            break;
+
+                          case 'immagine':
+                            showDialog(
+                              context: context,
+                              builder: (_) => ImageDialog(
+                                immagini: mediaList,
+                                initialIndex: index,
+                              ),
+                            );
+                            break;
+
+                          case 'link_esterno':
+                          default:
+                            context.read<MediaService>().apriUrl(item.url);
+                            break;
                         }
-
-                        if (item.tipo == 'link_esterno') {
-                          context.read<MediaService>().apriUrl(item.url);
-                          return;
-                        }
-
-                        if (item.tipo == 'pdf') {
-                          showDialog(
-                            context: context,
-                            useSafeArea: false,
-                            builder: (_) => PdfDialog(
-                              titolo: item.titolo,
-                              pdfPath: item.url,
-                            ),
-                          );
-                          return;
-                        }
-
-                        showDialog(
-                          context: context,
-                          builder: (_) {
-                            switch (item.tipo) {
-                              case 'testo':
-                                return TextDialog(
-                                  titolo: item.titolo,
-                                  textPath: item.url,
-                                );
-
-                              case 'immagine':
-                                return ImageDialog(
-                                  immagini: mediaList,
-                                  initialIndex: index,
-                                );
-
-                              case 'video':
-                                return VideoDialog(
-                                  titolo: item.titolo,
-                                  videoPath: item.url,
-                                );
-
-                              default:
-                                return const AlertDialog(
-                                  title: Text('Formato non supportato'),
-                                );
-                            }
-                          },
-                        );
                       },
                     );
                   },
