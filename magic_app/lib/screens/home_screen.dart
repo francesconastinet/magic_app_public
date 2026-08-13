@@ -4,11 +4,11 @@ import 'package:provider/provider.dart';
 import '../app_config.dart';
 import '../models.dart';
 import '../widgets/chat_widget.dart';
+import '../widgets/menu_widget.dart';
 import '../services/package_service.dart';
 import '../services/package_storage.dart';
 import '../services/auth_service.dart';
 import '../services/update_service.dart';
-import '../widgets/menu_laterale_widget.dart';
 
 class ChatScreen extends StatefulWidget {
   final String? titoloFonteIniziale;
@@ -80,9 +80,7 @@ class _ChatScreenState extends State<ChatScreen> {
               )
             : null,
       ),
-
       endDrawer: DrawerWidget(),
-
       body: ChatWidget(
         titoloFonteSelezionata: _titoloFonteSelezionata,
         bookIds: _idsFonteSelezionata,
@@ -103,14 +101,12 @@ class _ChatScreenState extends State<ChatScreen> {
 
     try {
       final extra = GoRouterState.of(context).extra;
-
       if (extra is BookModel && extra != _operaRiconosciutaAR) {
         _operaRiconosciutaAR = extra;
 
         final isDifferent =
             _idsFonteSelezionata == null ||
             !_idsFonteSelezionata!.contains(extra.id);
-
         if (isDifferent) {
           WidgetsBinding.instance.addPostFrameCallback((_) {
             if (mounted) {
@@ -136,9 +132,10 @@ class _ChatScreenState extends State<ChatScreen> {
       final necessaria = await updateService.isSincronizzazioneNecessaria(
         AppConfig.packageId,
       );
-      if (!necessaria) return;
 
+      if (!necessaria) return;
       if (mounted) setState(() => _syncInCorso = true);
+
       final packageService = PackageService(
         storage: context.read<PackageStorage>(),
         authService: context.read<AuthService>(),

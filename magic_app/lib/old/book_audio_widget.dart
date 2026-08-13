@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:audioplayers/audioplayers.dart';
 import '../models.dart';
 
+// TODO: unificare ad AudioWidegt
 class AudioPlayerWidget extends StatefulWidget {
   final MediaItem media;
 
@@ -21,17 +22,14 @@ class _AudioPlayerWidgetState extends State<AudioPlayerWidget> {
   void initState() {
     super.initState();
 
-    // Ascolta i cambiamenti di stato del player
     _player.onPlayerStateChanged.listen((stato) {
       if (mounted) setState(() => _stato = stato);
     });
 
-    // Ascolta la durata totale della traccia
     _player.onDurationChanged.listen((durata) {
       if (mounted) setState(() => _durata = durata);
     });
 
-    // Ascolta la posizione corrente
     _player.onPositionChanged.listen((posizione) {
       if (mounted) setState(() => _posizione = posizione);
     });
@@ -39,12 +37,10 @@ class _AudioPlayerWidgetState extends State<AudioPlayerWidget> {
 
   @override
   void dispose() {
-    // Rilascia le risorse del player
     _player.dispose();
     super.dispose();
   }
 
-  // Formatta Duration in mm:ss
   String _formatDurata(Duration d) {
     final minuti = d.inMinutes.remainder(60).toString().padLeft(2, '0');
     final secondi = d.inSeconds.remainder(60).toString().padLeft(2, '0');
@@ -75,14 +71,15 @@ class _AudioPlayerWidgetState extends State<AudioPlayerWidget> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Titolo traccia
             Row(
               children: [
                 CircleAvatar(
                   backgroundColor: Colors.purple.withValues(alpha: 0.15),
                   child: const Icon(Icons.headphones, color: Colors.purple),
                 ),
+
                 const SizedBox(width: 12),
+
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -104,9 +101,9 @@ class _AudioPlayerWidgetState extends State<AudioPlayerWidget> {
                 ),
               ],
             ),
+
             const SizedBox(height: 12),
 
-            // Barra di avanzamento
             SliderTheme(
               data: SliderTheme.of(context).copyWith(
                 thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 6),
@@ -125,10 +122,8 @@ class _AudioPlayerWidgetState extends State<AudioPlayerWidget> {
               ),
             ),
 
-            // Tempi e controlli
             Row(
               children: [
-                // Tempo corrente
                 Text(
                   _formatDurata(_posizione),
                   style: TextStyle(
@@ -136,15 +131,16 @@ class _AudioPlayerWidgetState extends State<AudioPlayerWidget> {
                     color: colorScheme.onSurfaceVariant,
                   ),
                 ),
+
                 const Spacer(),
-                // Bottone Stop
+
                 IconButton(
                   icon: const Icon(Icons.stop),
                   onPressed: _stato == PlayerState.stopped ? null : _stop,
                   color: colorScheme.onSurfaceVariant,
                   iconSize: 20,
                 ),
-                // Bottone Play/Pause
+
                 FloatingActionButton.small(
                   heroTag: widget.media.url,
                   onPressed: _playPause,
@@ -154,8 +150,9 @@ class _AudioPlayerWidgetState extends State<AudioPlayerWidget> {
                     color: Colors.white,
                   ),
                 ),
+
                 const Spacer(),
-                // Durata totale
+
                 Text(
                   _formatDurata(_durata),
                   style: TextStyle(

@@ -1,19 +1,22 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
+import 'app_state.dart';
 import 'models.dart';
 import 'screens/book_detail_screen.dart';
 import 'screens/home_screen.dart';
-import 'screens/camera_screen.dart';
-import 'screens/collection_screen.dart';
+import 'old/camera_screen.dart';
+import 'old/collection_screen.dart';
 import 'screens/ar_screen.dart';
-import 'app_state.dart';
 import 'services/chat_service.dart';
 import 'services/auth_service.dart';
 import 'services/package_storage.dart';
 import 'services/media_service.dart';
 
-// --- ROUTER ---
+// ==========================================
+// ROUTER
+// ==========================================
+
 final router = GoRouter(
   routes: [
     GoRoute(path: '/', builder: (context, state) => const ChatScreen()),
@@ -40,7 +43,10 @@ final router = GoRouter(
   ],
 );
 
-// --- APP BOOTSTRAP ---
+// ==========================================
+// APP BOOTSTRAP
+// ==========================================
+
 void main() {
   runApp(
     MultiProvider(
@@ -59,6 +65,7 @@ void main() {
 class MagicApp extends StatelessWidget {
   const MagicApp({super.key});
 
+  // --- RENDERING ---
   @override
   Widget build(BuildContext context) {
     return MaterialApp.router(

@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
+import 'book_selection_widget.dart';
 import '../services/chat_service.dart';
-import 'fonti_widget.dart';
 
 // ==========================================
 // SCHERMATA
@@ -345,7 +345,6 @@ class _ChatWidgetState extends State<ChatWidget> {
 // ==========================================
 
 // --- BARRA SUPERIORE ---
-
 class ChatHeaderBar extends StatelessWidget {
   final String? titoloFonte;
   final bool inCorso;
@@ -478,7 +477,6 @@ class ChatHeaderBar extends StatelessWidget {
 }
 
 // --- PANNELLO FONTI CONSULTATE SMART ---
-
 class FontiConsultateDialog extends StatelessWidget {
   final List<FonteChat> fonteTotali;
 

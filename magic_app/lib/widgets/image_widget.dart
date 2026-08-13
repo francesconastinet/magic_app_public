@@ -1,9 +1,9 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../../app_config.dart';
-import '../../services/package_storage.dart';
-import '../../models.dart';
+import '../app_config.dart';
+import '../models.dart';
+import '../services/package_storage.dart';
 
 // ==========================================
 // SCHERMATA
@@ -45,12 +45,10 @@ class _ImageDialogState extends State<ImageDialog> {
   Widget build(BuildContext context) {
     final currentImage = widget.immagini[_currentIndex];
     final totalCount = widget.immagini.length;
-
     final screenSize = MediaQuery.sizeOf(context);
     final isTablet = screenSize.shortestSide >= 600;
     final isLandscape =
         MediaQuery.orientationOf(context) == Orientation.landscape;
-
     final double adaptiveMaxWidth = isTablet
         ? screenSize.width * 0.8
         : (isLandscape ? screenSize.width * 0.7 : screenSize.width * 0.9);
@@ -68,6 +66,7 @@ class _ImageDialogState extends State<ImageDialog> {
               currentIndex: _currentIndex,
               totalCount: totalCount,
             ),
+
             ImageCarousel(
               pageController: _pageController,
               immagini: widget.immagini,
@@ -78,6 +77,7 @@ class _ImageDialogState extends State<ImageDialog> {
               },
               imageBuilder: _buildImage,
             ),
+
             if (totalCount > 1)
               ImageDotsIndicator(
                 currentIndex: _currentIndex,
@@ -167,6 +167,7 @@ class ImageDialogHeader extends StatelessWidget {
               overflow: TextOverflow.ellipsis,
             ),
           ),
+
           IconButton(
             icon: const Icon(Icons.close, color: Colors.white),
             onPressed: () => Navigator.pop(context),

@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:audioplayers/audioplayers.dart';
 import 'package:provider/provider.dart';
-import '../../app_config.dart';
-import '../../services/package_storage.dart';
+import 'package:audioplayers/audioplayers.dart';
+import '../app_config.dart';
+import '../services/package_storage.dart';
 
 // ==========================================
 // SCHERMATA
@@ -145,18 +145,14 @@ class ExpandedAudioPlayer extends StatelessWidget {
     final screenSize = MediaQuery.sizeOf(context);
     final isLandscape =
         MediaQuery.orientationOf(context) == Orientation.landscape;
-
     final double containerWidth = isLandscape
         ? (screenSize.width * 0.45).clamp(320.0, 500.0)
         : (screenSize.width * 0.85).clamp(300.0, 500.0);
-
     final double maxContainerHeight = isLandscape
         ? screenSize.height * 0.75
         : screenSize.height * 0.85;
-
     final double verticalSpacing = (screenSize.height * 0.02).clamp(8.0, 24.0);
     final double padding = screenSize.width * 0.05;
-
     final double iconSize = isLandscape ? 24.0 : 64.0;
 
     return Positioned.fill(
@@ -190,20 +186,27 @@ class ExpandedAudioPlayer extends StatelessWidget {
                         onMinimize: onMinimize,
                         onClose: onClose,
                       ),
+
                       ExpandedPlayerTitle(titolo: titolo),
+
                       SizedBox(height: verticalSpacing),
+
                       Icon(
                         Icons.audiotrack,
                         size: iconSize,
                         color: Colors.blueAccent,
                       ),
+
                       SizedBox(height: verticalSpacing),
+
                       AudioProgressBar(
                         duration: duration,
                         position: position,
                         onSeek: onSeek,
                       ),
+
                       SizedBox(height: verticalSpacing),
+
                       AudioPlayPauseButton(
                         isPlaying: isPlaying,
                         onTogglePlay: onTogglePlay,
@@ -241,6 +244,7 @@ class ExpandedPlayerHeader extends StatelessWidget {
           icon: const Icon(Icons.keyboard_arrow_down, color: Colors.white54),
           onPressed: onMinimize,
         ),
+
         IconButton(
           icon: const Icon(Icons.close, color: Colors.redAccent, size: 24),
           onPressed: onClose,
@@ -310,6 +314,7 @@ class AudioProgressBar extends StatelessWidget {
           ),
           onChanged: onSeek,
         ),
+
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
@@ -317,6 +322,7 @@ class AudioProgressBar extends StatelessWidget {
               _formatDuration(position),
               style: const TextStyle(color: Colors.white54),
             ),
+
             Text(
               _formatDuration(duration),
               style: const TextStyle(color: Colors.white54),

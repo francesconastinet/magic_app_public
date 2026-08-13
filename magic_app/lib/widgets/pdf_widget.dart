@@ -2,10 +2,10 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_pdfview/flutter_pdfview.dart';
-import 'package:path_provider/path_provider.dart';
 import 'package:provider/provider.dart';
-import '../../app_config.dart';
-import '../../services/package_storage.dart';
+import 'package:path_provider/path_provider.dart';
+import '../app_config.dart';
+import '../services/package_storage.dart';
 
 // ==========================================
 // SCHERMATA
@@ -41,7 +41,6 @@ class _PdfDialogState extends State<PdfDialog> {
     final isLandscape =
         MediaQuery.orientationOf(context) == Orientation.landscape;
     final isTablet = screenSize.shortestSide >= 600;
-
     final double maxPdfWidth = isTablet
         ? (screenSize.width * 0.75).clamp(600.0, 900.0)
         : (isLandscape
@@ -61,6 +60,7 @@ class _PdfDialogState extends State<PdfDialog> {
               percorsoAssoluto: _percorsoAssoluto,
               onClose: () => Navigator.pop(context),
             ),
+
             Expanded(
               child: Container(
                 color: Colors.black,
@@ -112,7 +112,6 @@ class _PdfDialogState extends State<PdfDialog> {
           byteData.offsetInBytes,
           byteData.lengthInBytes,
         );
-
         final tempDir = await getTemporaryDirectory();
         final fileName = widget.pdfPath.split('/').last;
         final tempFile = File('${tempDir.path}/$fileName');
@@ -185,12 +184,15 @@ class PdfDialogHeader extends StatelessWidget {
               overflow: TextOverflow.ellipsis,
             ),
           ),
+
           if (isReady && percorsoAssoluto != null)
             Text(
               '${currentPage! + 1}/$totalPages',
               style: const TextStyle(color: Colors.white54),
             ),
+
           const SizedBox(width: 16),
+
           IconButton(
             icon: const Icon(Icons.close, color: Colors.white),
             onPressed: onClose,

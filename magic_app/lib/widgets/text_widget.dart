@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
 import 'package:flutter/services.dart';
-import '../../services/package_storage.dart';
-import '../../app_config.dart';
+import 'package:provider/provider.dart';
+import '../services/package_storage.dart';
+import '../app_config.dart';
 
 // ==========================================
 // SCHERMATA
@@ -81,6 +81,7 @@ class TextDialogHeader extends StatelessWidget {
             overflow: TextOverflow.ellipsis,
           ),
         ),
+
         IconButton(
           icon: const Icon(Icons.close, color: Colors.white),
           onPressed: onClose,

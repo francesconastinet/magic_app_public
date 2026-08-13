@@ -3,8 +3,8 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:video_player/video_player.dart';
 import 'package:provider/provider.dart';
-import '../../services/package_storage.dart';
-import '../../app_config.dart';
+import '../app_config.dart';
+import '../services/package_storage.dart';
 
 // ==========================================
 // SCHERMATA
@@ -47,7 +47,6 @@ class _VideoDialogState extends State<VideoDialog> {
     final isLandscape =
         MediaQuery.orientationOf(context) == Orientation.landscape;
     final isTablet = screenSize.shortestSide >= 600;
-
     final double adaptiveMaxWidth = isTablet
         ? (isLandscape ? screenSize.width * 0.75 : screenSize.width * 0.9)
         : (isLandscape ? screenSize.width * 0.7 : screenSize.width * 0.9);
@@ -65,6 +64,7 @@ class _VideoDialogState extends State<VideoDialog> {
               titolo: widget.titolo,
               onClose: () => Navigator.pop(context),
             ),
+
             Flexible(
               child: Container(
                 decoration: const BoxDecoration(
@@ -110,6 +110,7 @@ class _VideoDialogState extends State<VideoDialog> {
         alignment: Alignment.bottomCenter,
         children: [
           VideoPlayer(_controller!),
+
           VideoControlOverlay(
             controller: _controller!,
             mostraControlli: _mostraControlli,
@@ -170,7 +171,6 @@ class _VideoDialogState extends State<VideoDialog> {
 
   Future<void> _salta(int secondi) async {
     if (_controller == null || !_controller!.value.isInitialized) return;
-
     final posizioneCorrente = await _controller!.position;
     if (posizioneCorrente != null) {
       final nuovaPosizione = posizioneCorrente + Duration(seconds: secondi);
@@ -192,9 +192,7 @@ class _VideoDialogState extends State<VideoDialog> {
 
   void _avviaTimerNascondiControlli() {
     _timerNascondiControlli?.cancel();
-
     if (_controller != null && !_controller!.value.isPlaying) return;
-
     _timerNascondiControlli = Timer(const Duration(seconds: 2), () {
       if (mounted) {
         setState(() => _mostraControlli = false);
@@ -238,6 +236,7 @@ class VideoDialogHeader extends StatelessWidget {
               overflow: TextOverflow.ellipsis,
             ),
           ),
+
           IconButton(
             icon: const Icon(Icons.close, color: Colors.white),
             onPressed: onClose,
@@ -262,7 +261,9 @@ class VideoErrorState extends StatelessWidget {
         child: Column(
           children: [
             Icon(Icons.error_outline, color: Colors.red, size: 48),
+
             SizedBox(height: 8),
+
             Text(
               'Impossibile riprodurre il video',
               style: TextStyle(color: Colors.white70),
@@ -329,7 +330,9 @@ class VideoControlOverlay extends StatelessWidget {
                 onJump: onJump,
                 onTogglePlay: onTogglePlay,
               ),
+
               const SizedBox(height: 16),
+
               VideoProgressBar(
                 controller: controller,
                 onDragStart: onDragStart,
@@ -374,14 +377,18 @@ class VideoPlaybackButtons extends StatelessWidget {
               icon: const Icon(Icons.replay_5),
               onPressed: () => onJump(-5),
             ),
+
             const SizedBox(width: 16),
+
             IconButton(
               iconSize: 56,
               color: Colors.white,
               icon: Icon(isPlaying ? Icons.pause_circle : Icons.play_circle),
               onPressed: onTogglePlay,
             ),
+
             const SizedBox(width: 16),
+
             IconButton(
               iconSize: 36,
               color: Colors.white,

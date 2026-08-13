@@ -4,16 +4,16 @@ import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
 import 'package:camera/camera.dart';
 import 'package:permission_handler/permission_handler.dart';
-import 'package:magic_app/opera_repository.dart';
 import '../app_state.dart';
-import '../services/media_service.dart';
+import '../opera_repository.dart';
 import '../models.dart';
+import '../services/media_service.dart';
 import '../services/recognition_service.dart';
-import '../widgets/ar/audio_widget.dart';
-import '../widgets/ar/image_dialog.dart';
-import '../widgets/ar/pdf_dialog.dart';
-import '../widgets/ar/text_dialog.dart';
-import '../widgets/ar/video_dialog.dart';
+import '../widgets/audio_widget.dart';
+import '../widgets/image_widget.dart';
+import '../widgets/pdf_widget.dart';
+import '../widgets/text_widget.dart';
+import '../widgets/video_widget.dart';
 
 // ==========================================
 // CONFIGURAZIONE LAYOUT
@@ -209,6 +209,15 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
             isScanning: _elaborazione,
           ),
 
+        if (kDebugMode)
+          ARDebugMenu(
+            layout: layout,
+            onSimulate: () {
+              setState(() => _audioInEsecuzione = null);
+              _mostraOverlay();
+            },
+          ),
+
         if (_overlayVisibile && opera != null) ...[
           AROperaInfoPanel(
             opera: opera,
@@ -251,35 +260,7 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
             ),
         ],
 
-        if (layout.isLandscape)
-          Positioned(
-            top: layout.safePadding.top + 16.0,
-            left: layout.safePadding.left + 16.0,
-            child: SizedBox(
-              width: 48,
-              height: 48,
-              child: FloatingActionButton(
-                heroTag: 'btn_back_landscape',
-                backgroundColor: Colors.black.withValues(alpha: 0.75),
-                foregroundColor: Colors.white,
-                elevation: 0,
-                shape: const CircleBorder(
-                  side: BorderSide(color: Colors.white24, width: 1),
-                ),
-                onPressed: () => Navigator.pop(context),
-                child: const Icon(Icons.arrow_back),
-              ),
-            ),
-          ),
-
-        if (kDebugMode)
-          ARDebugMenu(
-            layout: layout,
-            onSimulate: () {
-              setState(() => _audioInEsecuzione = null);
-              _mostraOverlay();
-            },
-          ),
+        if (layout.isLandscape) ARBackButton(layout: layout),
       ],
     );
   }
@@ -651,7 +632,7 @@ class ARMediaBubblesPanel extends StatelessWidget {
                   _buildBubble(context, Icons.picture_as_pdf, 'PDF', pdfList),
 
                 if (testoList.isNotEmpty)
-                  _buildBubble(context, Icons.article, 'Testo', testoList),
+                  _buildBubble(context, Icons.article, 'Testi', testoList),
 
                 if (linkList.isNotEmpty)
                   _buildBubble(context, Icons.link, 'Link', linkList),
@@ -717,7 +698,7 @@ class ARMediaBubblesPanel extends StatelessWidget {
                 child: Row(
                   children: [
                     Text(
-                      'Contenuti: $titoloTipo',
+                      titoloTipo,
                       style: const TextStyle(
                         color: Colors.white,
                         fontSize: 18,
@@ -899,6 +880,36 @@ class ARCloseButton extends StatelessWidget {
               ),
             ),
           ),
+        ),
+      ),
+    );
+  }
+}
+
+// --- PULSANTE INDIETRO (LANDSCAPE) ---
+class ARBackButton extends StatelessWidget {
+  final ARLayout layout;
+
+  const ARBackButton({super.key, required this.layout});
+
+  @override
+  Widget build(BuildContext context) {
+    return Positioned(
+      top: layout.safePadding.top + 16.0,
+      left: layout.safePadding.left + 16.0,
+      child: SizedBox(
+        width: 48,
+        height: 48,
+        child: FloatingActionButton(
+          heroTag: 'btn_back_landscape',
+          backgroundColor: Colors.black.withValues(alpha: 0.75),
+          foregroundColor: Colors.white,
+          elevation: 0,
+          shape: const CircleBorder(
+            side: BorderSide(color: Colors.white24, width: 1),
+          ),
+          onPressed: () => Navigator.pop(context),
+          child: const Icon(Icons.arrow_back),
         ),
       ),
     );

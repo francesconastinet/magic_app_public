@@ -435,7 +435,6 @@ class _RestoreChatDialogState extends State<RestoreChatDialog> {
           onPressed: () => Navigator.pop(context),
           child: const Text('Annulla'),
         ),
-
         FilledButton(
           onPressed: () async {
             final codice = _codeController.text.trim();
@@ -654,7 +653,6 @@ class _LoginDialogState extends State<LoginDialog> {
           onPressed: () => Navigator.pop(context),
           child: const Text('Annulla'),
         ),
-
         FilledButton(
           onPressed: _isLoading
               ? null

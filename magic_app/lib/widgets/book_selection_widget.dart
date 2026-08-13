@@ -23,10 +23,8 @@ class FontiSelectionSheet extends StatefulWidget {
 
 class _FontiSelectionSheetState extends State<FontiSelectionSheet> {
   late Future<List<CollectionV2Model>> _collezioni;
-
   final TextEditingController _searchController = TextEditingController();
   String _searchQuery = '';
-
   late Set<String> _selectedBookIds;
   String? _selectedCollectionId;
   List<CollectionV2Model> _collezioniCache = [];
@@ -99,11 +97,9 @@ class _FontiSelectionSheetState extends State<FontiSelectionSheet> {
                         final activeColl = _collezioniCache.firstWhere(
                           (c) => c.id == _selectedCollectionId,
                         );
-
                         final allSelected = activeColl.bookIds.every(
                           (id) => _selectedBookIds.contains(id),
                         );
-
                         return OutlinedButton.icon(
                           icon: Icon(
                             allSelected ? Icons.deselect : Icons.select_all,
@@ -201,6 +197,7 @@ class _FontiSelectionSheetState extends State<FontiSelectionSheet> {
       widget.onFonteSelezionata(opera.titolo, [idSingolo]);
     } else {
       String? nomeCollezioneCorrispondente;
+
       for (var coll in _collezioniCache) {
         if (coll.bookIds.length == _selectedBookIds.length &&
             coll.bookIds.every((id) => _selectedBookIds.contains(id))) {
@@ -208,6 +205,7 @@ class _FontiSelectionSheetState extends State<FontiSelectionSheet> {
           break;
         }
       }
+
       if (nomeCollezioneCorrispondente != null) {
         widget.onFonteSelezionata(
           nomeCollezioneCorrispondente,
@@ -229,6 +227,7 @@ class _FontiSelectionSheetState extends State<FontiSelectionSheet> {
       bool allSelected = collezione.bookIds.every(
         (id) => _selectedBookIds.contains(id),
       );
+
       if (allSelected) {
         _selectedBookIds.removeAll(collezione.bookIds);
       } else {
@@ -277,6 +276,7 @@ class FontiHeaderSection extends StatelessWidget {
                   color: colorScheme.onPrimaryContainer,
                 ),
               ),
+
               IconButton(
                 icon: const Icon(Icons.close),
                 onPressed: onClose,
@@ -423,6 +423,7 @@ class FontiCollectionsSection extends StatelessWidget {
                       },
                     ),
                   ),
+
                   ...collezioni.map(
                     (collection) => Padding(
                       padding: const EdgeInsets.only(right: 8.0),
@@ -438,6 +439,7 @@ class FontiCollectionsSection extends StatelessWidget {
                 ],
               ),
             ),
+
             const Padding(
               padding: EdgeInsets.symmetric(vertical: 8.0),
               child: Divider(height: 1),
@@ -544,7 +546,6 @@ class FontiBooksSection extends StatelessWidget {
                       tooltip: 'Dettagli Manoscritto',
                       color: colorScheme.primary,
                       onPressed: () {
-                        Navigator.pop(context);
                         GoRouter.of(
                           context,
                         ).push('/opera/${opera.id}', extra: opera);
