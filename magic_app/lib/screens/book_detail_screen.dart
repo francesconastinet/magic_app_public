@@ -373,7 +373,7 @@ class _EmptyMediaCard extends StatelessWidget {
       margin: const EdgeInsets.only(bottom: 12),
       clipBehavior: Clip.antiAlias,
       child: ListTile(
-        leading: Icon(Icons.info_outline, color: colorScheme.onSurfaceVariant),
+        leading: Icon(Icons.folder_off_outlined, color: colorScheme.onSurfaceVariant),
         title: Text(
           'Nessun contenuto',
           style: TextStyle(

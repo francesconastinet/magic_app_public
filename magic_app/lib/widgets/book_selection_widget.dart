@@ -7,21 +7,21 @@ import '../opera_repository.dart'; // TODO: rimuovere opere hardcodate
 // SCHERMATA
 // ==========================================
 
-class FontiSelectionSheet extends StatefulWidget {
+class BookSelectionWidget extends StatefulWidget {
   final void Function(String? titolo, List<String>? ids) onFonteSelezionata;
   final List<String>? idsFonteIniziale;
 
-  const FontiSelectionSheet({
+  const BookSelectionWidget({
     super.key,
     required this.onFonteSelezionata,
     this.idsFonteIniziale,
   });
 
   @override
-  State<FontiSelectionSheet> createState() => _FontiSelectionSheetState();
+  State<BookSelectionWidget> createState() => _BookSelectionWidgetState();
 }
 
-class _FontiSelectionSheetState extends State<FontiSelectionSheet> {
+class _BookSelectionWidgetState extends State<BookSelectionWidget> {
   late Future<List<CollectionV2Model>> _collezioni;
   final TextEditingController _searchController = TextEditingController();
   String _searchQuery = '';

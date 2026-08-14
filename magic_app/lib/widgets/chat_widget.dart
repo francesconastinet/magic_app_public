@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import 'book_selection_widget.dart';
+import '../app_state.dart';
 import '../services/chat_service.dart';
 
 // ==========================================
@@ -111,7 +112,7 @@ class _ChatWidgetState extends State<ChatWidget> {
                         showModalBottomSheet(
                           context: context,
                           isScrollControlled: true,
-                          builder: (ctx) => FontiSelectionSheet(
+                          builder: (ctx) => BookSelectionWidget(
                             idsFonteIniziale: widget.bookIds,
                             onFonteSelezionata:
                                 widget.onFonteSelezionata ?? (t, ids) {},
@@ -124,12 +125,19 @@ class _ChatWidgetState extends State<ChatWidget> {
                     const SizedBox(height: 12),
 
                     FloatingActionButton.small(
-                      heroTag: 'fab_camera',
+                      heroTag: 'fab_ar',
                       backgroundColor: colorScheme.secondaryContainer,
                       foregroundColor: colorScheme.onSecondaryContainer,
                       elevation: 2,
-                      tooltip: 'Riconosci Manoscritto',
-                      onPressed: () => context.push('/ar'),
+                      tooltip: 'Realtà Aumentata',
+                      onPressed: () {
+                        final appState = context.read<AppState>();
+                        if (appState.operaSelezionata != null) {
+                          context.push('/ar/${appState.operaSelezionata!.titolo}');
+                        } else {
+                          context.push('/ar');
+                        }
+                      },
                       child: const Icon(Icons.camera_alt, size: 25),
                     ),
                   ],
@@ -798,7 +806,7 @@ class ChatInputArea extends StatelessWidget {
           const SizedBox(width: 8),
 
           FloatingActionButton.small(
-            heroTag: 'chat_send_btn',
+            heroTag: 'chat_send',
             elevation: 0,
             onPressed: isWriting ? null : onSend,
             backgroundColor: colorScheme.primary,

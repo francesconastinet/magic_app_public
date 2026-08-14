@@ -19,7 +19,7 @@ import 'services/media_service.dart';
 
 final router = GoRouter(
   routes: [
-    GoRoute(path: '/', builder: (context, state) => const ChatScreen()),
+    GoRoute(path: '/', builder: (context, state) => const HomeScreen()),
     GoRoute(path: '/camera', builder: (context, state) => const CameraScreen()),
     GoRoute(
       path: '/collezioni',

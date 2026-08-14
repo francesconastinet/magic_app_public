@@ -10,21 +10,21 @@ import '../services/package_storage.dart';
 import '../services/auth_service.dart';
 import '../services/update_service.dart';
 
-class ChatScreen extends StatefulWidget {
+class HomeScreen extends StatefulWidget {
   final String? titoloFonteIniziale;
   final List<String>? idsFonteIniziale;
 
-  const ChatScreen({
+  const HomeScreen({
     super.key,
     this.titoloFonteIniziale,
     this.idsFonteIniziale,
   });
 
   @override
-  State<ChatScreen> createState() => _ChatScreenState();
+  State<HomeScreen> createState() => _HomeScreenState();
 }
 
-class _ChatScreenState extends State<ChatScreen> {
+class _HomeScreenState extends State<HomeScreen> {
   bool _syncInCorso = false;
   String? _titoloFonteSelezionata;
   List<String>? _idsFonteSelezionata;
@@ -80,7 +80,7 @@ class _ChatScreenState extends State<ChatScreen> {
               )
             : null,
       ),
-      endDrawer: DrawerWidget(),
+      endDrawer: MenuWidget(),
       body: ChatWidget(
         titoloFonteSelezionata: _titoloFonteSelezionata,
         bookIds: _idsFonteSelezionata,

@@ -7,14 +7,14 @@ import '../services/chat_service.dart';
 // SCHERMATA
 // ==========================================
 
-class DrawerWidget extends StatefulWidget {
-  const DrawerWidget({super.key});
+class MenuWidget extends StatefulWidget {
+  const MenuWidget({super.key});
 
   @override
-  State<DrawerWidget> createState() => _DrawerWidgetState();
+  State<MenuWidget> createState() => _MenuWidgetState();
 }
 
-class _DrawerWidgetState extends State<DrawerWidget> {
+class _MenuWidgetState extends State<MenuWidget> {
   // TODO; rimuovere quando disponibile login
   static String? _mockLoggedUser;
 
