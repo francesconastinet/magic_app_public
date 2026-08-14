@@ -320,7 +320,7 @@ class _MediaListItem extends StatelessWidget {
             showDialog(
               context: context,
               builder: (_) =>
-                  VideoDialog(titolo: media.titolo, videoPath: media.url),
+                  VideoWidget(titolo: media.titolo, videoPath: media.url),
             );
             break;
 
@@ -329,7 +329,7 @@ class _MediaListItem extends StatelessWidget {
               context: context,
               useSafeArea: false,
               builder: (_) =>
-                  PdfDialog(titolo: media.titolo, pdfPath: media.url),
+                  PdfWidget(titolo: media.titolo, pdfPath: media.url),
             );
             break;
 
@@ -337,7 +337,7 @@ class _MediaListItem extends StatelessWidget {
             showDialog(
               context: context,
               builder: (_) =>
-                  TextDialog(titolo: media.titolo, textPath: media.url),
+                  TextWidget(titolo: media.titolo, textPath: media.url),
             );
             break;
 
@@ -348,7 +348,7 @@ class _MediaListItem extends StatelessWidget {
             final imgIndex = immaginiList.indexOf(media);
             showDialog(
               context: context,
-              builder: (_) => ImageDialog(
+              builder: (_) => ImageWidget(
                 immagini: immaginiList,
                 initialIndex: imgIndex >= 0 ? imgIndex : 0,
               ),

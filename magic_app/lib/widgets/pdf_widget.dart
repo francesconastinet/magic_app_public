@@ -8,20 +8,56 @@ import '../app_config.dart';
 import '../services/package_storage.dart';
 
 // ==========================================
+// CONFIGURAZIONE LAYOUT
+// ==========================================
+
+class PdfLayout {
+  final Size screenSize;
+  final bool isLandscape;
+  final bool isTablet;
+
+  PdfLayout(BuildContext context)
+    : screenSize = MediaQuery.sizeOf(context),
+      isLandscape = MediaQuery.orientationOf(context) == Orientation.landscape,
+      isTablet = MediaQuery.sizeOf(context).shortestSide >= 600;
+
+  double get _sS => screenSize.shortestSide;
+  double get _lS => screenSize.longestSide;
+
+  // --- DIMENSIONI SCHERMATA ---
+  double get maxPdfWidth {
+    if (isTablet) {
+      return (screenSize.width * 0.75).clamp(_lS * 0.5, _lS * 0.76);
+    } else if (isLandscape) {
+      return (screenSize.width * 0.55).clamp(_lS * 0.4, _lS * 0.65);
+    }
+    return double.infinity;
+  }
+
+  // --- MISURE TESTI E SPAZIATURE ---
+  double get padding => _sS * 0.04;
+  double get spacing => _sS * 0.04;
+  double get titleFontSize => _sS * (isTablet ? 0.03 : 0.045);
+  double get counterFontSize => _sS * (isTablet ? 0.03 : 0.035);
+  double get iconSize => _sS * (isTablet ? 0.045 : 0.06);
+  double get errorFontSize => _sS * 0.04;
+}
+
+// ==========================================
 // SCHERMATA
 // ==========================================
 
-class PdfDialog extends StatefulWidget {
+class PdfWidget extends StatefulWidget {
   final String titolo;
   final String pdfPath;
 
-  const PdfDialog({super.key, required this.titolo, required this.pdfPath});
+  const PdfWidget({super.key, required this.titolo, required this.pdfPath});
 
   @override
-  State<PdfDialog> createState() => _PdfDialogState();
+  State<PdfWidget> createState() => _PdfWidgetState();
 }
 
-class _PdfDialogState extends State<PdfDialog> {
+class _PdfWidgetState extends State<PdfWidget> {
   int? _totalPages = 0;
   int? _currentPage = 0;
   bool _isReady = false;
@@ -37,15 +73,7 @@ class _PdfDialogState extends State<PdfDialog> {
   // --- RENDERING ---
   @override
   Widget build(BuildContext context) {
-    final screenSize = MediaQuery.sizeOf(context);
-    final isLandscape =
-        MediaQuery.orientationOf(context) == Orientation.landscape;
-    final isTablet = screenSize.shortestSide >= 600;
-    final double maxPdfWidth = isTablet
-        ? (screenSize.width * 0.75).clamp(600.0, 900.0)
-        : (isLandscape
-              ? (screenSize.width * 0.55).clamp(350.0, 550.0)
-              : double.infinity);
+    final layout = PdfLayout(context);
 
     return Scaffold(
       backgroundColor: Colors.black,
@@ -58,6 +86,7 @@ class _PdfDialogState extends State<PdfDialog> {
               totalPages: _totalPages,
               isReady: _isReady,
               percorsoAssoluto: _percorsoAssoluto,
+              layout: layout,
               onClose: () => Navigator.pop(context),
             ),
 
@@ -66,7 +95,7 @@ class _PdfDialogState extends State<PdfDialog> {
                 color: Colors.black,
                 alignment: Alignment.center,
                 child: ConstrainedBox(
-                  constraints: BoxConstraints(maxWidth: maxPdfWidth),
+                  constraints: BoxConstraints(maxWidth: layout.maxPdfWidth),
                   child: Container(
                     width: double.infinity,
                     height: double.infinity,
@@ -74,7 +103,7 @@ class _PdfDialogState extends State<PdfDialog> {
                     child: PdfContentWidget(
                       hasError: _hasError,
                       percorsoAssoluto: _percorsoAssoluto,
-                      isLandscape: isLandscape,
+                      layout: layout,
                       isReady: _isReady,
                       onRender: (pages) {
                         setState(() {
@@ -104,8 +133,6 @@ class _PdfDialogState extends State<PdfDialog> {
   // --- LOGICA ---
   Future<void> _inizializzaPdf() async {
     try {
-      // CASO 1: File negli asset (Modalità Test)
-      // TODO: rimuovere quando il client sarà collegato al backend
       if (widget.pdfPath.startsWith('assets/')) {
         final byteData = await rootBundle.load(widget.pdfPath);
         final fileBytes = byteData.buffer.asUint8List(
@@ -122,9 +149,7 @@ class _PdfDialogState extends State<PdfDialog> {
             _percorsoAssoluto = tempFile.path;
           });
         }
-      }
-      // CASO 2: File nel sistema (Scaricato dallo ZIP)
-      else {
+      } else {
         final storageService = context.read<PackageStorage>();
         final basePath = await storageService.percorsoPacchetto(
           AppConfig.packageId,
@@ -154,6 +179,7 @@ class PdfDialogHeader extends StatelessWidget {
   final int? totalPages;
   final bool isReady;
   final String? percorsoAssoluto;
+  final PdfLayout layout;
   final VoidCallback onClose;
 
   const PdfDialogHeader({
@@ -163,22 +189,23 @@ class PdfDialogHeader extends StatelessWidget {
     required this.totalPages,
     required this.isReady,
     required this.percorsoAssoluto,
+    required this.layout,
     required this.onClose,
   });
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: EdgeInsets.all(layout.padding),
       color: Colors.black,
       child: Row(
         children: [
           Expanded(
             child: Text(
               titolo,
-              style: const TextStyle(
+              style: TextStyle(
                 color: Colors.white,
-                fontSize: 18,
+                fontSize: layout.titleFontSize,
                 fontWeight: FontWeight.bold,
               ),
               overflow: TextOverflow.ellipsis,
@@ -188,14 +215,19 @@ class PdfDialogHeader extends StatelessWidget {
           if (isReady && percorsoAssoluto != null)
             Text(
               '${currentPage! + 1}/$totalPages',
-              style: const TextStyle(color: Colors.white54),
+              style: TextStyle(
+                color: Colors.white54,
+                fontSize: layout.counterFontSize,
+              ),
             ),
 
-          const SizedBox(width: 16),
+          SizedBox(width: layout.spacing),
 
           IconButton(
-            icon: const Icon(Icons.close, color: Colors.white),
+            icon: Icon(Icons.close, color: Colors.white, size: layout.iconSize),
             onPressed: onClose,
+            padding: EdgeInsets.zero,
+            constraints: const BoxConstraints(),
           ),
         ],
       ),
@@ -207,7 +239,7 @@ class PdfDialogHeader extends StatelessWidget {
 class PdfContentWidget extends StatelessWidget {
   final bool hasError;
   final String? percorsoAssoluto;
-  final bool isLandscape;
+  final PdfLayout layout;
   final bool isReady;
   final ValueChanged<int?> onRender;
   final ValueChanged<int?> onPageChanged;
@@ -217,7 +249,7 @@ class PdfContentWidget extends StatelessWidget {
     super.key,
     required this.hasError,
     required this.percorsoAssoluto,
-    required this.isLandscape,
+    required this.layout,
     required this.isReady,
     required this.onRender,
     required this.onPageChanged,
@@ -227,10 +259,13 @@ class PdfContentWidget extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (hasError) {
-      return const Center(
+      return Center(
         child: Text(
           'Impossibile caricare il documento PDF.',
-          style: TextStyle(color: Colors.redAccent, fontSize: 16),
+          style: TextStyle(
+            color: Colors.redAccent,
+            fontSize: layout.errorFontSize,
+          ),
         ),
       );
     }
@@ -249,7 +284,7 @@ class PdfContentWidget extends StatelessWidget {
           autoSpacing: true,
           pageFling: true,
           fitEachPage: true,
-          fitPolicy: isLandscape ? FitPolicy.WIDTH : FitPolicy.BOTH,
+          fitPolicy: layout.isLandscape ? FitPolicy.WIDTH : FitPolicy.BOTH,
           onRender: onRender,
           onPageChanged: (int? page, int? total) => onPageChanged(page),
           onError: (error) {

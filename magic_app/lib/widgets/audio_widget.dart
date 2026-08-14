@@ -21,7 +21,7 @@ class AudioLayout {
   double get _sS => screenSize.shortestSide;
   double get _lS => screenSize.longestSide;
 
-  // --- DIMENSIONI CONTAINER ---
+  // --- DIMENSIONI SCHERMATA ---
   double get containerWidth => isLandscape
       ? (isTablet ? _lS * 0.35 : _lS * 0.45)
       : (isTablet ? _sS * 0.6 : _sS * 0.85);

@@ -6,24 +6,59 @@ import '../models.dart';
 import '../services/package_storage.dart';
 
 // ==========================================
+// CONFIGURAZIONE LAYOUT
+// ==========================================
+
+class ImageDialogLayout {
+  final Size screenSize;
+  final bool isLandscape;
+  final bool isTablet;
+
+  ImageDialogLayout(BuildContext context)
+    : screenSize = MediaQuery.sizeOf(context),
+      isLandscape = MediaQuery.orientationOf(context) == Orientation.landscape,
+      isTablet = MediaQuery.sizeOf(context).shortestSide >= 600;
+
+  double get _sS => screenSize.shortestSide;
+
+  // --- DIMENSIONI SCHERMATA ---
+  double get adaptiveMaxWidth => isTablet
+      ? screenSize.width * 0.8
+      : (isLandscape ? screenSize.width * 0.7 : screenSize.width * 0.9);
+  double get insetPadding => _sS * 0.04;
+  double get borderRadius => _sS * 0.03;
+  double get errorIconSize => _sS * 0.12;
+
+  // --- HEADER ---
+  double get headerPadding => _sS * 0.02;
+  double get titleFontSize => _sS * (isTablet ? 0.03 : 0.04);
+  double get closeIconSize => _sS * (isTablet ? 0.04 : 0.06);
+
+  // --- INDICATORI SCORRIMENTO ---
+  double get dotSize => _sS * 0.02;
+  double get dotMargin => _sS * 0.01;
+  double get dotsTopPadding => _sS * 0.02;
+}
+
+// ==========================================
 // SCHERMATA
 // ==========================================
 
-class ImageDialog extends StatefulWidget {
+class ImageWidget extends StatefulWidget {
   final List<MediaItem> immagini;
   final int initialIndex;
 
-  const ImageDialog({
+  const ImageWidget({
     super.key,
     required this.immagini,
     required this.initialIndex,
   });
 
   @override
-  State<ImageDialog> createState() => _ImageDialogState();
+  State<ImageWidget> createState() => _ImageWidgetState();
 }
 
-class _ImageDialogState extends State<ImageDialog> {
+class _ImageWidgetState extends State<ImageWidget> {
   late PageController _pageController;
   late int _currentIndex;
 
@@ -45,29 +80,20 @@ class _ImageDialogState extends State<ImageDialog> {
   Widget build(BuildContext context) {
     final currentImage = widget.immagini[_currentIndex];
     final totalCount = widget.immagini.length;
-    final screenSize = MediaQuery.sizeOf(context);
-    final isTablet = screenSize.shortestSide >= 600;
-    final isLandscape =
-        MediaQuery.orientationOf(context) == Orientation.landscape;
-    final double adaptiveMaxWidth = isTablet
-        ? screenSize.width * 0.8
-        : (isLandscape ? screenSize.width * 0.7 : screenSize.width * 0.9);
+    final layout = ImageDialogLayout(context);
 
     return Dialog(
       backgroundColor: Colors.transparent,
-      insetPadding: const EdgeInsets.all(16),
+      insetPadding: EdgeInsets.all(layout.insetPadding),
       child: ConstrainedBox(
-        constraints: BoxConstraints(maxWidth: adaptiveMaxWidth),
+        constraints: BoxConstraints(maxWidth: layout.adaptiveMaxWidth),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            ImageDialogHeader(
-              currentImage: currentImage,
-              currentIndex: _currentIndex,
-              totalCount: totalCount,
-            ),
+            ImageDialogHeader(layout: layout, currentImage: currentImage),
 
             ImageCarousel(
+              layout: layout,
               pageController: _pageController,
               immagini: widget.immagini,
               onPageChanged: (index) {
@@ -75,11 +101,13 @@ class _ImageDialogState extends State<ImageDialog> {
                   _currentIndex = index;
                 });
               },
-              imageBuilder: _buildImage,
+              imageBuilder: (context, path) =>
+                  _buildImage(context, path, layout),
             ),
 
             if (totalCount > 1)
               ImageDotsIndicator(
+                layout: layout,
                 currentIndex: _currentIndex,
                 totalCount: totalCount,
               ),
@@ -89,15 +117,22 @@ class _ImageDialogState extends State<ImageDialog> {
     );
   }
 
-  Widget _buildImage(BuildContext context, String imagePath) {
+  Widget _buildImage(
+    BuildContext context,
+    String imagePath,
+    ImageDialogLayout layout,
+  ) {
     // CASO 1: File negli asset (Modalità Mock/Test)
     // TODO: rimuovere quando il client sarà collegato al backend
     if (imagePath.startsWith('assets/')) {
       return Image.asset(
         imagePath,
         fit: BoxFit.contain,
-        errorBuilder: (context, error, stackTrace) =>
-            const Icon(Icons.broken_image, color: Colors.white, size: 50),
+        errorBuilder: (context, error, stackTrace) => Icon(
+          Icons.broken_image,
+          color: Colors.white,
+          size: layout.errorIconSize,
+        ),
       );
     }
     // CASO 2: File nel sistema (Scaricato dallo ZIP)
@@ -112,7 +147,11 @@ class _ImageDialogState extends State<ImageDialog> {
           }
 
           if (snapshot.hasError || !snapshot.hasData) {
-            return const Icon(Icons.error, color: Colors.red, size: 50);
+            return Icon(
+              Icons.error,
+              color: Colors.red,
+              size: layout.errorIconSize,
+            );
           }
 
           final percorsoAssoluto = '${snapshot.data}/$imagePath';
@@ -120,8 +159,11 @@ class _ImageDialogState extends State<ImageDialog> {
           return Image.file(
             File(percorsoAssoluto),
             fit: BoxFit.contain,
-            errorBuilder: (context, error, stackTrace) =>
-                const Icon(Icons.broken_image, color: Colors.white, size: 50),
+            errorBuilder: (context, error, stackTrace) => Icon(
+              Icons.broken_image,
+              color: Colors.white,
+              size: layout.errorIconSize,
+            ),
           );
         },
       );
@@ -135,41 +177,46 @@ class _ImageDialogState extends State<ImageDialog> {
 
 // --- HEADER ---
 class ImageDialogHeader extends StatelessWidget {
+  final ImageDialogLayout layout;
   final MediaItem currentImage;
-  final int currentIndex;
-  final int totalCount;
 
   const ImageDialogHeader({
     super.key,
+    required this.layout,
     required this.currentImage,
-    required this.currentIndex,
-    required this.totalCount,
   });
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(8),
-      decoration: const BoxDecoration(
+      padding: EdgeInsets.all(layout.headerPadding),
+      decoration: BoxDecoration(
         color: Colors.black87,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(12)),
+        borderRadius: BorderRadius.vertical(
+          top: Radius.circular(layout.borderRadius),
+        ),
       ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           Expanded(
             child: Text(
-              '${currentImage.titolo} (${currentIndex + 1}/$totalCount)',
-              style: const TextStyle(
+              currentImage.titolo,
+              style: TextStyle(
                 color: Colors.white,
                 fontWeight: FontWeight.bold,
+                fontSize: layout.titleFontSize,
               ),
               overflow: TextOverflow.ellipsis,
             ),
           ),
 
           IconButton(
-            icon: const Icon(Icons.close, color: Colors.white),
+            icon: Icon(
+              Icons.close,
+              color: Colors.white,
+              size: layout.closeIconSize,
+            ),
             onPressed: () => Navigator.pop(context),
             padding: EdgeInsets.zero,
             constraints: const BoxConstraints(),
@@ -182,6 +229,7 @@ class ImageDialogHeader extends StatelessWidget {
 
 // --- CAROSELLO ---
 class ImageCarousel extends StatelessWidget {
+  final ImageDialogLayout layout;
   final PageController pageController;
   final List<MediaItem> immagini;
   final ValueChanged<int> onPageChanged;
@@ -189,6 +237,7 @@ class ImageCarousel extends StatelessWidget {
 
   const ImageCarousel({
     super.key,
+    required this.layout,
     required this.pageController,
     required this.immagini,
     required this.onPageChanged,
@@ -199,7 +248,9 @@ class ImageCarousel extends StatelessWidget {
   Widget build(BuildContext context) {
     return Flexible(
       child: ClipRRect(
-        borderRadius: const BorderRadius.vertical(bottom: Radius.circular(12)),
+        borderRadius: BorderRadius.vertical(
+          bottom: Radius.circular(layout.borderRadius),
+        ),
         child: Container(
           color: Colors.black,
           child: PageView.builder(
@@ -220,11 +271,13 @@ class ImageCarousel extends StatelessWidget {
 
 // --- INDICATORI SCORRIMENTO ---
 class ImageDotsIndicator extends StatelessWidget {
+  final ImageDialogLayout layout;
   final int currentIndex;
   final int totalCount;
 
   const ImageDotsIndicator({
     super.key,
+    required this.layout,
     required this.currentIndex,
     required this.totalCount,
   });
@@ -232,15 +285,15 @@ class ImageDotsIndicator extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.only(top: 8),
+      padding: EdgeInsets.only(top: layout.dotsTopPadding),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.center,
         children: List.generate(
           totalCount,
           (index) => Container(
-            margin: const EdgeInsets.symmetric(horizontal: 4),
-            width: 8,
-            height: 8,
+            margin: EdgeInsets.symmetric(horizontal: layout.dotMargin),
+            width: layout.dotSize,
+            height: layout.dotSize,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
               color: currentIndex == index ? Colors.blueAccent : Colors.white24,

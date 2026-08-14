@@ -768,7 +768,7 @@ class ARMediaBubblesPanel extends StatelessWidget {
                           case 'video':
                             showDialog(
                               context: context,
-                              builder: (_) => VideoDialog(
+                              builder: (_) => VideoWidget(
                                 titolo: item.titolo,
                                 videoPath: item.url,
                               ),
@@ -779,7 +779,7 @@ class ARMediaBubblesPanel extends StatelessWidget {
                             showDialog(
                               context: context,
                               useSafeArea: false,
-                              builder: (_) => PdfDialog(
+                              builder: (_) => PdfWidget(
                                 titolo: item.titolo,
                                 pdfPath: item.url,
                               ),
@@ -789,7 +789,7 @@ class ARMediaBubblesPanel extends StatelessWidget {
                           case 'testo':
                             showDialog(
                               context: context,
-                              builder: (_) => TextDialog(
+                              builder: (_) => TextWidget(
                                 titolo: item.titolo,
                                 textPath: item.url,
                               ),
@@ -799,7 +799,7 @@ class ARMediaBubblesPanel extends StatelessWidget {
                           case 'immagine':
                             showDialog(
                               context: context,
-                              builder: (_) => ImageDialog(
+                              builder: (_) => ImageWidget(
                                 immagini: mediaList,
                                 initialIndex: index,
                               ),

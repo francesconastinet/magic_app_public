@@ -7,20 +7,65 @@ import '../app_config.dart';
 import '../services/package_storage.dart';
 
 // ==========================================
+// CONFIGURAZIONE LAYOUT
+// ==========================================
+
+class VideoLayout {
+  final Size screenSize;
+  final bool isLandscape;
+  final bool isTablet;
+
+  VideoLayout(BuildContext context)
+    : screenSize = MediaQuery.sizeOf(context),
+      isLandscape = MediaQuery.orientationOf(context) == Orientation.landscape,
+      isTablet = MediaQuery.sizeOf(context).shortestSide >= 600;
+
+  double get _sS => screenSize.shortestSide;
+
+  // --- DIMENSIONI SCHERMATA ---
+  double get adaptiveMaxWidth => isTablet
+      ? (isLandscape ? screenSize.width * 0.75 : screenSize.width * 0.9)
+      : (isLandscape ? screenSize.width * 0.7 : screenSize.width * 0.9);
+  double get dialogInset => _sS * 0.04;
+  double get borderRadius => _sS * 0.03;
+
+  // --- HEADER ---
+  double get headerPadH => _sS * 0.03;
+  double get headerPadV => _sS * 0.02;
+  double get headerFontSize => _sS * (isTablet ? 0.03 : 0.04);
+  double get headerIconSize => _sS * (isTablet ? 0.04 : 0.06);
+
+  // --- ERRORE E CARICAMENTO ---
+  double get errorIconSize => _sS * (isTablet ? 0.08 : 0.12);
+  double get errorSpacing => _sS * 0.02;
+  double get errorFontSize => _sS * (isTablet ? 0.025 : 0.035);
+  double get statePaddingMedium => _sS * 0.08;
+  double get statePaddingLarge => _sS * 0.16;
+
+  // --- OVERLAY CONTROLLI ---
+  double get controlSpacing => _sS * 0.04;
+  double get controlPadH => _sS * 0.04;
+  double get controlPadV => _sS * 0.02;
+  double get controlRadius => _sS * 0.075;
+  double get smallIconSize => _sS * (isTablet ? 0.06 : 0.09);
+  double get largeIconSize => _sS * (isTablet ? 0.09 : 0.14);
+}
+
+// ==========================================
 // SCHERMATA
 // ==========================================
 
-class VideoDialog extends StatefulWidget {
+class VideoWidget extends StatefulWidget {
   final String titolo;
   final String videoPath;
 
-  const VideoDialog({super.key, required this.titolo, required this.videoPath});
+  const VideoWidget({super.key, required this.titolo, required this.videoPath});
 
   @override
-  State<VideoDialog> createState() => _VideoDialogState();
+  State<VideoWidget> createState() => _VideoWidgetState();
 }
 
-class _VideoDialogState extends State<VideoDialog> {
+class _VideoWidgetState extends State<VideoWidget> {
   VideoPlayerController? _controller;
   bool _isInitialized = false;
   bool _hasError = false;
@@ -43,37 +88,35 @@ class _VideoDialogState extends State<VideoDialog> {
   // --- RENDERING ---
   @override
   Widget build(BuildContext context) {
-    final screenSize = MediaQuery.sizeOf(context);
-    final isLandscape =
-        MediaQuery.orientationOf(context) == Orientation.landscape;
-    final isTablet = screenSize.shortestSide >= 600;
-    final double adaptiveMaxWidth = isTablet
-        ? (isLandscape ? screenSize.width * 0.75 : screenSize.width * 0.9)
-        : (isLandscape ? screenSize.width * 0.7 : screenSize.width * 0.9);
+    final layout = VideoLayout(context);
 
     return Dialog(
       backgroundColor: Colors.transparent,
-      insetPadding: const EdgeInsets.all(16),
+      insetPadding: EdgeInsets.all(layout.dialogInset),
       child: ConstrainedBox(
-        constraints: BoxConstraints(maxWidth: adaptiveMaxWidth),
+        constraints: BoxConstraints(maxWidth: layout.adaptiveMaxWidth),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             VideoDialogHeader(
               titolo: widget.titolo,
+              layout: layout,
               onClose: () => Navigator.pop(context),
             ),
 
             Flexible(
               child: Container(
-                decoration: const BoxDecoration(
+                decoration: BoxDecoration(
                   color: Colors.black,
                   borderRadius: BorderRadius.vertical(
-                    bottom: Radius.circular(12),
+                    bottom: Radius.circular(layout.borderRadius),
                   ),
                 ),
-                child: Center(heightFactor: 1.0, child: _buildVideoContent()),
+                child: Center(
+                  heightFactor: 1.0,
+                  child: _buildVideoContent(layout),
+                ),
               ),
             ),
           ],
@@ -82,7 +125,7 @@ class _VideoDialogState extends State<VideoDialog> {
     );
   }
 
-  Widget _buildVideoContent() {
+  Widget _buildVideoContent(VideoLayout layout) {
     double safeRatio = 16 / 9;
 
     if (_controller != null && _controller!.value.isInitialized) {
@@ -93,15 +136,20 @@ class _VideoDialogState extends State<VideoDialog> {
     }
 
     return ClipRRect(
-      borderRadius: const BorderRadius.vertical(bottom: Radius.circular(12)),
-      child: AspectRatio(aspectRatio: safeRatio, child: _buildVideoState()),
+      borderRadius: BorderRadius.vertical(
+        bottom: Radius.circular(layout.borderRadius),
+      ),
+      child: AspectRatio(
+        aspectRatio: safeRatio,
+        child: _buildVideoState(layout),
+      ),
     );
   }
 
-  Widget _buildVideoState() {
-    if (_hasError) return const VideoErrorState();
+  Widget _buildVideoState(VideoLayout layout) {
+    if (_hasError) return VideoErrorState(layout: layout);
     if (!_isInitialized || _controller == null) {
-      return const VideoLoadingState();
+      return VideoLoadingState(layout: layout);
     }
 
     return GestureDetector(
@@ -113,6 +161,7 @@ class _VideoDialogState extends State<VideoDialog> {
 
           VideoControlOverlay(
             controller: _controller!,
+            layout: layout,
             mostraControlli: _mostraControlli,
             onJump: (secondi) {
               _salta(secondi);
@@ -140,13 +189,9 @@ class _VideoDialogState extends State<VideoDialog> {
   // --- LOGICA ---
   Future<void> _inizializzaVideo() async {
     try {
-      // CASO 1: File negli asset (Modalità Test)
-      // TODO: rimuovere quando il client sarà collegato al backend
       if (widget.videoPath.startsWith('assets/')) {
         _controller = VideoPlayerController.asset(widget.videoPath);
-      }
-      // CASO 2: File nel file system (Scaricato dallo ZIP)
-      else {
+      } else {
         final storageService = context.read<PackageStorage>();
         final basePath = await storageService.percorsoPacchetto(
           AppConfig.packageId,
@@ -208,37 +253,49 @@ class _VideoDialogState extends State<VideoDialog> {
 // --- HEADER ---
 class VideoDialogHeader extends StatelessWidget {
   final String titolo;
+  final VideoLayout layout;
   final VoidCallback onClose;
 
   const VideoDialogHeader({
     super.key,
     required this.titolo,
+    required this.layout,
     required this.onClose,
   });
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-      decoration: const BoxDecoration(
+      padding: EdgeInsets.symmetric(
+        horizontal: layout.headerPadH,
+        vertical: layout.headerPadV,
+      ),
+      decoration: BoxDecoration(
         color: Colors.black87,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(12)),
+        borderRadius: BorderRadius.vertical(
+          top: Radius.circular(layout.borderRadius),
+        ),
       ),
       child: Row(
         children: [
           Expanded(
             child: Text(
               titolo,
-              style: const TextStyle(
+              style: TextStyle(
                 color: Colors.white,
                 fontWeight: FontWeight.bold,
+                fontSize: layout.headerFontSize,
               ),
               overflow: TextOverflow.ellipsis,
             ),
           ),
 
           IconButton(
-            icon: const Icon(Icons.close, color: Colors.white),
+            icon: Icon(
+              Icons.close,
+              color: Colors.white,
+              size: layout.headerIconSize,
+            ),
             onPressed: onClose,
             padding: EdgeInsets.zero,
             constraints: const BoxConstraints(),
@@ -251,22 +308,32 @@ class VideoDialogHeader extends StatelessWidget {
 
 // --- SCHERMATA ERRORE ---
 class VideoErrorState extends StatelessWidget {
-  const VideoErrorState({super.key});
+  final VideoLayout layout;
+
+  const VideoErrorState({super.key, required this.layout});
 
   @override
   Widget build(BuildContext context) {
-    return const Padding(
-      padding: EdgeInsets.all(32.0),
+    return Padding(
+      padding: EdgeInsets.all(layout.statePaddingMedium),
       child: Center(
         child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.error_outline, color: Colors.red, size: 48),
+            Icon(
+              Icons.error_outline,
+              color: Colors.red,
+              size: layout.errorIconSize,
+            ),
 
-            SizedBox(height: 8),
+            SizedBox(height: layout.errorSpacing),
 
             Text(
               'Impossibile riprodurre il video',
-              style: TextStyle(color: Colors.white70),
+              style: TextStyle(
+                color: Colors.white70,
+                fontSize: layout.errorFontSize,
+              ),
             ),
           ],
         ),
@@ -277,13 +344,15 @@ class VideoErrorState extends StatelessWidget {
 
 // --- SCHERMATA CARICAMENTO ---
 class VideoLoadingState extends StatelessWidget {
-  const VideoLoadingState({super.key});
+  final VideoLayout layout;
+
+  const VideoLoadingState({super.key, required this.layout});
 
   @override
   Widget build(BuildContext context) {
-    return const Padding(
-      padding: EdgeInsets.all(64.0),
-      child: Center(child: CircularProgressIndicator()),
+    return Padding(
+      padding: EdgeInsets.all(layout.statePaddingLarge),
+      child: const Center(child: CircularProgressIndicator()),
     );
   }
 }
@@ -291,6 +360,7 @@ class VideoLoadingState extends StatelessWidget {
 // --- OVERLAY CONTROLLI ---
 class VideoControlOverlay extends StatelessWidget {
   final VideoPlayerController controller;
+  final VideoLayout layout;
   final bool mostraControlli;
   final Function(int) onJump;
   final VoidCallback onTogglePlay;
@@ -300,6 +370,7 @@ class VideoControlOverlay extends StatelessWidget {
   const VideoControlOverlay({
     super.key,
     required this.controller,
+    required this.layout,
     required this.mostraControlli,
     required this.onJump,
     required this.onTogglePlay,
@@ -322,21 +393,26 @@ class VideoControlOverlay extends StatelessWidget {
               colors: [Colors.transparent, Colors.black.withValues(alpha: 0.7)],
             ),
           ),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.end,
+          child: Stack(
             children: [
-              VideoPlaybackButtons(
-                isPlaying: controller.value.isPlaying,
-                onJump: onJump,
-                onTogglePlay: onTogglePlay,
+              Center(
+                child: VideoPlaybackButtons(
+                  layout: layout,
+                  isPlaying: controller.value.isPlaying,
+                  onJump: onJump,
+                  onTogglePlay: onTogglePlay,
+                ),
               ),
 
-              const SizedBox(height: 16),
-
-              VideoProgressBar(
-                controller: controller,
-                onDragStart: onDragStart,
-                onDragEnd: onDragEnd,
+              Positioned(
+                left: 0,
+                right: 0,
+                bottom: layout.controlPadV,
+                child: VideoProgressBar(
+                  controller: controller,
+                  onDragStart: onDragStart,
+                  onDragEnd: onDragEnd,
+                ),
               ),
             ],
           ),
@@ -348,12 +424,14 @@ class VideoControlOverlay extends StatelessWidget {
 
 // --- CONTROLLI PLAYER ---
 class VideoPlaybackButtons extends StatelessWidget {
+  final VideoLayout layout;
   final bool isPlaying;
   final Function(int) onJump;
   final VoidCallback onTogglePlay;
 
   const VideoPlaybackButtons({
     super.key,
+    required this.layout,
     required this.isPlaying,
     required this.onJump,
     required this.onTogglePlay,
@@ -363,34 +441,37 @@ class VideoPlaybackButtons extends StatelessWidget {
   Widget build(BuildContext context) {
     return Center(
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        padding: EdgeInsets.symmetric(
+          horizontal: layout.controlPadH,
+          vertical: layout.controlPadV,
+        ),
         decoration: BoxDecoration(
           color: Colors.black.withValues(alpha: 0.5),
-          borderRadius: BorderRadius.circular(30),
+          borderRadius: BorderRadius.circular(layout.controlRadius),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
             IconButton(
-              iconSize: 36,
+              iconSize: layout.smallIconSize,
               color: Colors.white,
               icon: const Icon(Icons.replay_5),
               onPressed: () => onJump(-5),
             ),
 
-            const SizedBox(width: 16),
+            SizedBox(width: layout.controlSpacing),
 
             IconButton(
-              iconSize: 56,
+              iconSize: layout.largeIconSize,
               color: Colors.white,
               icon: Icon(isPlaying ? Icons.pause_circle : Icons.play_circle),
               onPressed: onTogglePlay,
             ),
 
-            const SizedBox(width: 16),
+            SizedBox(width: layout.controlSpacing),
 
             IconButton(
-              iconSize: 36,
+              iconSize: layout.smallIconSize,
               color: Colors.white,
               icon: const Icon(Icons.forward_5),
               onPressed: () => onJump(5),
