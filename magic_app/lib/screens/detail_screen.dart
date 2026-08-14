@@ -14,16 +14,16 @@ import '../widgets/video_widget.dart';
 // SCHERMATA
 // ==========================================
 
-class BookDetailScreen extends StatefulWidget {
+class DetailScreen extends StatefulWidget {
   final BookModel book;
 
-  const BookDetailScreen({super.key, required this.book});
+  const DetailScreen({super.key, required this.book});
 
   @override
-  State<BookDetailScreen> createState() => _BookDetailScreenState();
+  State<DetailScreen> createState() => _DetailScreenState();
 }
 
-class _BookDetailScreenState extends State<BookDetailScreen> {
+class _DetailScreenState extends State<DetailScreen> {
   MediaItem? _audioInEsecuzione;
   bool _audioMinimizzato = false;
 
@@ -40,30 +40,7 @@ class _BookDetailScreenState extends State<BookDetailScreen> {
           Scaffold(
             appBar: _buildAppBar(colorScheme),
             floatingActionButton: _StartARButton(book: widget.book),
-            body: SingleChildScrollView(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  _BookHeaderCard(book: widget.book),
-
-                  const SizedBox(height: 16),
-
-                  _MultimediaSection(
-                    book: widget.book,
-                    audioInEsecuzione: _audioInEsecuzione,
-                    onPlayAudio: (item) {
-                      setState(() {
-                        _audioInEsecuzione = item;
-                        _audioMinimizzato = false;
-                      });
-                    },
-                  ),
-
-                  const SizedBox(height: 80),
-                ],
-              ),
-            ),
+            body: _buildBody(),
           ),
 
           if (_audioInEsecuzione != null)
@@ -86,6 +63,33 @@ class _BookDetailScreenState extends State<BookDetailScreen> {
       title: const Text(
         'Dettaglio',
         style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+      ),
+    );
+  }
+
+  Widget _buildBody() {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _BookHeaderCard(book: widget.book),
+
+          const SizedBox(height: 16),
+
+          _MultimediaSection(
+            book: widget.book,
+            audioInEsecuzione: _audioInEsecuzione,
+            onPlayAudio: (item) {
+              setState(() {
+                _audioInEsecuzione = item;
+                _audioMinimizzato = false;
+              });
+            },
+          ),
+
+          const SizedBox(height: 80),
+        ],
       ),
     );
   }
@@ -373,7 +377,10 @@ class _EmptyMediaCard extends StatelessWidget {
       margin: const EdgeInsets.only(bottom: 12),
       clipBehavior: Clip.antiAlias,
       child: ListTile(
-        leading: Icon(Icons.folder_off_outlined, color: colorScheme.onSurfaceVariant),
+        leading: Icon(
+          Icons.folder_off_outlined,
+          color: colorScheme.onSurfaceVariant,
+        ),
         title: Text(
           'Nessun contenuto',
           style: TextStyle(

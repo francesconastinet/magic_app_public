@@ -31,66 +31,84 @@ class ARLayout {
       isLandscape = MediaQuery.orientationOf(context) == Orientation.landscape,
       isTablet = MediaQuery.sizeOf(context).shortestSide >= 600;
 
+  double get _sS => screenSize.shortestSide;
+  double get _lS => screenSize.longestSide;
+
   // --- MIRINO FOTOCAMERA ---
-  double get viewfinderWidth => (screenSize.width * 0.6).clamp(150.0, 300.0);
-  double get viewfinderHeight => (screenSize.height * 0.4).clamp(200.0, 400.0);
+  double get viewfinderWidth =>
+      (screenSize.width * 0.6).clamp(_sS * 0.35, _sS * 0.75);
+  double get viewfinderHeight =>
+      (screenSize.height * 0.4).clamp(_lS * 0.25, _lS * 0.5);
 
   // --- PANNELLO INFO OPERA ---
-  Alignment get infoAlignment {
-    if (isLandscape) {
-      return Alignment.topRight;
-    }
-    return Alignment.topCenter;
-  }
-
-  double get infoMaxWidth {
-    if (isLandscape) {
-      return (screenSize.width * (isTablet ? 0.3 : 0.2)).clamp(220.0, 450.0);
-    } else {
-      return (screenSize.width * (isTablet ? 0.75 : 0.9)).clamp(300.0, 600.0);
-    }
-  }
-
+  Alignment get infoAlignment =>
+      isLandscape ? Alignment.topRight : Alignment.topCenter;
+  double get infoMaxWidth =>
+      screenSize.width * (isLandscape ? 0.3 : (isTablet ? 0.75 : 0.9));
   double get infoTop => safePadding.top;
-  double get infoLeft => safePadding.left + 16.0;
-  double get infoRight => safePadding.right + 16.0;
-  double get infoTitleFontSize => isTablet ? 20.0 : 16.0;
-  double get infoTextFontSize => isTablet ? 14.0 : 13.0;
-  double get infoIconSize => isTablet ? 26.0 : 20.0;
-  double get infoPadding => isTablet ? 14.0 : 12.0;
+  double get infoLeft => safePadding.left + (_sS * 0.04);
+  double get infoRight => safePadding.right + (_sS * 0.04);
+  double get infoTitleFontSize => _sS * (isTablet ? 0.026 : 0.04);
+  double get infoTextFontSize => _sS * (isTablet ? 0.018 : 0.032);
+  double get infoIconSize => _sS * (isTablet ? 0.033 : 0.05);
+  double get infoPadding => _sS * (isTablet ? 0.018 : 0.03);
 
   // --- PANNELLO BOLLE MULTIMEDIALI ---
-  double get bubblesTop => isLandscape
-      ? safePadding.top + (screenSize.width * 0.15)
-      : safePadding.top + (isTablet ? 160.0 : 110.0);
-  double get bubblesPanelWidth =>
-      isLandscape ? (isTablet ? 170.0 : 130.0) : (isTablet ? 85.0 : 60.0);
+  double get bubblesTop {
+    if (isTablet && isLandscape) return safePadding.top + (_lS * 0.14);
+    return isLandscape
+        ? safePadding.top + (screenSize.width * 0.15)
+        : safePadding.top + (_lS * (isTablet ? 0.16 : 0.13));
+  }
+
+  double get bubblesPanelWidth {
+    if (isTablet && isLandscape) return _lS * 0.14;
+    return isLandscape
+        ? _lS * (isTablet ? 0.17 : 0.15)
+        : _sS * (isTablet ? 0.11 : 0.15);
+  }
+
   double get bubblesBottom =>
       safePadding.bottom +
-      (isLandscape ? (isTablet ? 150.0 : 100.0) : (isTablet ? 120.0 : 100.0));
+      (isLandscape
+          ? _sS * (isTablet ? 0.18 : 0.20)
+          : _lS * (isTablet ? 0.12 : 0.12));
   double get bubblesRight =>
       safePadding.right +
-      (isLandscape ? (isTablet ? 0.0 : 16.0) : (isTablet ? 10.0 : 16.0));
-  double get bubblesSize => isTablet ? 52.0 : 48.0;
-  double get bubblesIconSize => isTablet ? 32.0 : 24.0;
+      (isLandscape
+          ? (isTablet ? _lS * 0.01 : _lS * 0.02)
+          : _sS * (isTablet ? 0.013 : 0.04));
+  double get bubblesSize => _sS * (isTablet ? 0.067 : 0.12);
+  double get bubblesIconSize => _sS * (isTablet ? 0.041 : 0.06);
+  double get bubblesSpacing =>
+      (isTablet && isLandscape) ? _sS * 0.012 : _sS * 0.025;
+  double get bubblesRunSpacing =>
+      (isTablet && isLandscape) ? _sS * 0.015 : _sS * 0.03;
 
   // --- BOTTONE CHAT ---
-  double get chatBottom => safePadding.bottom + (isLandscape ? 0.0 : 50.0);
-  double get chatRight => safePadding.right + (isTablet ? 20.0 : 16.0);
-  double get chatSize => isTablet ? 60.0 : 56.0;
-  double get chatIconSize => isTablet ? 32.0 : 24.0;
+  double get chatBottom =>
+      safePadding.bottom + (isLandscape ? 0.0 : _lS * 0.06);
+  double get chatRight => safePadding.right + (_sS * (isTablet ? 0.026 : 0.04));
+  double get chatSize => _sS * (isTablet ? 0.078 : 0.14);
+  double get chatIconSize => _sS * (isTablet ? 0.041 : 0.06);
 
   // --- BOTTONE CHIUDI ---
   double get closeBottom => safePadding.bottom;
   double get closeLeft => 0.0;
   double get closeRight => 0.0;
-  double get closeSize => isTablet ? 60.0 : 56.0;
-  double get closeIconSize => isTablet ? 32.0 : 24.0;
+  double get closeSize => _sS * (isTablet ? 0.078 : 0.14);
+  double get closeIconSize => _sS * (isTablet ? 0.041 : 0.06);
+
+  // --- BOTTONE INDIETRO (LANDSCAPE) ---
+  double get backTop => safePadding.top + (_sS * 0.04);
+  double get backLeft => safePadding.left + (_lS * 0.02);
+  double get backSize => (isTablet && isLandscape) ? _sS * 0.06 : _sS * 0.12;
 
   // --- MENU DEBUG ---
-  double get debugTop => safePadding.top + 120.0;
-  double get debugLeft => 10.0;
-  double get debugWidth => (screenSize.width * 0.5).clamp(180.0, 300.0);
+  double get debugTop => safePadding.top + (_lS * 0.14);
+  double get debugLeft => _sS * 0.025;
+  double get debugWidth =>
+      (isTablet && isLandscape) ? _lS * 0.25 : screenSize.width * 0.5;
 }
 
 // ==========================================
@@ -166,18 +184,35 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
         MediaQuery.orientationOf(context) == Orientation.landscape;
     final colorScheme = Theme.of(context).colorScheme;
 
-    return Scaffold(
-      appBar: isLandscape
-          ? null
-          : AppBar(
-              backgroundColor: colorScheme.primary,
-              foregroundColor: colorScheme.onPrimary,
-              title: const Text(
-                'Realtà Aumentata',
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-              ),
+    return Stack(
+      fit: StackFit.expand,
+      children: [
+        Scaffold(
+          appBar: isLandscape
+              ? null
+              : AppBar(
+                  backgroundColor: colorScheme.primary,
+                  foregroundColor: colorScheme.onPrimary,
+                  title: const Text(
+                    'Realtà Aumentata',
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  ),
+                ),
+          body: _buildBody(opera),
+        ),
+
+        if (_audioInEsecuzione != null)
+          Material(
+            type: MaterialType.transparency,
+            child: AudioWidget(
+              titolo: _audioInEsecuzione!.titolo,
+              audioPath: _audioInEsecuzione!.url,
+              isMinimized: _audioMinimizzato,
+              onMinimizeToggle: () => setState(() => _audioMinimizzato = true),
+              onClose: () => setState(() => _audioInEsecuzione = null),
             ),
-      body: _buildBody(opera),
+          ),
+      ],
     );
   }
 
@@ -249,15 +284,6 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
               _audioMinimizzato = false;
             }),
           ),
-
-          if (_audioInEsecuzione != null)
-            AudioWidget(
-              titolo: _audioInEsecuzione!.titolo,
-              audioPath: _audioInEsecuzione!.url,
-              isMinimized: _audioMinimizzato,
-              onMinimizeToggle: () => setState(() => _audioMinimizzato = true),
-              onClose: () => setState(() => _audioInEsecuzione = null),
-            ),
         ],
 
         if (layout.isLandscape) ARBackButton(layout: layout),
@@ -616,8 +642,8 @@ class ARMediaBubblesPanel extends StatelessWidget {
             child: Wrap(
               alignment: WrapAlignment.center,
               runAlignment: WrapAlignment.center,
-              spacing: 10,
-              runSpacing: 12,
+              spacing: layout.bubblesSpacing,
+              runSpacing: layout.bubblesRunSpacing,
               children: [
                 if (videoList.isNotEmpty)
                   _buildBubble(context, Icons.videocam, 'Video', videoList),
@@ -900,11 +926,11 @@ class ARBackButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Positioned(
-      top: layout.safePadding.top + 16.0,
-      left: layout.safePadding.left + 16.0,
+      top: layout.backTop,
+      left: layout.backLeft,
       child: SizedBox(
-        width: 48,
-        height: 48,
+        width: layout.backSize,
+        height: layout.backSize,
         child: FloatingActionButton(
           heroTag: 'btn_back_landscape',
           backgroundColor: Colors.black.withValues(alpha: 0.75),

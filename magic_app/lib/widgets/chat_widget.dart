@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
-import 'book_selection_widget.dart';
+import 'catalogue_widget.dart';
 import '../app_state.dart';
 import '../services/chat_service.dart';
 
@@ -112,7 +112,7 @@ class _ChatWidgetState extends State<ChatWidget> {
                         showModalBottomSheet(
                           context: context,
                           isScrollControlled: true,
-                          builder: (ctx) => BookSelectionWidget(
+                          builder: (ctx) => CatalogueWidget(
                             idsFonteIniziale: widget.bookIds,
                             onFonteSelezionata:
                                 widget.onFonteSelezionata ?? (t, ids) {},
@@ -133,7 +133,9 @@ class _ChatWidgetState extends State<ChatWidget> {
                       onPressed: () {
                         final appState = context.read<AppState>();
                         if (appState.operaSelezionata != null) {
-                          context.push('/ar/${appState.operaSelezionata!.titolo}');
+                          context.push(
+                            '/ar/${appState.operaSelezionata!.titolo}',
+                          );
                         } else {
                           context.push('/ar');
                         }

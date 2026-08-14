@@ -4,7 +4,7 @@ import '../services/package_service.dart';
 import '../services/package_storage.dart';
 import '../services/auth_service.dart';
 import '../models.dart';
-import '../screens/book_detail_screen.dart';
+import '../screens/detail_screen.dart';
 
 class ManuscriptScreen extends StatelessWidget {
   final String packageId;
@@ -163,7 +163,7 @@ class ManuscriptScreen extends StatelessWidget {
                     Navigator.push(
                       context,
                       MaterialPageRoute(
-                        builder: (_) => BookDetailScreen(book: book),
+                        builder: (_) => DetailScreen(book: book),
                       ),
                     );
                   },

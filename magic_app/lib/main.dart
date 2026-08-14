@@ -3,7 +3,7 @@ import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import 'app_state.dart';
 import 'models.dart';
-import 'screens/book_detail_screen.dart';
+import 'screens/detail_screen.dart';
 import 'screens/home_screen.dart';
 import 'old/camera_screen.dart';
 import 'old/collection_screen.dart';
@@ -37,7 +37,7 @@ final router = GoRouter(
       path: '/opera/:id',
       builder: (context, state) {
         final book = state.extra as BookModel;
-        return BookDetailScreen(book: book);
+        return DetailScreen(book: book);
       },
     ),
   ],

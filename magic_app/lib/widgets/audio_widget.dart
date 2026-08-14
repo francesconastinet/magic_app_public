@@ -5,6 +5,45 @@ import '../app_config.dart';
 import '../services/package_storage.dart';
 
 // ==========================================
+// CONFIGURAZIONE LAYOUT
+// ==========================================
+
+class AudioLayout {
+  final Size screenSize;
+  final bool isLandscape;
+  final bool isTablet;
+
+  AudioLayout(BuildContext context)
+    : screenSize = MediaQuery.sizeOf(context),
+      isLandscape = MediaQuery.orientationOf(context) == Orientation.landscape,
+      isTablet = MediaQuery.sizeOf(context).shortestSide >= 600;
+
+  double get _sS => screenSize.shortestSide;
+  double get _lS => screenSize.longestSide;
+
+  // --- DIMENSIONI CONTAINER ---
+  double get containerWidth => isLandscape
+      ? (isTablet ? _lS * 0.35 : _lS * 0.45)
+      : (isTablet ? _sS * 0.6 : _sS * 0.85);
+  double get maxContainerHeight => isLandscape ? _sS * 0.75 : _lS * 0.85;
+
+  // --- SPAZIATURE ---
+  double get verticalSpacing => isLandscape ? _sS * 0.02 : _lS * 0.02;
+  double get padding => isTablet ? _sS * 0.04 : _sS * 0.05;
+  double get borderRadius => _sS * 0.04;
+
+  // --- ICONE E TESTI ---
+  double get mainIconSize => _sS * 0.1;
+  double get headerIconSize => _sS * (isTablet ? 0.04 : 0.06);
+  double get titleFontSize => _sS * (isTablet ? 0.03 : 0.045);
+  double get timeFontSize => _sS * (isTablet ? 0.025 : 0.035);
+
+  // --- PULSANTE PLAY/PAUSE ---
+  double get playRadius => isLandscape ? _sS * 0.05 : _sS * 0.07;
+  double get playIconSize => isLandscape ? _sS * 0.06 : _sS * 0.08;
+}
+
+// ==========================================
 // SCHERMATA
 // ==========================================
 
@@ -65,11 +104,14 @@ class _AudioWidgetState extends State<AudioWidget> {
       return const SizedBox.shrink();
     }
 
+    final layout = AudioLayout(context);
+
     return ExpandedAudioPlayer(
       titolo: widget.titolo,
       isPlaying: _isPlaying,
       duration: _duration,
       position: _position,
+      layout: layout,
       onTogglePlay: _togglePlayPause,
       onSeek: (value) async {
         final position = Duration(seconds: value.toInt());
@@ -123,6 +165,7 @@ class ExpandedAudioPlayer extends StatelessWidget {
   final bool isPlaying;
   final Duration duration;
   final Duration position;
+  final AudioLayout layout;
   final VoidCallback onTogglePlay;
   final ValueChanged<double> onSeek;
   final VoidCallback onMinimize;
@@ -134,6 +177,7 @@ class ExpandedAudioPlayer extends StatelessWidget {
     required this.isPlaying,
     required this.duration,
     required this.position,
+    required this.layout,
     required this.onTogglePlay,
     required this.onSeek,
     required this.onMinimize,
@@ -142,40 +186,27 @@ class ExpandedAudioPlayer extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final screenSize = MediaQuery.sizeOf(context);
-    final isLandscape =
-        MediaQuery.orientationOf(context) == Orientation.landscape;
-    final double containerWidth = isLandscape
-        ? (screenSize.width * 0.45).clamp(320.0, 500.0)
-        : (screenSize.width * 0.85).clamp(300.0, 500.0);
-    final double maxContainerHeight = isLandscape
-        ? screenSize.height * 0.75
-        : screenSize.height * 0.85;
-    final double verticalSpacing = (screenSize.height * 0.02).clamp(8.0, 24.0);
-    final double padding = screenSize.width * 0.05;
-    final double iconSize = isLandscape ? 24.0 : 64.0;
-
     return Positioned.fill(
       child: Container(
         color: Colors.black54,
         child: SafeArea(
-          minimum: const EdgeInsets.symmetric(vertical: 16.0),
+          minimum: EdgeInsets.symmetric(vertical: layout.borderRadius),
           child: Center(
             child: ConstrainedBox(
               constraints: BoxConstraints(
-                maxWidth: containerWidth,
-                maxHeight: maxContainerHeight,
+                maxWidth: layout.containerWidth,
+                maxHeight: layout.maxContainerHeight,
               ),
               child: Container(
                 padding: EdgeInsets.only(
-                  top: verticalSpacing,
-                  bottom: verticalSpacing + 16.0,
-                  left: padding.clamp(16.0, 32.0),
-                  right: padding.clamp(16.0, 32.0),
+                  top: layout.verticalSpacing,
+                  bottom: layout.verticalSpacing + layout.borderRadius,
+                  left: layout.padding,
+                  right: layout.padding,
                 ),
                 decoration: BoxDecoration(
                   color: Colors.black87,
-                  borderRadius: BorderRadius.circular(16),
+                  borderRadius: BorderRadius.circular(layout.borderRadius),
                   border: Border.all(color: Colors.white24, width: 1),
                 ),
                 child: SingleChildScrollView(
@@ -185,32 +216,34 @@ class ExpandedAudioPlayer extends StatelessWidget {
                       ExpandedPlayerHeader(
                         onMinimize: onMinimize,
                         onClose: onClose,
+                        layout: layout,
                       ),
 
-                      ExpandedPlayerTitle(titolo: titolo),
+                      ExpandedPlayerTitle(titolo: titolo, layout: layout),
 
-                      SizedBox(height: verticalSpacing),
+                      SizedBox(height: layout.verticalSpacing),
 
                       Icon(
                         Icons.audiotrack,
-                        size: iconSize,
+                        size: layout.mainIconSize,
                         color: Colors.blueAccent,
                       ),
 
-                      SizedBox(height: verticalSpacing),
+                      SizedBox(height: layout.verticalSpacing),
 
                       AudioProgressBar(
                         duration: duration,
                         position: position,
                         onSeek: onSeek,
+                        layout: layout,
                       ),
 
-                      SizedBox(height: verticalSpacing),
+                      SizedBox(height: layout.verticalSpacing),
 
                       AudioPlayPauseButton(
                         isPlaying: isPlaying,
                         onTogglePlay: onTogglePlay,
-                        isLandscape: isLandscape,
+                        layout: layout,
                       ),
                     ],
                   ),
@@ -228,11 +261,13 @@ class ExpandedAudioPlayer extends StatelessWidget {
 class ExpandedPlayerHeader extends StatelessWidget {
   final VoidCallback onMinimize;
   final VoidCallback onClose;
+  final AudioLayout layout;
 
   const ExpandedPlayerHeader({
     super.key,
     required this.onMinimize,
     required this.onClose,
+    required this.layout,
   });
 
   @override
@@ -241,12 +276,20 @@ class ExpandedPlayerHeader extends StatelessWidget {
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
         IconButton(
-          icon: const Icon(Icons.keyboard_arrow_down, color: Colors.white54),
+          icon: Icon(
+            Icons.keyboard_arrow_down,
+            color: Colors.white54,
+            size: layout.headerIconSize,
+          ),
           onPressed: onMinimize,
         ),
 
         IconButton(
-          icon: const Icon(Icons.close, color: Colors.redAccent, size: 24),
+          icon: Icon(
+            Icons.close,
+            color: Colors.redAccent,
+            size: layout.headerIconSize,
+          ),
           onPressed: onClose,
         ),
       ],
@@ -257,8 +300,13 @@ class ExpandedPlayerHeader extends StatelessWidget {
 // --- TITOLO ---
 class ExpandedPlayerTitle extends StatelessWidget {
   final String titolo;
+  final AudioLayout layout;
 
-  const ExpandedPlayerTitle({super.key, required this.titolo});
+  const ExpandedPlayerTitle({
+    super.key,
+    required this.titolo,
+    required this.layout,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -266,9 +314,9 @@ class ExpandedPlayerTitle extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 8.0),
       child: Text(
         titolo,
-        style: const TextStyle(
+        style: TextStyle(
           color: Colors.white,
-          fontSize: 18,
+          fontSize: layout.titleFontSize,
           fontWeight: FontWeight.bold,
         ),
         textAlign: TextAlign.center,
@@ -284,12 +332,14 @@ class AudioProgressBar extends StatelessWidget {
   final Duration duration;
   final Duration position;
   final ValueChanged<double> onSeek;
+  final AudioLayout layout;
 
   const AudioProgressBar({
     super.key,
     required this.duration,
     required this.position,
     required this.onSeek,
+    required this.layout,
   });
 
   String _formatDuration(Duration d) {
@@ -320,12 +370,18 @@ class AudioProgressBar extends StatelessWidget {
           children: [
             Text(
               _formatDuration(position),
-              style: const TextStyle(color: Colors.white54),
+              style: TextStyle(
+                color: Colors.white54,
+                fontSize: layout.timeFontSize,
+              ),
             ),
 
             Text(
               _formatDuration(duration),
-              style: const TextStyle(color: Colors.white54),
+              style: TextStyle(
+                color: Colors.white54,
+                fontSize: layout.timeFontSize,
+              ),
             ),
           ],
         ),
@@ -338,29 +394,26 @@ class AudioProgressBar extends StatelessWidget {
 class AudioPlayPauseButton extends StatelessWidget {
   final bool isPlaying;
   final VoidCallback onTogglePlay;
-  final bool isLandscape;
+  final AudioLayout layout;
 
   const AudioPlayPauseButton({
     super.key,
     required this.isPlaying,
     required this.onTogglePlay,
-    this.isLandscape = false,
+    required this.layout,
   });
 
   @override
   Widget build(BuildContext context) {
-    final double radius = isLandscape ? 20.0 : 28.0;
-    final double iconSize = isLandscape ? 24.0 : 32.0;
-
     return CircleAvatar(
-      radius: radius,
+      radius: layout.playRadius,
       backgroundColor: Colors.blueAccent,
       child: IconButton(
         padding: EdgeInsets.zero,
         icon: Icon(
           isPlaying ? Icons.pause : Icons.play_arrow,
           color: Colors.white,
-          size: iconSize,
+          size: layout.playIconSize,
         ),
         onPressed: onTogglePlay,
       ),
