@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import '../models.dart';
-import '../opera_repository.dart'; // TODO: rimuovere opere hardcodate
+import '../models/models.dart';
+import '../old/opera_repository.dart'; // TODO: rimuovere opere hardcodate
 
 // ==========================================
 // SCHERMATA
@@ -50,8 +50,12 @@ class _CatalogueWidgetState extends State<CatalogueWidget> {
   // --- RENDERING ---
   @override
   Widget build(BuildContext context) {
+    final isLandscape =
+        MediaQuery.orientationOf(context) == Orientation.landscape;
+    final isTablet = MediaQuery.sizeOf(context).shortestSide >= 600;
+
     return FractionallySizedBox(
-      heightFactor: 0.8,
+      heightFactor: isLandscape ? (isTablet ? 0.8 : 1) : 0.8,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [

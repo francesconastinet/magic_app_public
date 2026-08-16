@@ -1,4 +1,4 @@
-import 'models.dart';
+import '../models/models.dart';
 
 class OperaRepository {
   static final List<BookModel> _catalogo = [

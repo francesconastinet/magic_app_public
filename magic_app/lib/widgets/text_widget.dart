@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
-import '../services/package_storage.dart';
-import '../app_config.dart';
+import '../services/storage_service.dart';
+import '../core/app_config.dart';
 
 // ==========================================
 // CONFIGURAZIONE LAYOUT

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:audioplayers/audioplayers.dart';
-import '../models.dart';
+import '../models/models.dart';
 
 // TODO: unificare ad AudioWidegt
 class AudioPlayerWidget extends StatefulWidget {

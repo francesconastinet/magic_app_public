@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
-import 'app_state.dart';
-import 'models.dart';
+import 'core/app_state.dart';
+import 'models/models.dart';
 import 'screens/detail_screen.dart';
 import 'screens/home_screen.dart';
 import 'old/camera_screen.dart';
@@ -10,7 +11,7 @@ import 'old/collection_screen.dart';
 import 'screens/ar_screen.dart';
 import 'services/chat_service.dart';
 import 'services/auth_service.dart';
-import 'services/package_storage.dart';
+import 'services/storage_service.dart';
 import 'services/media_service.dart';
 
 // ==========================================
@@ -92,6 +93,11 @@ class MagicApp extends StatelessWidget {
         ),
       ),
       routerConfig: router,
+      localizationsDelegates: const [
+        GlobalMaterialLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+      ],
+      supportedLocales: const [Locale('it', 'IT')],
     );
   }
 }

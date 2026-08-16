@@ -1,6 +1,3 @@
-// Template di configurazione
-// Duplicare il file, rinominare in app_config.dart e inserire i valori reali
-
 class AppConfig {
   // ID pacchetto
   static const String packageId = 'INSERIRE_PACKAGE_ID';

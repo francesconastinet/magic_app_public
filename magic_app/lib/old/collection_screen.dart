@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../models.dart';
+import '../models/models.dart';
 import 'manuscript_screen.dart';
 import '../services/package_service.dart';
-import '../services/package_storage.dart';
+import '../services/storage_service.dart';
 import '../services/auth_service.dart';
-import '../app_config.dart';
+import '../core/app_config.dart';
 
 class CollectionScreen extends StatelessWidget {
   const CollectionScreen({super.key});

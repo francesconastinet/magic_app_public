@@ -4,8 +4,8 @@ import 'package:flutter/services.dart';
 import 'package:flutter_pdfview/flutter_pdfview.dart';
 import 'package:provider/provider.dart';
 import 'package:path_provider/path_provider.dart';
-import '../app_config.dart';
-import '../services/package_storage.dart';
+import '../core/app_config.dart';
+import '../services/storage_service.dart';
 
 // ==========================================
 // CONFIGURAZIONE LAYOUT

@@ -48,4 +48,4 @@ app.*.map.json
 key.properties
 
 # Local Environment
-lib/app_config.dart
+lib/core/app_config.dart

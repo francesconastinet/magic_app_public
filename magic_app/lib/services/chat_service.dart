@@ -3,7 +3,7 @@ import 'dart:math' as math; // TODO: rimuovere quando disponibile api
 import 'package:dio/dio.dart';
 import 'package:uuid/uuid.dart';
 import 'package:flutter/foundation.dart';
-import '../app_config.dart';
+import '../core/app_config.dart';
 
 class MessaggioChat {
   final String testo;

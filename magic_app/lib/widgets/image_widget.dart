@@ -1,9 +1,9 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../app_config.dart';
-import '../models.dart';
-import '../services/package_storage.dart';
+import '../core/app_config.dart';
+import '../models/models.dart';
+import '../services/storage_service.dart';
 
 // ==========================================
 // CONFIGURAZIONE LAYOUT

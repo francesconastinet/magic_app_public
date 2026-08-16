@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
-import '../app_config.dart';
-import '../models.dart';
+import '../core/app_config.dart';
+import '../models/models.dart';
 import '../widgets/chat_widget.dart';
 import '../widgets/menu_widget.dart';
 import '../services/package_service.dart';
-import '../services/package_storage.dart';
+import '../services/storage_service.dart';
 import '../services/auth_service.dart';
 import '../services/update_service.dart';
 
@@ -57,7 +57,7 @@ class _HomeScreenState extends State<HomeScreen> {
             builder: (BuildContext context) {
               return IconButton(
                 icon: const Icon(Icons.menu),
-                tooltip: 'Apri Menu Principale',
+                tooltip: 'Menu Principale',
                 onPressed: () {
                   Scaffold.of(context).openEndDrawer();
                 },

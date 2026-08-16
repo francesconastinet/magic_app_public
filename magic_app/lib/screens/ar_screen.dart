@@ -4,9 +4,9 @@ import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
 import 'package:camera/camera.dart';
 import 'package:permission_handler/permission_handler.dart';
-import '../app_state.dart';
-import '../opera_repository.dart';
-import '../models.dart';
+import '../core/app_state.dart';
+import '../old/opera_repository.dart';
+import '../models/models.dart';
 import '../services/media_service.dart';
 import '../services/recognition_service.dart';
 import '../widgets/audio_widget.dart';
@@ -690,6 +690,7 @@ class ARMediaBubblesPanel extends StatelessWidget {
           borderRadius: BorderRadius.circular(16),
           side: const BorderSide(color: Colors.white24, width: 1),
         ),
+        tooltip: tipo,
         onPressed: () {
           _mostraListaMedia(context, tipo, mediaList);
         },
@@ -857,6 +858,7 @@ class ARChatButton extends StatelessWidget {
               foregroundColor: Colors.white,
               elevation: 4,
               shape: const CircleBorder(),
+              tooltip: 'Chiedi alla Chat',
               onPressed: () {
                 context.go('/', extra: opera);
               },
@@ -907,6 +909,7 @@ class ARCloseButton extends StatelessWidget {
                   side: BorderSide(color: Colors.white24, width: 1),
                 ),
                 onPressed: onClose,
+                tooltip: 'Chiudi',
                 child: Icon(Icons.close, size: layout.closeIconSize),
               ),
             ),

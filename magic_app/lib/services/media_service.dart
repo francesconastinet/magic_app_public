@@ -1,6 +1,6 @@
 import 'package:url_launcher/url_launcher.dart';
 import 'package:flutter/foundation.dart';
-import '../models.dart';
+import '../models/models.dart';
 
 class MediaService {
   // Apre un MediaItem nel modo corretto in base al tipo
