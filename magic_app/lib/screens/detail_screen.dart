@@ -39,7 +39,6 @@ class _DetailScreenState extends State<DetailScreen> {
         children: [
           Scaffold(
             appBar: _buildAppBar(colorScheme),
-            floatingActionButton: _StartARButton(book: widget.book),
             body: _buildBody(),
           ),
 
@@ -67,6 +66,16 @@ class _DetailScreenState extends State<DetailScreen> {
         'Dettaglio',
         style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
       ),
+      actions: [
+        IconButton(
+          icon: const Icon(Icons.chat_bubble_outline),
+          tooltip: 'Chiedi all\'Assistente',
+          onPressed: () {
+            context.read<AppState>().selezionaOpera(widget.book);
+            context.go('/', extra: widget.book);
+          },
+        ),
+      ],
     );
   }
 
@@ -397,30 +406,6 @@ class _EmptyMediaCard extends StatelessWidget {
           style: TextStyle(color: colorScheme.onSurfaceVariant, fontSize: 13),
         ),
       ),
-    );
-  }
-}
-
-// --- PULSANTE AR ---
-class _StartARButton extends StatelessWidget {
-  final BookModel book;
-
-  const _StartARButton({required this.book});
-
-  @override
-  Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-
-    return FloatingActionButton.extended(
-      heroTag: 'btn_avvia_ar',
-      onPressed: () {
-        context.read<AppState>().selezionaOpera(book);
-        context.push('/ar/${book.titolo}');
-      },
-      backgroundColor: colorScheme.primary,
-      foregroundColor: colorScheme.onPrimary,
-      icon: const Icon(Icons.view_in_ar),
-      label: const Text('Avvia AR'),
     );
   }
 }
