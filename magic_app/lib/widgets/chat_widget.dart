@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import 'catalogue_widget.dart';
-import '../app_state.dart';
+import '../core/app_state.dart';
 import '../services/chat_service.dart';
 
 // ==========================================
@@ -54,7 +54,6 @@ class _ChatWidgetState extends State<ChatWidget> {
   Widget build(BuildContext context) {
     final chatService = context.watch<ChatService>();
     final messaggi = chatService.messaggi;
-    final colorScheme = Theme.of(context).colorScheme;
 
     return Column(
       children: [
@@ -72,80 +71,22 @@ class _ChatWidgetState extends State<ChatWidget> {
         ),
 
         Expanded(
-          child: Stack(
-            children: [
-              ListView.builder(
-                controller: _scrollController,
-                padding: const EdgeInsets.all(16),
-                itemCount: messaggi.length + (_botStaScrivendo ? 1 : 0),
-                itemBuilder: (context, index) {
-                  if (index == messaggi.length && _botStaScrivendo) {
-                    return const ChatTypingIndicator();
-                  }
-
-                  final msg = messaggi[index];
-
-                  if (msg.isSystem) {
-                    return _buildSystemSeparator(
-                      msg.testo,
-                      Theme.of(context).colorScheme,
-                    );
-                  }
-
-                  return ChatMessageBubble(msg: msg);
-                },
-              ),
-
-              Positioned(
-                right: 12,
-                bottom: 0,
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    FloatingActionButton.small(
-                      heroTag: 'fab_fonti',
-                      backgroundColor: colorScheme.secondaryContainer,
-                      foregroundColor: colorScheme.onSecondaryContainer,
-                      elevation: 2,
-                      tooltip: 'Gestisci Fonti',
-                      onPressed: () {
-                        showModalBottomSheet(
-                          context: context,
-                          isScrollControlled: true,
-                          builder: (ctx) => CatalogueWidget(
-                            idsFonteIniziale: widget.bookIds,
-                            onFonteSelezionata:
-                                widget.onFonteSelezionata ?? (t, ids) {},
-                          ),
-                        );
-                      },
-                      child: const Icon(Icons.library_books, size: 25),
-                    ),
-
-                    const SizedBox(height: 12),
-
-                    FloatingActionButton.small(
-                      heroTag: 'fab_ar',
-                      backgroundColor: colorScheme.secondaryContainer,
-                      foregroundColor: colorScheme.onSecondaryContainer,
-                      elevation: 2,
-                      tooltip: 'Realtà Aumentata',
-                      onPressed: () {
-                        final appState = context.read<AppState>();
-                        if (appState.operaSelezionata != null) {
-                          context.push(
-                            '/ar/${appState.operaSelezionata!.titolo}',
-                          );
-                        } else {
-                          context.push('/ar');
-                        }
-                      },
-                      child: const Icon(Icons.camera_alt, size: 25),
-                    ),
-                  ],
+          child: SafeArea(
+            top: false,
+            bottom: false,
+            child: Stack(
+              children: [
+                ChatMessagesList(
+                  scrollController: _scrollController,
+                  messaggi: messaggi,
+                  botStaScrivendo: _botStaScrivendo,
                 ),
-              ),
-            ],
+                ChatFloatingButtons(
+                  bookIds: widget.bookIds,
+                  onFonteSelezionata: widget.onFonteSelezionata,
+                ),
+              ],
+            ),
           ),
         ),
 
@@ -396,91 +337,95 @@ class ChatHeaderBar extends StatelessWidget {
       width: double.infinity,
       height: 32,
       color: colorScheme.secondaryContainer,
-      child: Stack(
-        alignment: Alignment.center,
-        children: [
-          Material(
-            color: Colors.transparent,
-            child: InkWell(
-              onTap: () =>
-                  _mostraInfoDialog(context, isSmartMode, testoVisualizzato),
-              borderRadius: BorderRadius.circular(16),
-              child: Padding(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 12.0,
-                  vertical: 4.0,
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    if (inCorso)
-                      SizedBox(
-                        width: 14,
-                        height: 14,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          color: colorScheme.onSecondaryContainer,
+      child: SafeArea(
+        top: false,
+        bottom: false,
+        child: Stack(
+          alignment: Alignment.center,
+          children: [
+            Material(
+              color: Colors.transparent,
+              child: InkWell(
+                onTap: () =>
+                    _mostraInfoDialog(context, isSmartMode, testoVisualizzato),
+                borderRadius: BorderRadius.circular(16),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12.0,
+                    vertical: 4.0,
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      if (inCorso)
+                        SizedBox(
+                          width: 14,
+                          height: 14,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: colorScheme.onSecondaryContainer,
+                          ),
+                        )
+                      else
+                        Icon(
+                          creata
+                              ? Icons.check_circle
+                              : (isSmartMode
+                                    ? Icons.auto_awesome
+                                    : Icons.error_outline),
+                          size: 16,
+                          color: isSmartMode
+                              ? Colors.orange
+                              : (creata ? Colors.green : colorScheme.error),
                         ),
-                      )
-                    else
+
+                      const SizedBox(width: 6),
+
+                      Flexible(
+                        child: Text(
+                          testoVisualizzato,
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: colorScheme.onSecondaryContainer,
+                            fontWeight: FontWeight.bold,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+
+                      const SizedBox(width: 4),
+
                       Icon(
-                        creata
-                            ? Icons.check_circle
-                            : (isSmartMode
-                                  ? Icons.auto_awesome
-                                  : Icons.error_outline),
+                        Icons.keyboard_arrow_down,
                         size: 16,
-                        color: isSmartMode
-                            ? Colors.orange
-                            : (creata ? Colors.green : colorScheme.error),
-                      ),
-
-                    const SizedBox(width: 6),
-
-                    Flexible(
-                      child: Text(
-                        testoVisualizzato,
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: colorScheme.onSecondaryContainer,
-                          fontWeight: FontWeight.bold,
+                        color: colorScheme.onSecondaryContainer.withValues(
+                          alpha: 0.7,
                         ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
                       ),
-                    ),
-
-                    const SizedBox(width: 4),
-
-                    Icon(
-                      Icons.keyboard_arrow_down,
-                      size: 16,
-                      color: colorScheme.onSecondaryContainer.withValues(
-                        alpha: 0.7,
-                      ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               ),
             ),
-          ),
 
-          if (isSmartMode)
-            Positioned(
-              right: 12,
-              child: SizedBox(
-                width: 24,
-                height: 24,
-                child: IconButton.filledTonal(
-                  onPressed: onMostraFontiConsultate,
-                  icon: const Icon(Icons.saved_search, size: 20),
-                  tooltip: 'Fonti Consultate',
-                  padding: EdgeInsets.zero,
-                  constraints: const BoxConstraints(),
+            if (isSmartMode)
+              Positioned(
+                right: 12,
+                child: SizedBox(
+                  width: 24,
+                  height: 24,
+                  child: IconButton.filledTonal(
+                    onPressed: onMostraFontiConsultate,
+                    icon: const Icon(Icons.saved_search, size: 20),
+                    tooltip: 'Fonti Consultate',
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(),
+                  ),
                 ),
               ),
-            ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -761,6 +706,107 @@ class InfoStatoDialog extends StatelessWidget {
   }
 }
 
+// --- LISTA MESSAGGI ---
+class ChatMessagesList extends StatelessWidget {
+  final ScrollController scrollController;
+  final List<MessaggioChat> messaggi;
+  final bool botStaScrivendo;
+
+  const ChatMessagesList({
+    super.key,
+    required this.scrollController,
+    required this.messaggi,
+    required this.botStaScrivendo,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return ListView.builder(
+      controller: scrollController,
+      padding: const EdgeInsets.all(16),
+      itemCount: messaggi.length + (botStaScrivendo ? 1 : 0),
+      itemBuilder: (context, index) {
+        if (index == messaggi.length && botStaScrivendo) {
+          return const ChatTypingIndicator();
+        }
+
+        final msg = messaggi[index];
+
+        if (msg.isSystem) {
+          return _buildSystemSeparator(
+            msg.testo,
+            Theme.of(context).colorScheme,
+          );
+        }
+
+        return ChatMessageBubble(msg: msg);
+      },
+    );
+  }
+}
+
+// --- PULSANTI (Fonti e AR) ---
+class ChatFloatingButtons extends StatelessWidget {
+  final List<String>? bookIds;
+  final void Function(String? titolo, List<String>? ids)? onFonteSelezionata;
+
+  const ChatFloatingButtons({super.key, this.bookIds, this.onFonteSelezionata});
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final isLandscape =
+        MediaQuery.orientationOf(context) == Orientation.landscape;
+
+    return Positioned(
+      right: isLandscape ? 0 : 12,
+      bottom: 0,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          FloatingActionButton.small(
+            heroTag: 'fab_fonti',
+            backgroundColor: colorScheme.secondaryContainer,
+            foregroundColor: colorScheme.onSecondaryContainer,
+            elevation: 2,
+            tooltip: 'Gestisci Fonti',
+            onPressed: () {
+              showModalBottomSheet(
+                context: context,
+                isScrollControlled: true,
+                builder: (ctx) => CatalogueWidget(
+                  idsFonteIniziale: bookIds,
+                  onFonteSelezionata: onFonteSelezionata ?? (t, ids) {},
+                ),
+              );
+            },
+            child: const Icon(Icons.library_books, size: 25),
+          ),
+
+          const SizedBox(height: 12),
+
+          FloatingActionButton.small(
+            heroTag: 'fab_ar',
+            backgroundColor: colorScheme.secondaryContainer,
+            foregroundColor: colorScheme.onSecondaryContainer,
+            elevation: 2,
+            tooltip: 'Realtà Aumentata',
+            onPressed: () {
+              final appState = context.read<AppState>();
+              if (appState.operaSelezionata != null) {
+                context.push('/ar/${appState.operaSelezionata!.titolo}');
+              } else {
+                context.push('/ar');
+              }
+            },
+            child: const Icon(Icons.camera_alt, size: 25),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 // --- INPUT TESTUALE ---
 class ChatInputArea extends StatelessWidget {
   final TextEditingController controller;
@@ -779,43 +825,46 @@ class ChatInputArea extends StatelessWidget {
     final colorScheme = Theme.of(context).colorScheme;
 
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
       decoration: BoxDecoration(color: colorScheme.surface),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.end,
-        children: [
-          Expanded(
-            child: TextField(
-              controller: controller,
-              decoration: InputDecoration(
-                hintText: 'Fai una domanda...',
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(24),
-                  borderSide: BorderSide.none,
+      child: SafeArea(
+        top: false,
+        minimum: const EdgeInsets.all(12),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.end,
+          children: [
+            Expanded(
+              child: TextField(
+                controller: controller,
+                decoration: InputDecoration(
+                  hintText: 'Fai una domanda...',
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(24),
+                    borderSide: BorderSide.none,
+                  ),
+                  filled: true,
+                  fillColor: colorScheme.surfaceContainerHighest,
+                  contentPadding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 10,
+                  ),
                 ),
-                filled: true,
-                fillColor: colorScheme.surfaceContainerHighest,
-                contentPadding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 10,
-                ),
+                onSubmitted: (_) => onSend(),
+                enabled: !isWriting,
               ),
-              onSubmitted: (_) => onSend(),
-              enabled: !isWriting,
             ),
-          ),
 
-          const SizedBox(width: 8),
+            const SizedBox(width: 8),
 
-          FloatingActionButton.small(
-            heroTag: 'chat_send',
-            elevation: 0,
-            onPressed: isWriting ? null : onSend,
-            backgroundColor: colorScheme.primary,
-            tooltip: 'Invia',
-            child: Icon(Icons.send, color: colorScheme.onPrimary),
-          ),
-        ],
+            FloatingActionButton.small(
+              heroTag: 'chat_send',
+              elevation: 0,
+              onPressed: isWriting ? null : onSend,
+              backgroundColor: colorScheme.primary,
+              tooltip: 'Invia',
+              child: Icon(Icons.send, color: colorScheme.onPrimary),
+            ),
+          ],
+        ),
       ),
     );
   }

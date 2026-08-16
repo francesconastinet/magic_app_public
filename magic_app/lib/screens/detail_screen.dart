@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
-import '../app_state.dart';
-import '../models.dart';
+import '../core/app_state.dart';
+import '../models/models.dart';
 import '../services/media_service.dart';
 import '../widgets/audio_widget.dart';
 import '../widgets/image_widget.dart';
@@ -44,12 +44,15 @@ class _DetailScreenState extends State<DetailScreen> {
           ),
 
           if (_audioInEsecuzione != null)
-            AudioWidget(
-              titolo: _audioInEsecuzione!.titolo,
-              audioPath: _audioInEsecuzione!.url,
-              isMinimized: _audioMinimizzato,
-              onMinimizeToggle: () => setState(() => _audioMinimizzato = true),
-              onClose: () => setState(() => _audioInEsecuzione = null),
+            SafeArea(
+              child: AudioWidget(
+                titolo: _audioInEsecuzione!.titolo,
+                audioPath: _audioInEsecuzione!.url,
+                isMinimized: _audioMinimizzato,
+                onMinimizeToggle: () =>
+                    setState(() => _audioMinimizzato = true),
+                onClose: () => setState(() => _audioInEsecuzione = null),
+              ),
             ),
         ],
       ),
@@ -68,28 +71,29 @@ class _DetailScreenState extends State<DetailScreen> {
   }
 
   Widget _buildBody() {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          _BookHeaderCard(book: widget.book),
+    return SafeArea(
+      top: false,
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _BookHeaderCard(book: widget.book),
 
-          const SizedBox(height: 16),
+            const SizedBox(height: 16),
 
-          _MultimediaSection(
-            book: widget.book,
-            audioInEsecuzione: _audioInEsecuzione,
-            onPlayAudio: (item) {
-              setState(() {
-                _audioInEsecuzione = item;
-                _audioMinimizzato = false;
-              });
-            },
-          ),
-
-          const SizedBox(height: 80),
-        ],
+            _MultimediaSection(
+              book: widget.book,
+              audioInEsecuzione: _audioInEsecuzione,
+              onPlayAudio: (item) {
+                setState(() {
+                  _audioInEsecuzione = item;
+                  _audioMinimizzato = false;
+                });
+              },
+            ),
+          ],
+        ),
       ),
     );
   }
