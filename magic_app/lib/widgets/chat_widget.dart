@@ -55,47 +55,57 @@ class _ChatWidgetState extends State<ChatWidget> {
     final chatService = context.watch<ChatService>();
     final messaggi = chatService.messaggi;
 
-    return Column(
-      children: [
-        ChatHeaderBar(
-          titoloFonte: widget.titoloFonteSelezionata,
-          inCorso: _contextSessionInCorso,
-          creata: _contextSessionCreata,
-          onMostraFontiConsultate: () {
-            showDialog(
-              context: context,
-              builder: (ctx) =>
-                  FontiConsultateDialog(fonteTotali: chatService.fontiTotali),
-            );
-          },
-        ),
+    return GestureDetector(
+      onTap: () {
+        FocusManager.instance.primaryFocus?.unfocus();
+      },
+      child: Column(
+        children: [
+          ChatHeaderBar(
+            titoloFonte: widget.titoloFonteSelezionata,
+            inCorso: _contextSessionInCorso,
+            creata: _contextSessionCreata,
+            onMostraFontiConsultate: () {
+              FocusManager.instance.primaryFocus?.unfocus();
+              Future.delayed(const Duration(milliseconds: 50), () {
+                if (!context.mounted) return;
+                showDialog(
+                  context: context,
+                  builder: (ctx) => FontiConsultateDialog(
+                    fonteTotali: chatService.fontiTotali,
+                  ),
+                );
+              });
+            },
+          ),
 
-        Expanded(
-          child: SafeArea(
-            top: false,
-            bottom: false,
-            child: Stack(
-              children: [
-                ChatMessagesList(
-                  scrollController: _scrollController,
-                  messaggi: messaggi,
-                  botStaScrivendo: _botStaScrivendo,
-                ),
-                ChatFloatingButtons(
-                  bookIds: widget.bookIds,
-                  onFonteSelezionata: widget.onFonteSelezionata,
-                ),
-              ],
+          Expanded(
+            child: SafeArea(
+              top: false,
+              bottom: false,
+              child: Stack(
+                children: [
+                  ChatMessagesList(
+                    scrollController: _scrollController,
+                    messaggi: messaggi,
+                    botStaScrivendo: _botStaScrivendo,
+                  ),
+                  ChatFloatingButtons(
+                    bookIds: widget.bookIds,
+                    onFonteSelezionata: widget.onFonteSelezionata,
+                  ),
+                ],
+              ),
             ),
           ),
-        ),
 
-        ChatInputArea(
-          controller: _controller,
-          isWriting: _botStaScrivendo,
-          onSend: _inviaMessaggio,
-        ),
-      ],
+          ChatInputArea(
+            controller: _controller,
+            isWriting: _botStaScrivendo,
+            onSend: _inviaMessaggio,
+          ),
+        ],
+      ),
     );
   }
 
@@ -315,15 +325,19 @@ class ChatHeaderBar extends StatelessWidget {
     bool isSmartMode,
     String titolo,
   ) {
-    showDialog(
-      context: context,
-      builder: (ctx) => InfoStatoDialog(
-        isSmartMode: isSmartMode,
-        titoloFonte: titolo,
-        inCorso: inCorso,
-        creata: creata,
-      ),
-    );
+    FocusManager.instance.primaryFocus?.unfocus();
+    Future.delayed(const Duration(milliseconds: 50), () {
+      if (!context.mounted) return;
+      showDialog(
+        context: context,
+        builder: (ctx) => InfoStatoDialog(
+          isSmartMode: isSmartMode,
+          titoloFonte: titolo,
+          inCorso: inCorso,
+          creata: creata,
+        ),
+      );
+    });
   }
 
   @override
@@ -771,14 +785,18 @@ class ChatFloatingButtons extends StatelessWidget {
             elevation: 2,
             tooltip: 'Gestisci Fonti',
             onPressed: () {
-              showModalBottomSheet(
-                context: context,
-                isScrollControlled: true,
-                builder: (ctx) => CatalogueWidget(
-                  idsFonteIniziale: bookIds,
-                  onFonteSelezionata: onFonteSelezionata ?? (t, ids) {},
-                ),
-              );
+              FocusManager.instance.primaryFocus?.unfocus();
+              Future.delayed(const Duration(milliseconds: 50), () {
+                if (!context.mounted) return;
+                showModalBottomSheet(
+                  context: context,
+                  isScrollControlled: true,
+                  builder: (ctx) => CatalogueWidget(
+                    idsFonteIniziale: bookIds,
+                    onFonteSelezionata: onFonteSelezionata ?? (t, ids) {},
+                  ),
+                );
+              });
             },
             child: const Icon(Icons.library_books, size: 25),
           ),
@@ -792,12 +810,16 @@ class ChatFloatingButtons extends StatelessWidget {
             elevation: 2,
             tooltip: 'Realtà Aumentata',
             onPressed: () {
-              final appState = context.read<AppState>();
-              if (appState.operaSelezionata != null) {
-                context.push('/ar/${appState.operaSelezionata!.titolo}');
-              } else {
-                context.push('/ar');
-              }
+              FocusManager.instance.primaryFocus?.unfocus();
+              Future.delayed(const Duration(milliseconds: 50), () {
+                if (!context.mounted) return;
+                final appState = context.read<AppState>();
+                if (appState.operaSelezionata != null) {
+                  context.push('/ar/${appState.operaSelezionata!.titolo}');
+                } else {
+                  context.push('/ar');
+                }
+              });
             },
             child: const Icon(Icons.camera_alt, size: 25),
           ),
