@@ -150,7 +150,7 @@ class _PdfWidgetState extends State<PdfWidget> {
           });
         }
       } else {
-        final storageService = context.read<PackageStorage>();
+        final storageService = context.read<StorageService>();
         final basePath = await storageService.percorsoPacchetto(
           AppConfig.packageId,
         );

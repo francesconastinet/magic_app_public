@@ -3,7 +3,7 @@ import 'package:provider/provider.dart';
 import '../services/package_service.dart';
 import '../services/storage_service.dart';
 import '../services/auth_service.dart';
-import '../models/models.dart';
+import '../data/models.dart';
 import '../screens/detail_screen.dart';
 
 class ManuscriptScreen extends StatelessWidget {
@@ -44,7 +44,7 @@ class ManuscriptScreen extends StatelessWidget {
   // in un momento successivo dell'esecuzione async)
   Future<List<BookModel>> _caricaLibri(BuildContext context) async {
     final service = PackageService(
-      storage: context.read<PackageStorage>(),
+      storage: context.read<StorageService>(),
       authService: context.read<AuthService>(),
     );
     // Legge i libri della collezione dalla nuova struttura

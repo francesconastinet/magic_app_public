@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../models/models.dart';
+import '../data/models.dart';
 import 'manuscript_screen.dart';
 import '../services/package_service.dart';
 import '../services/storage_service.dart';
@@ -32,7 +32,7 @@ class CollectionScreen extends StatelessWidget {
         // Legge le collezioni dal nuovo pacchetto invece che dal Gist
         // MODIFICATO — dipendenze prese dal Provider invece di crearle al volo
         future: PackageService(
-          storage: context.read<PackageStorage>(),
+          storage: context.read<StorageService>(),
           authService: context.read<AuthService>(),
         ).leggiCollezioniV2(AppConfig.packageId),
         builder: (context, snapshot) {

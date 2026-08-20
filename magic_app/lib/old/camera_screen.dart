@@ -5,7 +5,7 @@ import 'package:provider/provider.dart';
 import 'package:permission_handler/permission_handler.dart';
 import '../core/app_state.dart';
 import '../services/recognition_service.dart';
-import 'opera_repository.dart';
+import '../data/opera_repository.dart';
 
 class CameraScreen extends StatefulWidget {
   const CameraScreen({super.key});

@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import '../core/app_state.dart';
-import '../models/models.dart';
+import '../data/models.dart';
 import '../services/media_service.dart';
 import '../widgets/audio_widget.dart';
 import '../widgets/image_widget.dart';
@@ -37,10 +37,7 @@ class _DetailScreenState extends State<DetailScreen> {
       child: Stack(
         fit: StackFit.expand,
         children: [
-          Scaffold(
-            appBar: _buildAppBar(colorScheme),
-            body: _buildBody(),
-          ),
+          Scaffold(appBar: _buildAppBar(colorScheme), body: _buildBody()),
 
           if (_audioInEsecuzione != null)
             SafeArea(
@@ -72,7 +69,7 @@ class _DetailScreenState extends State<DetailScreen> {
           tooltip: 'Chiedi all\'Assistente',
           onPressed: () {
             context.read<AppState>().selezionaOpera(widget.book);
-            context.go('/', extra: widget.book);
+            context.go('/');
           },
         ),
       ],

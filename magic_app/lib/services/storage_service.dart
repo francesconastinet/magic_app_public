@@ -2,7 +2,7 @@ import 'dart:io';
 import 'dart:convert';
 import 'package:path_provider/path_provider.dart';
 
-class PackageStorage {
+class StorageService {
   // Restituisce la cartella radice per i pacchetti MAGIC
   Future<Directory> get _baseDir async {
     final docs = await getApplicationDocumentsDirectory();

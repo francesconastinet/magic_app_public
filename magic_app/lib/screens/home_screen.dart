@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import '../core/app_config.dart';
-import '../models/models.dart';
+import '../core/app_state.dart';
+import '../data/models.dart';
 import '../widgets/chat_widget.dart';
 import '../widgets/menu_widget.dart';
 import '../services/package_service.dart';
@@ -29,6 +29,7 @@ class _HomeScreenState extends State<HomeScreen> {
   String? _titoloFonteSelezionata;
   List<String>? _idsFonteSelezionata;
   BookModel? _operaRiconosciutaAR;
+  AppState? _appState;
 
   @override
   void initState() {
@@ -36,10 +37,20 @@ class _HomeScreenState extends State<HomeScreen> {
 
     _titoloFonteSelezionata = widget.titoloFonteIniziale;
     _idsFonteSelezionata = widget.idsFonteIniziale;
+    _appState = context.read<AppState>();
+    _appState?.addListener(_onAppStateChanged);
+
+    _onAppStateChanged();
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _sincronizzaPacchettoInBackground();
     });
+  }
+
+  @override
+  void dispose() {
+    _appState?.removeListener(_onAppStateChanged);
+    super.dispose();
   }
 
   // --- RENDERING ---
@@ -88,6 +99,7 @@ class _HomeScreenState extends State<HomeScreen> {
           setState(() {
             _titoloFonteSelezionata = titolo;
             _idsFonteSelezionata = ids;
+            _operaRiconosciutaAR = null;
           });
         },
       ),
@@ -95,34 +107,23 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   // --- LOGICA ---
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
+  void _onAppStateChanged() {
+    if (!mounted) return;
 
-    try {
-      final extra = GoRouterState.of(context).extra;
-      if (extra is BookModel && extra != _operaRiconosciutaAR) {
-        _operaRiconosciutaAR = extra;
+    final operaSelezionata = _appState?.operaSelezionata;
 
-        final isDifferent =
-            _idsFonteSelezionata == null ||
-            !_idsFonteSelezionata!.contains(extra.id);
-        if (isDifferent) {
-          WidgetsBinding.instance.addPostFrameCallback((_) {
-            if (mounted) {
-              setState(() {
-                _titoloFonteSelezionata = extra.titolo;
-                _idsFonteSelezionata = [extra.id];
-              });
-            }
-          });
-        }
+    if (operaSelezionata != null && operaSelezionata != _operaRiconosciutaAR) {
+      final isDifferent =
+          _idsFonteSelezionata == null ||
+          !_idsFonteSelezionata!.contains(operaSelezionata.id);
+
+      if (isDifferent) {
+        setState(() {
+          _operaRiconosciutaAR = operaSelezionata;
+          _titoloFonteSelezionata = operaSelezionata.titolo;
+          _idsFonteSelezionata = [operaSelezionata.id];
+        });
       }
-    } catch (e) {
-      debugPrint(
-        '[ChatScreen] Impossibile recuperare GoRouterState '
-        'in didChangeDependencies: $e',
-      );
     }
   }
 
@@ -137,7 +138,7 @@ class _HomeScreenState extends State<HomeScreen> {
       if (mounted) setState(() => _syncInCorso = true);
 
       final packageService = PackageService(
-        storage: context.read<PackageStorage>(),
+        storage: context.read<StorageService>(),
         authService: context.read<AuthService>(),
       );
 

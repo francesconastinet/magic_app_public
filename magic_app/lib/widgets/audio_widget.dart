@@ -133,7 +133,7 @@ class _AudioWidgetState extends State<AudioWidget> {
       }
       // CASO 2: Modalità Produzione (File estratti su disco dallo ZIP)
       else {
-        final storageService = context.read<PackageStorage>();
+        final storageService = context.read<StorageService>();
         final basePath = await storageService.percorsoPacchetto(
           AppConfig.packageId,
         );

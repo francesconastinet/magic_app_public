@@ -69,7 +69,7 @@ class TextWidget extends StatelessWidget {
       }
       // CASO 2: Modalità Produzione (File estratti su disco dallo ZIP)
       else {
-        final storageService = context.read<PackageStorage>();
+        final storageService = context.read<StorageService>();
         return await storageService.leggiFile(AppConfig.packageId, textPath);
       }
     } catch (e) {

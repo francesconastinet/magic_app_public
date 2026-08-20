@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import '../models/models.dart';
-import '../old/opera_repository.dart'; // TODO: rimuovere opere hardcodate
+import '../data/models.dart';
+import '../data/opera_repository.dart'; // TODO: rimuovere opere hardcodate
 
 // ==========================================
 // SCHERMATA
@@ -551,9 +551,7 @@ class FontiBooksSection extends StatelessWidget {
                       color: colorScheme.primary,
                       onPressed: () {
                         context.pop();
-                        GoRouter.of(
-                          context,
-                        ).push('/opera/${opera.id}', extra: opera);
+                        GoRouter.of(context).push('/opera/${opera.id}');
                       },
                     ),
                   ],

@@ -192,7 +192,7 @@ class _VideoWidgetState extends State<VideoWidget> {
       if (widget.videoPath.startsWith('assets/')) {
         _controller = VideoPlayerController.asset(widget.videoPath);
       } else {
-        final storageService = context.read<PackageStorage>();
+        final storageService = context.read<StorageService>();
         final basePath = await storageService.percorsoPacchetto(
           AppConfig.packageId,
         );

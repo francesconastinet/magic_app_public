@@ -5,7 +5,7 @@ import 'storage_service.dart';
 import 'package:flutter/foundation.dart';
 import 'download_service.dart';
 import 'update_service.dart';
-import '../models/models.dart';
+import '../data/models.dart';
 import 'auth_service.dart';
 
 // Risultato della sincronizzazione automatica in background.
@@ -19,7 +19,7 @@ class SyncResult {
 }
 
 class PackageService {
-  final PackageStorage _storage;
+  final StorageService _storage;
   final AuthService _authService;
   final UpdateService _updateService = UpdateService();
 
@@ -29,7 +29,7 @@ class PackageService {
   // la STESSA istanza di AuthService in tutta l'app, invece di rifare
   // login ogni volta che serve un download.
   PackageService({
-    required PackageStorage storage,
+    required StorageService storage,
     required AuthService authService,
   }) : _storage = storage,
        _authService = authService;

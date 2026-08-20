@@ -3,11 +3,9 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import 'core/app_state.dart';
-import 'models/models.dart';
+import 'data/opera_repository.dart';
 import 'screens/detail_screen.dart';
 import 'screens/home_screen.dart';
-import 'old/camera_screen.dart';
-import 'old/collection_screen.dart';
 import 'screens/ar_screen.dart';
 import 'services/chat_service.dart';
 import 'services/auth_service.dart';
@@ -18,14 +16,10 @@ import 'services/media_service.dart';
 // ROUTER
 // ==========================================
 
+// TODO: sposta in file apposito
 final router = GoRouter(
   routes: [
     GoRoute(path: '/', builder: (context, state) => const HomeScreen()),
-    GoRoute(path: '/camera', builder: (context, state) => const CameraScreen()),
-    GoRoute(
-      path: '/collezioni',
-      builder: (context, state) => const CollectionScreen(),
-    ),
     GoRoute(path: '/ar', builder: (context, state) => const ARScreen()),
     GoRoute(
       path: '/ar/:nome',
@@ -37,7 +31,10 @@ final router = GoRouter(
     GoRoute(
       path: '/opera/:id',
       builder: (context, state) {
-        final book = state.extra as BookModel;
+        final id = state.pathParameters['id']!;
+        final book = OperaRepository.tutteLeOpere().firstWhere(
+          (o) => o.id == id,
+        );
         return DetailScreen(book: book);
       },
     ),
@@ -55,7 +52,7 @@ void main() {
         ChangeNotifierProvider(create: (context) => AppState()),
         ChangeNotifierProvider(create: (context) => AuthService()),
         ChangeNotifierProvider(create: (context) => ChatService()),
-        Provider(create: (context) => PackageStorage()),
+        Provider(create: (context) => StorageService()),
         Provider(create: (context) => MediaService()),
       ],
       child: const MagicApp(),
@@ -71,6 +68,7 @@ class MagicApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp.router(
       title: 'MAGIC OR8.2',
+      // TODO: sposta in file apposito
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(
           seedColor: const Color(0xFF8B4513),
@@ -96,6 +94,7 @@ class MagicApp extends StatelessWidget {
       localizationsDelegates: const [
         GlobalMaterialLocalizations.delegate,
         GlobalWidgetsLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
       ],
       supportedLocales: const [Locale('it', 'IT')],
     );

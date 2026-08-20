@@ -1,5 +1,6 @@
-import '../models/models.dart';
+import 'models.dart';
 
+// TODO: il catalogo va letto dal pacchetto
 class OperaRepository {
   static final List<BookModel> _catalogo = [
     BookModel(

@@ -5,8 +5,8 @@ import 'package:go_router/go_router.dart';
 import 'package:camera/camera.dart';
 import 'package:permission_handler/permission_handler.dart';
 import '../core/app_state.dart';
-import '../old/opera_repository.dart';
-import '../models/models.dart';
+import '../data/opera_repository.dart';
+import '../data/models.dart';
 import '../services/media_service.dart';
 import '../services/recognition_service.dart';
 import '../widgets/audio_widget.dart';
@@ -347,6 +347,10 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
     setState(() => _elaborazione = true);
 
     try {
+      if (_camController == null || !_camController!.value.isInitialized) {
+        return;
+      }
+
       final foto = await _camController!.takePicture();
       final bytes = await foto.readAsBytes();
       final risultato = await _recognitionService.riconosci(bytes);
@@ -418,20 +422,18 @@ class ARCameraFeed extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final previewSize = controller.value.previewSize;
-    final double cameraWidth = previewSize != null
-        ? (layout.isLandscape ? previewSize.width : previewSize.height)
-        : layout.screenSize.width;
-    final double cameraHeight = previewSize != null
-        ? (layout.isLandscape ? previewSize.height : previewSize.width)
-        : layout.screenSize.height;
+    double cameraRatio = controller.value.aspectRatio;
+
+    if (!layout.isLandscape) {
+      cameraRatio = 1 / cameraRatio;
+    }
 
     return SizedBox.expand(
       child: FittedBox(
         fit: BoxFit.cover,
         child: SizedBox(
-          width: cameraWidth,
-          height: cameraHeight,
+          width: 100,
+          height: 100 / cameraRatio,
           child: CameraPreview(controller),
         ),
       ),
@@ -860,7 +862,8 @@ class ARChatButton extends StatelessWidget {
               shape: const CircleBorder(),
               tooltip: 'Chiedi alla Chat',
               onPressed: () {
-                context.go('/', extra: opera);
+                context.read<AppState>().selezionaOpera(opera);
+                context.go('/');
               },
               child: Icon(Icons.chat_bubble, size: layout.chatIconSize),
             ),
