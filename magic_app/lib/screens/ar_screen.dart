@@ -382,6 +382,16 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
       }
     } catch (e) {
       debugPrint('Errore Riconoscimento ML: $e');
+      if (mounted && !_overlayVisibile) {
+        ScaffoldMessenger.of(context).hideCurrentSnackBar();
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Errore della fotocamera. Riprovo...'),
+            backgroundColor: Colors.red,
+            duration: Duration(seconds: 2),
+          ),
+        );
+      }
     } finally {
       if (mounted) setState(() => _elaborazione = false);
     }
@@ -701,129 +711,115 @@ class ARMediaBubblesPanel extends StatelessWidget {
     );
   }
 
-  void _mostraListaMedia(
-    BuildContext context,
-    String titoloTipo,
-    List<MediaItem> mediaList,
-  ) {
+  void _mostraListaMedia(BuildContext context, String titoloTipo, List<MediaItem> mediaList) {
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.black87,
       barrierColor: Colors.transparent,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      builder: (ctx) => MediaSelectionBottomSheet(
+        titoloTipo: titoloTipo,
+        mediaList: mediaList,
+        audioInEsecuzione: audioInEsecuzione,
+        onPlayAudio: onPlayAudio,
       ),
-      builder: (ctx) {
-        return SafeArea(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Padding(
-                padding: const EdgeInsets.all(16.0),
-                child: Row(
-                  children: [
-                    Text(
-                      '$titoloTipo (${mediaList.length})',
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-
-              const Divider(color: Colors.white24, height: 1),
-
-              Flexible(
-                child: ListView.builder(
-                  shrinkWrap: true,
-                  itemCount: mediaList.length,
-                  itemBuilder: (ctx, index) {
-                    final item = mediaList[index];
-                    final isAudioActive =
-                        item.tipo == 'audio' && audioInEsecuzione == item;
-
-                    return ListTile(
-                      leading: Icon(
-                        isAudioActive ? Icons.volume_up : Icons.arrow_right,
-                        color: Colors.white70,
-                        size: isAudioActive ? 20 : 24,
-                      ),
-                      title: Text(
-                        item.titolo,
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontWeight: isAudioActive
-                              ? FontWeight.bold
-                              : FontWeight.normal,
-                        ),
-                      ),
-                      onTap: () {
-                        Navigator.pop(ctx);
-
-                        switch (item.tipo) {
-                          case 'audio':
-                            onPlayAudio(item);
-                            break;
-
-                          case 'video':
-                            showDialog(
-                              context: context,
-                              builder: (_) => VideoWidget(
-                                titolo: item.titolo,
-                                videoPath: item.url,
-                              ),
-                            );
-                            break;
-
-                          case 'pdf':
-                            showDialog(
-                              context: context,
-                              useSafeArea: false,
-                              builder: (_) => PdfWidget(
-                                titolo: item.titolo,
-                                pdfPath: item.url,
-                              ),
-                            );
-                            break;
-
-                          case 'testo':
-                            showDialog(
-                              context: context,
-                              builder: (_) => TextWidget(
-                                titolo: item.titolo,
-                                textPath: item.url,
-                              ),
-                            );
-                            break;
-
-                          case 'immagine':
-                            showDialog(
-                              context: context,
-                              builder: (_) => ImageWidget(
-                                immagini: mediaList,
-                                initialIndex: index,
-                              ),
-                            );
-                            break;
-
-                          case 'link_esterno':
-                          default:
-                            context.read<MediaService>().apriUrl(item.url);
-                            break;
-                        }
-                      },
-                    );
-                  },
-                ),
-              ),
-            ],
-          ),
-        );
-      },
     );
+  }
+}
+
+// --- LISTA FILE MULTIMEDIALI ---
+class MediaSelectionBottomSheet extends StatelessWidget {
+  final String titoloTipo;
+  final List<MediaItem> mediaList;
+  final MediaItem? audioInEsecuzione;
+  final ValueChanged<MediaItem> onPlayAudio;
+
+  const MediaSelectionBottomSheet({
+    super.key,
+    required this.titoloTipo,
+    required this.mediaList,
+    required this.audioInEsecuzione,
+    required this.onPlayAudio,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return SafeArea(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: Row(
+              children: [
+                Text(
+                  '$titoloTipo (${mediaList.length})',
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const Divider(color: Colors.white24, height: 1),
+          Flexible(
+            child: ListView.builder(
+              shrinkWrap: true,
+              itemCount: mediaList.length,
+              itemBuilder: (ctx, index) {
+                final item = mediaList[index];
+                final isAudioActive = item.tipo == 'audio' && audioInEsecuzione == item;
+
+                return ListTile(
+                  leading: Icon(
+                    isAudioActive ? Icons.volume_up : Icons.arrow_right,
+                    color: Colors.white70,
+                    size: isAudioActive ? 20 : 24,
+                  ),
+                  title: Text(
+                    item.titolo,
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontWeight: isAudioActive ? FontWeight.bold : FontWeight.normal,
+                    ),
+                  ),
+                  onTap: () {
+                    Navigator.pop(ctx);
+                    _gestisciTapMedia(context, item, index);
+                  },
+                );
+              },
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _gestisciTapMedia(BuildContext context, MediaItem item, int index) {
+    switch (item.tipo) {
+      case 'audio':
+        onPlayAudio(item);
+        break;
+      case 'video':
+        showDialog(context: context, builder: (_) => VideoWidget(titolo: item.titolo, videoPath: item.url));
+        break;
+      case 'pdf':
+        showDialog(context: context, useSafeArea: false, builder: (_) => PdfWidget(titolo: item.titolo, pdfPath: item.url));
+        break;
+      case 'testo':
+        showDialog(context: context, builder: (_) => TextWidget(titolo: item.titolo, textPath: item.url));
+        break;
+      case 'immagine':
+        showDialog(context: context, builder: (_) => ImageWidget(immagini: mediaList, initialIndex: index));
+        break;
+      case 'link_esterno':
+      default:
+        context.read<MediaService>().apriUrl(item.url);
+        break;
+    }
   }
 }
 
