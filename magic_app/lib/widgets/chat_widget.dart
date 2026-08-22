@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import 'catalogue_widget.dart';
-import '../core/app_state.dart';
 import '../services/chat_service.dart';
 
 // ==========================================
@@ -114,10 +114,8 @@ class _ChatWidgetState extends State<ChatWidget> {
   void didUpdateWidget(covariant ChatWidget oldWidget) {
     super.didUpdateWidget(oldWidget);
 
-    final bool idsCambiati = _listaStringheDiversa(
-      widget.bookIds,
-      oldWidget.bookIds,
-    );
+    final bool idsCambiati = !listEquals(widget.bookIds, oldWidget.bookIds);
+
     final bool titoloCambiato =
         widget.titoloFonteSelezionata != oldWidget.titoloFonteSelezionata;
 
@@ -154,16 +152,6 @@ class _ChatWidgetState extends State<ChatWidget> {
         _scrollaInFondo();
       }
     }
-  }
-
-  bool _listaStringheDiversa(List<String>? list1, List<String>? list2) {
-    if (list1 == null && list2 == null) return false;
-    if (list1 == null || list2 == null) return true;
-    if (list1.length != list2.length) return true;
-    for (int i = 0; i < list1.length; i++) {
-      if (list1[i] != list2[i]) return true;
-    }
-    return false;
   }
 
   void _gestisciInizializzazioneContesto(List<String>? ids) {
@@ -326,7 +314,7 @@ class ChatHeaderBar extends StatelessWidget {
     String titolo,
   ) {
     FocusManager.instance.primaryFocus?.unfocus();
-    Future.delayed(const Duration(milliseconds: 50), () {
+    Future.microtask(() {
       if (!context.mounted) return;
       showDialog(
         context: context,
@@ -786,7 +774,7 @@ class ChatFloatingButtons extends StatelessWidget {
             tooltip: 'Gestisci Fonti',
             onPressed: () {
               FocusManager.instance.primaryFocus?.unfocus();
-              Future.delayed(const Duration(milliseconds: 50), () {
+              Future.microtask(() {
                 if (!context.mounted) return;
                 showModalBottomSheet(
                   context: context,
@@ -811,14 +799,9 @@ class ChatFloatingButtons extends StatelessWidget {
             tooltip: 'Realtà Aumentata',
             onPressed: () {
               FocusManager.instance.primaryFocus?.unfocus();
-              Future.delayed(const Duration(milliseconds: 50), () {
+              Future.microtask(() {
                 if (!context.mounted) return;
-                final appState = context.read<AppState>();
-                if (appState.operaSelezionata != null) {
-                  context.push('/ar/${appState.operaSelezionata!.titolo}');
-                } else {
-                  context.push('/ar');
-                }
+                context.push('/ar');
               });
             },
             child: const Icon(Icons.camera_alt, size: 25),
