@@ -12,20 +12,20 @@ class MediaService {
   // Apre un URL generico
   Future<bool> apriUrl(String url) async {
     final uri = Uri.parse(url);
-    return await _apriUrl(uri, 'link_esterno');
+    return await _apriUrl(uri, MediaType.linkEsterno);
   }
 
-  Future<bool> _apriUrl(Uri uri, String tipo) async {
+  Future<bool> _apriUrl(Uri uri, MediaType tipo) async {
     try {
       // video e audio — prova prima app nativa (YouTube, Spotify ecc.)
       // poi fallback al browser
-      if (tipo == 'video' || tipo == 'audio') {
+      if (tipo == MediaType.video || tipo == MediaType.audio) {
         if (await canLaunchUrl(uri)) {
           return await launchUrl(uri, mode: LaunchMode.externalApplication);
         }
       }
 
-      // pdf, immagine, link_esterno — apre nel browser interno
+      // pdf, immagine, link_esterno, testo — apre nel browser interno
       if (await canLaunchUrl(uri)) {
         return await launchUrl(uri, mode: LaunchMode.inAppBrowserView);
       }
@@ -39,20 +39,20 @@ class MediaService {
   }
 
   // Restituisce etichetta leggibile per il tipo
-  String etichettaTipo(String tipo) {
+  String etichettaTipo(MediaType tipo) {
     switch (tipo) {
-      case 'video':
+      case MediaType.video:
         return 'Video';
-      case 'audio':
+      case MediaType.audio:
         return 'Audio';
-      case 'immagine':
+      case MediaType.immagine:
         return 'Immagine';
-      case 'pdf':
+      case MediaType.pdf:
         return 'PDF';
-      case 'link_esterno':
+      case MediaType.testo:
+        return 'Testo';
+      case MediaType.linkEsterno:
         return 'Link esterno';
-      default:
-        return 'Contenuto';
     }
   }
 }

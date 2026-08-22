@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -47,7 +48,7 @@ class ARLayout {
       screenSize.width * (isLandscape ? 0.3 : (isTablet ? 0.75 : 0.9));
   double get infoTop => safePadding.top;
   double get infoLeft => safePadding.left + (_sS * 0.04);
-  double get infoRight => safePadding.right + (_sS * 0.04);
+  double get infoRight => safePadding.right + (isTablet ? (isLandscape ? _sS * 0.05 : _sS * 0.04) : _sS * 0.04);
   double get infoTitleFontSize => _sS * (isTablet ? 0.026 : 0.04);
   double get infoTextFontSize => _sS * (isTablet ? 0.018 : 0.032);
   double get infoIconSize => _sS * (isTablet ? 0.033 : 0.05);
@@ -76,7 +77,7 @@ class ARLayout {
   double get bubblesRight =>
       safePadding.right +
       (isLandscape
-          ? (isTablet ? _lS * 0.01 : _lS * 0.02)
+          ? (isTablet ? _sS * 0.03 : _lS * 0.01)
           : _sS * (isTablet ? 0.013 : 0.04));
   double get bubblesSize => _sS * (isTablet ? 0.067 : 0.12);
   double get bubblesIconSize => _sS * (isTablet ? 0.041 : 0.06);
@@ -88,7 +89,7 @@ class ARLayout {
   // --- BOTTONE CHAT ---
   double get chatBottom =>
       safePadding.bottom + (isLandscape ? 0.0 : _lS * 0.06);
-  double get chatRight => safePadding.right + (_sS * (isTablet ? 0.026 : 0.04));
+  double get chatRight => safePadding.right + (_sS * (isTablet ? (isLandscape ? 0.05 : 0.026) : 0.04));
   double get chatSize => _sS * (isTablet ? 0.078 : 0.14);
   double get chatIconSize => _sS * (isTablet ? 0.041 : 0.06);
 
@@ -133,6 +134,10 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
   bool _cameraReady = false;
   MediaItem? _audioInEsecuzione;
   bool _audioMinimizzato = false;
+  Timer? _scanTimer;
+
+  // FIX: Variabile locale per gestire l'opera riconosciuta senza sporcare lo stato globale!
+  BookModel? _operaRiconosciuta;
 
   late AnimationController _fadeController;
   late Animation<double> _fadeAnimation;
@@ -179,7 +184,9 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
   // --- RENDERING ---
   @override
   Widget build(BuildContext context) {
-    final opera = context.watch<AppState>().operaSelezionata;
+    // FIX: Ora la UI legge la variabile locale _operaAttuale invece dello stato globale
+    final opera = _operaRiconosciuta;
+
     final isLandscape =
         MediaQuery.orientationOf(context) == Orientation.landscape;
     final colorScheme = Theme.of(context).colorScheme;
@@ -247,8 +254,12 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
         if (kDebugMode)
           ARDebugMenu(
             layout: layout,
-            onSimulate: () {
-              setState(() => _audioInEsecuzione = null);
+            onSimulate: (book) {
+              setState(() {
+                // FIX: Aggiorniamo solo l'opera locale!
+                _operaRiconosciuta = book;
+                _audioInEsecuzione = null;
+              });
               _mostraOverlay();
             },
           ),
@@ -312,11 +323,11 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
       setState(() => _cameraReady = true);
 
       if (widget.nomeOperaIniziale != null) {
-        final operaTrovata = OperaRepository.tutteLeOpere().firstWhere(
+        // FIX: Inizializziamo la variabile locale invece che lo stato globale
+        _operaRiconosciuta = OperaRepository.tutteLeOpere().firstWhere(
           (o) => o.titolo == widget.nomeOperaIniziale,
           orElse: () => OperaRepository.tutteLeOpere().first,
         );
-        context.read<AppState>().selezionaOpera(operaTrovata);
         _mostraOverlay();
       } else {
         _avviaScansioneAutomatica();
@@ -327,30 +338,29 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
   void _avviaScansioneAutomatica() {
     if (_isAutoScanning) return;
     _isAutoScanning = true;
-    _loopScansione();
+
+    _scanTimer = Timer.periodic(const Duration(seconds: 2), (timer) {
+      if (_cameraReady && !_overlayVisibile && !_elaborazione && mounted) {
+        _riconosci();
+      }
+    });
   }
 
   void _fermaScansioneAutomatica() {
     _isAutoScanning = false;
-  }
-
-  Future<void> _loopScansione() async {
-    while (_isAutoScanning && mounted) {
-      if (_cameraReady && !_overlayVisibile && !_elaborazione) {
-        await _riconosci();
-      }
-      await Future.delayed(const Duration(seconds: 2));
-    }
+    _scanTimer?.cancel();
   }
 
   Future<void> _riconosci() async {
+    if (_camController == null ||
+        !_camController!.value.isInitialized ||
+        _camController!.value.isTakingPicture) {
+      return;
+    }
+
     setState(() => _elaborazione = true);
 
     try {
-      if (_camController == null || !_camController!.value.isInitialized) {
-        return;
-      }
-
       final foto = await _camController!.takePicture();
       final bytes = await foto.readAsBytes();
       final risultato = await _recognitionService.riconosci(bytes);
@@ -359,11 +369,9 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
         if (risultato != null) {
           if (risultato.isAffidabile) {
             _fermaScansioneAutomatica();
-            context.read<AppState>().riconosciOpera(risultato.nomeOpera);
-            final operaTrovata = OperaRepository.trovaPerNomeML(
-              risultato.nomeOpera,
-            );
-            context.read<AppState>().selezionaOpera(operaTrovata);
+
+            // FIX: Salviamo l'opera nello stato LOCALE della schermata AR
+            _operaRiconosciuta = OperaRepository.trovaPerNomeML(risultato.nomeOpera);
 
             _mostraOverlay();
           } else {
@@ -629,15 +637,23 @@ class ARMediaBubblesPanel extends StatelessWidget {
     final fileMultimediali = opera.multimedia;
     if (fileMultimediali.isEmpty) return const SizedBox.shrink();
 
-    final videoList = fileMultimediali.where((m) => m.tipo == 'video').toList();
-    final audioList = fileMultimediali.where((m) => m.tipo == 'audio').toList();
-    final immaginiList = fileMultimediali
-        .where((m) => m.tipo == 'immagine')
+    final videoList = fileMultimediali
+        .where((m) => m.tipo == MediaType.video)
         .toList();
-    final pdfList = fileMultimediali.where((m) => m.tipo == 'pdf').toList();
-    final testoList = fileMultimediali.where((m) => m.tipo == 'testo').toList();
+    final audioList = fileMultimediali
+        .where((m) => m.tipo == MediaType.audio)
+        .toList();
+    final immaginiList = fileMultimediali
+        .where((m) => m.tipo == MediaType.immagine)
+        .toList();
+    final pdfList = fileMultimediali
+        .where((m) => m.tipo == MediaType.pdf)
+        .toList();
+    final testoList = fileMultimediali
+        .where((m) => m.tipo == MediaType.testo)
+        .toList();
     final linkList = fileMultimediali
-        .where((m) => m.tipo == 'link_esterno')
+        .where((m) => m.tipo == MediaType.linkEsterno)
         .toList();
 
     return Positioned(
@@ -658,22 +674,52 @@ class ARMediaBubblesPanel extends StatelessWidget {
               runSpacing: layout.bubblesRunSpacing,
               children: [
                 if (videoList.isNotEmpty)
-                  _buildBubble(context, Icons.videocam, 'Video', videoList),
+                  _buildBubble(
+                    context,
+                    Icons.videocam,
+                    MediaType.video,
+                    videoList,
+                  ),
 
                 if (audioList.isNotEmpty)
-                  _buildBubble(context, Icons.audiotrack, 'Audio', audioList),
+                  _buildBubble(
+                    context,
+                    Icons.audiotrack,
+                    MediaType.audio,
+                    audioList,
+                  ),
 
                 if (immaginiList.isNotEmpty)
-                  _buildBubble(context, Icons.image, 'Immagini', immaginiList),
+                  _buildBubble(
+                    context,
+                    Icons.image,
+                    MediaType.immagine,
+                    immaginiList,
+                  ),
 
                 if (pdfList.isNotEmpty)
-                  _buildBubble(context, Icons.picture_as_pdf, 'PDF', pdfList),
+                  _buildBubble(
+                    context,
+                    Icons.picture_as_pdf,
+                    MediaType.pdf,
+                    pdfList,
+                  ),
 
                 if (testoList.isNotEmpty)
-                  _buildBubble(context, Icons.article, 'Testi', testoList),
+                  _buildBubble(
+                    context,
+                    Icons.article,
+                    MediaType.testo,
+                    testoList,
+                  ),
 
                 if (linkList.isNotEmpty)
-                  _buildBubble(context, Icons.link, 'Link', linkList),
+                  _buildBubble(
+                    context,
+                    Icons.link,
+                    MediaType.linkEsterno,
+                    linkList,
+                  ),
               ],
             ),
           ),
@@ -685,7 +731,7 @@ class ARMediaBubblesPanel extends StatelessWidget {
   Widget _buildBubble(
     BuildContext context,
     IconData icona,
-    String tipo,
+    MediaType tipo,
     List<MediaItem> mediaList,
   ) {
     if (mediaList.isEmpty) return const SizedBox.shrink();
@@ -694,7 +740,7 @@ class ARMediaBubblesPanel extends StatelessWidget {
       width: layout.bubblesSize,
       height: layout.bubblesSize,
       child: FloatingActionButton(
-        heroTag: 'bubble_$tipo',
+        heroTag: 'bubble_${tipo.name}',
         backgroundColor: Colors.black.withValues(alpha: 0.75),
         foregroundColor: Colors.white,
         elevation: 0,
@@ -702,7 +748,7 @@ class ARMediaBubblesPanel extends StatelessWidget {
           borderRadius: BorderRadius.circular(16),
           side: const BorderSide(color: Colors.white24, width: 1),
         ),
-        tooltip: tipo,
+        tooltip: getTitoloTipo(tipo),
         onPressed: () {
           _mostraListaMedia(context, tipo, mediaList);
         },
@@ -711,14 +757,20 @@ class ARMediaBubblesPanel extends StatelessWidget {
     );
   }
 
-  void _mostraListaMedia(BuildContext context, String titoloTipo, List<MediaItem> mediaList) {
+  void _mostraListaMedia(
+    BuildContext context,
+    MediaType tipo,
+    List<MediaItem> mediaList,
+  ) {
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.black87,
       barrierColor: Colors.transparent,
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
       builder: (ctx) => MediaSelectionBottomSheet(
-        titoloTipo: titoloTipo,
+        titoloTipo: getTitoloTipo(tipo),
         mediaList: mediaList,
         audioInEsecuzione: audioInEsecuzione,
         onPlayAudio: onPlayAudio,
@@ -770,7 +822,8 @@ class MediaSelectionBottomSheet extends StatelessWidget {
               itemCount: mediaList.length,
               itemBuilder: (ctx, index) {
                 final item = mediaList[index];
-                final isAudioActive = item.tipo == 'audio' && audioInEsecuzione == item;
+                final isAudioActive =
+                    item.tipo == MediaType.audio && audioInEsecuzione == item;
 
                 return ListTile(
                   leading: Icon(
@@ -782,7 +835,9 @@ class MediaSelectionBottomSheet extends StatelessWidget {
                     item.titolo,
                     style: TextStyle(
                       color: Colors.white,
-                      fontWeight: isAudioActive ? FontWeight.bold : FontWeight.normal,
+                      fontWeight: isAudioActive
+                          ? FontWeight.bold
+                          : FontWeight.normal,
                     ),
                   ),
                   onTap: () {
@@ -800,23 +855,40 @@ class MediaSelectionBottomSheet extends StatelessWidget {
 
   void _gestisciTapMedia(BuildContext context, MediaItem item, int index) {
     switch (item.tipo) {
-      case 'audio':
+      case MediaType.audio:
         onPlayAudio(item);
         break;
-      case 'video':
-        showDialog(context: context, builder: (_) => VideoWidget(titolo: item.titolo, videoPath: item.url));
+
+      case MediaType.video:
+        showDialog(
+          context: context,
+          builder: (_) => VideoWidget(titolo: item.titolo, videoPath: item.url),
+        );
         break;
-      case 'pdf':
-        showDialog(context: context, useSafeArea: false, builder: (_) => PdfWidget(titolo: item.titolo, pdfPath: item.url));
+
+      case MediaType.pdf:
+        showDialog(
+          context: context,
+          useSafeArea: false,
+          builder: (_) => PdfWidget(titolo: item.titolo, pdfPath: item.url),
+        );
         break;
-      case 'testo':
-        showDialog(context: context, builder: (_) => TextWidget(titolo: item.titolo, textPath: item.url));
+
+      case MediaType.testo:
+        showDialog(
+          context: context,
+          builder: (_) => TextWidget(titolo: item.titolo, textPath: item.url),
+        );
         break;
-      case 'immagine':
-        showDialog(context: context, builder: (_) => ImageWidget(immagini: mediaList, initialIndex: index));
+
+      case MediaType.immagine:
+        showDialog(
+          context: context,
+          builder: (_) => ImageWidget(immagini: mediaList, initialIndex: index),
+        );
         break;
-      case 'link_esterno':
-      default:
+
+      case MediaType.linkEsterno:
         context.read<MediaService>().apriUrl(item.url);
         break;
     }
@@ -858,6 +930,7 @@ class ARChatButton extends StatelessWidget {
               shape: const CircleBorder(),
               tooltip: 'Chiedi alla Chat',
               onPressed: () {
+                // FIX: Aggiorna lo stato globale per la chat SOLO quando si preme questo tasto!
                 context.read<AppState>().selezionaOpera(opera);
                 context.go('/');
               },
@@ -941,7 +1014,9 @@ class ARBackButton extends StatelessWidget {
           shape: const CircleBorder(
             side: BorderSide(color: Colors.white24, width: 1),
           ),
-          onPressed: () => Navigator.pop(context),
+          onPressed: () {
+            if (context.canPop()) context.pop();
+          },
           child: const Icon(Icons.arrow_back),
         ),
       ),
@@ -951,7 +1026,8 @@ class ARBackButton extends StatelessWidget {
 
 // --- MENU DEBUG ---
 class ARDebugMenu extends StatelessWidget {
-  final VoidCallback onSimulate;
+  final void Function(BookModel book)
+  onSimulate; // FIX: Passa l'opera selezionata
   final ARLayout layout;
 
   const ARDebugMenu({
@@ -1032,8 +1108,8 @@ class ARDebugMenu extends StatelessWidget {
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         ),
         onPressed: () {
-          context.read<AppState>().selezionaOpera(book);
-          onSimulate();
+          // FIX: Non aggiorna più lo stato globale, passa l'opera alla callback
+          onSimulate(book);
         },
         child: Text(
           label,

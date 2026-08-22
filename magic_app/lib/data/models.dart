@@ -107,9 +107,28 @@ class CollectionModel {
 
 // --- MODELLI NUOVA STRUTTURA PACCHETTO  ---
 
+enum MediaType { video, audio, immagine, pdf, testo, linkEsterno }
+
+String getTitoloTipo(MediaType tipo) {
+  switch (tipo) {
+    case MediaType.video:
+      return 'Video';
+    case MediaType.audio:
+      return 'Audio';
+    case MediaType.immagine:
+      return 'Immagini';
+    case MediaType.pdf:
+      return 'PDF';
+    case MediaType.testo:
+      return 'Testi';
+    case MediaType.linkEsterno:
+      return 'Link';
+  }
+}
+
 // Singolo link multimediale nel books.json
 class MediaItem {
-  final String tipo;
+  final MediaType tipo;
   final String titolo;
   final String url;
   final String descrizione;
@@ -122,8 +141,33 @@ class MediaItem {
   });
 
   factory MediaItem.fromJson(Map<String, dynamic> json) {
+    final tipoString = json['tipo']?.toString().toLowerCase() ?? '';
+
+    MediaType parsedTipo;
+    switch (tipoString) {
+      case 'video':
+        parsedTipo = MediaType.video;
+        break;
+      case 'audio':
+        parsedTipo = MediaType.audio;
+        break;
+      case 'immagine':
+        parsedTipo = MediaType.immagine;
+        break;
+      case 'pdf':
+        parsedTipo = MediaType.pdf;
+        break;
+      case 'testo':
+        parsedTipo = MediaType.testo;
+        break;
+      case 'link_esterno':
+      default:
+        parsedTipo = MediaType.linkEsterno;
+        break;
+    }
+
     return MediaItem(
-      tipo: json['tipo']?.toString() ?? '',
+      tipo: parsedTipo,
       titolo: json['titolo']?.toString() ?? '',
       url: json['url']?.toString() ?? '',
       descrizione: json['descrizione']?.toString() ?? '',

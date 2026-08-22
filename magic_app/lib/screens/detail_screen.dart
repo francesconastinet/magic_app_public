@@ -213,16 +213,10 @@ class _MultimediaSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final videoList = book.multimedia.where((m) => m.tipo == 'video').toList();
-    final audioList = book.multimedia.where((m) => m.tipo == 'audio').toList();
-    final immaginiList = book.multimedia
-        .where((m) => m.tipo == 'immagine')
-        .toList();
-    final pdfList = book.multimedia.where((m) => m.tipo == 'pdf').toList();
-    final testoList = book.multimedia.where((m) => m.tipo == 'testo').toList();
-    final linkList = book.multimedia
-        .where((m) => m.tipo == 'link_esterno')
-        .toList();
+    final mediaGrouped = <MediaType, List<MediaItem>>{};
+    for (final m in book.multimedia) {
+      mediaGrouped.putIfAbsent(m.tipo, () => []).add(m);
+    }
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -238,18 +232,48 @@ class _MultimediaSection extends StatelessWidget {
         if (book.multimedia.isEmpty)
           const _EmptyMediaCard()
         else ...[
-          if (videoList.isNotEmpty)
-            _buildGroup('Video', Icons.videocam, Colors.red, videoList),
-          if (audioList.isNotEmpty)
-            _buildGroup('Audio', Icons.audiotrack, Colors.purple, audioList),
-          if (immaginiList.isNotEmpty)
-            _buildGroup('Immagini', Icons.image, Colors.blue, immaginiList),
-          if (pdfList.isNotEmpty)
-            _buildGroup('PDF', Icons.picture_as_pdf, Colors.orange, pdfList),
-          if (testoList.isNotEmpty)
-            _buildGroup('Testi', Icons.article, Colors.brown, testoList),
-          if (linkList.isNotEmpty)
-            _buildGroup('Link', Icons.link, Colors.green, linkList),
+          if (mediaGrouped.containsKey(MediaType.video))
+            _buildGroup(
+              'Video',
+              Icons.videocam,
+              Colors.red,
+              mediaGrouped[MediaType.video]!,
+            ),
+          if (mediaGrouped.containsKey(MediaType.audio))
+            _buildGroup(
+              'Audio',
+              Icons.audiotrack,
+              Colors.purple,
+              mediaGrouped[MediaType.audio]!,
+            ),
+          if (mediaGrouped.containsKey(MediaType.immagine))
+            _buildGroup(
+              'Immagini',
+              Icons.image,
+              Colors.blue,
+              mediaGrouped[MediaType.immagine]!,
+            ),
+          if (mediaGrouped.containsKey(MediaType.pdf))
+            _buildGroup(
+              'PDF',
+              Icons.picture_as_pdf,
+              Colors.orange,
+              mediaGrouped[MediaType.pdf]!,
+            ),
+          if (mediaGrouped.containsKey(MediaType.testo))
+            _buildGroup(
+              'Testi',
+              Icons.article,
+              Colors.brown,
+              mediaGrouped[MediaType.testo]!,
+            ),
+          if (mediaGrouped.containsKey(MediaType.linkEsterno))
+            _buildGroup(
+              'Link',
+              Icons.link,
+              Colors.green,
+              mediaGrouped[MediaType.linkEsterno]!,
+            ),
         ],
       ],
     );
@@ -303,7 +327,8 @@ class _MediaListItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isAudioActive = media.tipo == 'audio' && audioInEsecuzione == media;
+    final isAudioActive =
+        media.tipo == MediaType.audio && audioInEsecuzione == media;
     final colorScheme = Theme.of(context).colorScheme;
 
     return ListTile(
@@ -322,11 +347,11 @@ class _MediaListItem extends StatelessWidget {
       ),
       onTap: () {
         switch (media.tipo) {
-          case 'audio':
+          case MediaType.audio:
             onPlayAudio(media);
             break;
 
-          case 'video':
+          case MediaType.video:
             showDialog(
               context: context,
               builder: (_) =>
@@ -334,7 +359,7 @@ class _MediaListItem extends StatelessWidget {
             );
             break;
 
-          case 'pdf':
+          case MediaType.pdf:
             showDialog(
               context: context,
               useSafeArea: false,
@@ -343,7 +368,7 @@ class _MediaListItem extends StatelessWidget {
             );
             break;
 
-          case 'testo':
+          case MediaType.testo:
             showDialog(
               context: context,
               builder: (_) =>
@@ -351,9 +376,9 @@ class _MediaListItem extends StatelessWidget {
             );
             break;
 
-          case 'immagine':
+          case MediaType.immagine:
             final immaginiList = allMedia
-                .where((m) => m.tipo == 'immagine')
+                .where((m) => m.tipo == MediaType.immagine)
                 .toList();
             final imgIndex = immaginiList.indexOf(media);
             showDialog(
@@ -365,8 +390,7 @@ class _MediaListItem extends StatelessWidget {
             );
             break;
 
-          case 'link_esterno':
-          default:
+          case MediaType.linkEsterno:
             context.read<MediaService>().apriUrl(media.url);
             break;
         }
