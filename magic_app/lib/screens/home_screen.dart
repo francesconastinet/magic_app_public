@@ -91,7 +91,7 @@ class _HomeScreenState extends State<HomeScreen> {
               )
             : null,
       ),
-      endDrawer: MenuWidget(),
+      endDrawer: const MenuWidget(),
       body: ChatWidget(
         titoloFonteSelezionata: _titoloFonteSelezionata,
         bookIds: _idsFonteSelezionata,
@@ -128,6 +128,9 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> _sincronizzaPacchettoInBackground() async {
+    final storage = context.read<StorageService>();
+    final authService = context.read<AuthService>();
+
     try {
       final updateService = UpdateService();
       final necessaria = await updateService.isSincronizzazioneNecessaria(
@@ -135,11 +138,13 @@ class _HomeScreenState extends State<HomeScreen> {
       );
 
       if (!necessaria) return;
-      if (mounted) setState(() => _syncInCorso = true);
+      if (!mounted) return;
+
+      setState(() => _syncInCorso = true);
 
       final packageService = PackageService(
-        storage: context.read<StorageService>(),
-        authService: context.read<AuthService>(),
+        storage: storage,
+        authService: authService,
       );
 
       final risultato = await packageService.sincronizzaSeCambiato(
