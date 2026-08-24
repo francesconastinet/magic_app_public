@@ -483,8 +483,8 @@ class VideoPlaybackButtons extends StatelessWidget {
   }
 }
 
-// --- BARRA PROGRESSIONE ---
-class VideoProgressBar extends StatelessWidget {
+// --- BARRA PROGRESSO ---
+class VideoProgressBar extends StatefulWidget {
   final VideoPlayerController controller;
   final VoidCallback onDragStart;
   final VoidCallback onDragEnd;
@@ -497,9 +497,16 @@ class VideoProgressBar extends StatelessWidget {
   });
 
   @override
+  State<VideoProgressBar> createState() => _VideoProgressBarState();
+}
+
+class _VideoProgressBarState extends State<VideoProgressBar> {
+  double? _dragValue;
+
+  @override
   Widget build(BuildContext context) {
     return ValueListenableBuilder(
-      valueListenable: controller,
+      valueListenable: widget.controller,
       builder: (context, VideoPlayerValue value, child) {
         final pos = value.position.inMilliseconds.toDouble();
         final dur = value.duration.inMilliseconds.toDouble();
@@ -509,13 +516,29 @@ class VideoProgressBar extends StatelessWidget {
           inactiveColor: Colors.white54,
           min: 0.0,
           max: dur > 0 ? dur : 1.0,
-          value: pos.clamp(0.0, dur > 0 ? dur : 1.0),
-          onChangeStart: (_) => onDragStart(),
-          onChanged: (nuovoValore) async {
-            final nuovaPosizione = Duration(milliseconds: nuovoValore.toInt());
-            await controller.seekTo(nuovaPosizione);
+          value: (_dragValue ?? pos).clamp(0.0, dur > 0 ? dur : 1.0),
+
+          onChangeStart: (nuovoValore) {
+            widget.onDragStart();
+            setState(() {
+              _dragValue = nuovoValore;
+            });
           },
-          onChangeEnd: (_) => onDragEnd(),
+
+          onChanged: (nuovoValore) {
+            setState(() {
+              _dragValue = nuovoValore;
+            });
+          },
+
+          onChangeEnd: (nuovoValore) async {
+            final nuovaPosizione = Duration(milliseconds: nuovoValore.toInt());
+            await widget.controller.seekTo(nuovaPosizione);
+            setState(() {
+              _dragValue = null;
+            });
+            widget.onDragEnd();
+          },
         );
       },
     );
