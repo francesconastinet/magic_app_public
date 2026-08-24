@@ -63,11 +63,24 @@ class _PdfWidgetState extends State<PdfWidget> {
   bool _isReady = false;
   String? _percorsoAssoluto;
   bool _hasError = false;
+  File? _tempFile;
 
   @override
   void initState() {
     super.initState();
     _inizializzaPdf();
+  }
+
+  @override
+  void dispose() {
+    if (_tempFile != null && _tempFile!.existsSync()) {
+      try {
+        _tempFile!.deleteSync();
+      } catch (e) {
+        debugPrint('Impossibile eliminare il file temporaneo: $e');
+      }
+    }
+    super.dispose();
   }
 
   // --- RENDERING ---
@@ -91,34 +104,35 @@ class _PdfWidgetState extends State<PdfWidget> {
             ),
 
             Expanded(
-              child: Container(
+              child: ColoredBox(
                 color: Colors.black,
-                alignment: Alignment.center,
-                child: ConstrainedBox(
-                  constraints: BoxConstraints(maxWidth: layout.maxPdfWidth),
-                  child: Container(
-                    width: double.infinity,
-                    height: double.infinity,
-                    color: Colors.white,
-                    child: PdfContentWidget(
-                      hasError: _hasError,
-                      percorsoAssoluto: _percorsoAssoluto,
-                      layout: layout,
-                      isReady: _isReady,
-                      onRender: (pages) {
-                        setState(() {
-                          _totalPages = pages;
-                          _isReady = true;
-                        });
-                      },
-                      onPageChanged: (page) {
-                        setState(() {
-                          _currentPage = page;
-                        });
-                      },
-                      onError: () {
-                        setState(() => _hasError = true);
-                      },
+                child: Center(
+                  child: ConstrainedBox(
+                    constraints: BoxConstraints(maxWidth: layout.maxPdfWidth),
+                    child: ColoredBox(
+                      color: Colors.white,
+                      child: SizedBox.expand(
+                        child: PdfContentWidget(
+                          hasError: _hasError,
+                          percorsoAssoluto: _percorsoAssoluto,
+                          layout: layout,
+                          isReady: _isReady,
+                          onRender: (pages) {
+                            setState(() {
+                              _totalPages = pages;
+                              _isReady = true;
+                            });
+                          },
+                          onPageChanged: (page) {
+                            setState(() {
+                              _currentPage = page;
+                            });
+                          },
+                          onError: () {
+                            setState(() => _hasError = true);
+                          },
+                        ),
+                      ),
                     ),
                   ),
                 ),
@@ -141,12 +155,13 @@ class _PdfWidgetState extends State<PdfWidget> {
         );
         final tempDir = await getTemporaryDirectory();
         final fileName = widget.pdfPath.split('/').last;
-        final tempFile = File('${tempDir.path}/$fileName');
-        await tempFile.writeAsBytes(fileBytes);
+
+        _tempFile = File('${tempDir.path}/$fileName');
+        await _tempFile!.writeAsBytes(fileBytes);
 
         if (mounted) {
           setState(() {
-            _percorsoAssoluto = tempFile.path;
+            _percorsoAssoluto = _tempFile!.path;
           });
         }
       } else {
