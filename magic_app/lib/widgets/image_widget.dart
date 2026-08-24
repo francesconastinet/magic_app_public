@@ -61,12 +61,28 @@ class ImageWidget extends StatefulWidget {
 class _ImageWidgetState extends State<ImageWidget> {
   late PageController _pageController;
   late int _currentIndex;
+  String? _basePath;
+  bool _isLoadingPath = true;
+  bool _isZoomed = false;
 
   @override
   void initState() {
     super.initState();
     _currentIndex = widget.initialIndex;
     _pageController = PageController(initialPage: widget.initialIndex);
+
+    _inizializzaPercorso();
+  }
+
+  Future<void> _inizializzaPercorso() async {
+    try {
+      final storageService = context.read<StorageService>();
+      _basePath = await storageService.percorsoPacchetto(AppConfig.packageId);
+    } catch (e) {
+      debugPrint('Errore caricamento percorso base immagini: $e');
+    } finally {
+      if (mounted) setState(() => _isLoadingPath = false);
+    }
   }
 
   @override
@@ -92,17 +108,39 @@ class _ImageWidgetState extends State<ImageWidget> {
           children: [
             ImageDialogHeader(layout: layout, currentImage: currentImage),
 
-            ImageCarousel(
-              layout: layout,
-              pageController: _pageController,
-              immagini: widget.immagini,
-              onPageChanged: (index) {
-                setState(() {
-                  _currentIndex = index;
-                });
-              },
-              imageBuilder: (context, path) =>
-                  _buildImage(context, path, layout),
+            Flexible(
+              child: ClipRRect(
+                borderRadius: BorderRadius.vertical(
+                  bottom: Radius.circular(layout.borderRadius),
+                ),
+                child: Container(
+                  color: Colors.black,
+                  child: _isLoadingPath
+                      ? const Center(child: CircularProgressIndicator())
+                      : PageView.builder(
+                          controller: _pageController,
+                          physics: _isZoomed
+                              ? const NeverScrollableScrollPhysics()
+                              : const BouncingScrollPhysics(),
+                          itemCount: totalCount,
+                          onPageChanged: (index) {
+                            setState(() => _currentIndex = index);
+                          },
+                          itemBuilder: (context, index) {
+                            return ZoomableImageItem(
+                              imagePath: widget.immagini[index].url,
+                              basePath: _basePath,
+                              layout: layout,
+                              onZoomChanged: (isZoomed) {
+                                if (_isZoomed != isZoomed) {
+                                  setState(() => _isZoomed = isZoomed);
+                                }
+                              },
+                            );
+                          },
+                        ),
+                ),
+              ),
             ),
 
             if (totalCount > 1)
@@ -116,64 +154,97 @@ class _ImageWidgetState extends State<ImageWidget> {
       ),
     );
   }
-
-  Widget _buildImage(
-    BuildContext context,
-    String imagePath,
-    ImageDialogLayout layout,
-  ) {
-    // CASO 1: File negli asset (Modalità Mock/Test)
-    // TODO: rimuovere quando il client sarà collegato al backend
-    if (imagePath.startsWith('assets/')) {
-      return Image.asset(
-        imagePath,
-        fit: BoxFit.contain,
-        errorBuilder: (context, error, stackTrace) => Icon(
-          Icons.broken_image,
-          color: Colors.white,
-          size: layout.errorIconSize,
-        ),
-      );
-    }
-    // CASO 2: File nel sistema (Scaricato dallo ZIP)
-    else {
-      final storageService = context.read<StorageService>();
-
-      return FutureBuilder<String>(
-        future: storageService.percorsoPacchetto(AppConfig.packageId),
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
-          }
-
-          if (snapshot.hasError || !snapshot.hasData) {
-            return Icon(
-              Icons.error,
-              color: Colors.red,
-              size: layout.errorIconSize,
-            );
-          }
-
-          final percorsoAssoluto = '${snapshot.data}/$imagePath';
-
-          return Image.file(
-            File(percorsoAssoluto),
-            fit: BoxFit.contain,
-            errorBuilder: (context, error, stackTrace) => Icon(
-              Icons.broken_image,
-              color: Colors.white,
-              size: layout.errorIconSize,
-            ),
-          );
-        },
-      );
-    }
-  }
 }
 
 // ==========================================
 // WIDGET
 // ==========================================
+
+// --- ZOOM IMMAGINE ---
+class ZoomableImageItem extends StatefulWidget {
+  final String imagePath;
+  final String? basePath;
+  final ImageDialogLayout layout;
+  final ValueChanged<bool> onZoomChanged;
+
+  const ZoomableImageItem({
+    super.key,
+    required this.imagePath,
+    required this.basePath,
+    required this.layout,
+    required this.onZoomChanged,
+  });
+
+  @override
+  State<ZoomableImageItem> createState() => _ZoomableImageItemState();
+}
+
+class _ZoomableImageItemState extends State<ZoomableImageItem> {
+  final TransformationController _transformationController =
+      TransformationController();
+
+  @override
+  void initState() {
+    super.initState();
+    _transformationController.addListener(_onTransformationChanged);
+  }
+
+  void _onTransformationChanged() {
+    final scale = _transformationController.value.getMaxScaleOnAxis();
+    widget.onZoomChanged(scale > 1.01);
+  }
+
+  @override
+  void dispose() {
+    _transformationController.removeListener(_onTransformationChanged);
+    _transformationController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return InteractiveViewer(
+      transformationController: _transformationController,
+      minScale: 1.0,
+      maxScale: 4.0,
+      child: _buildImage(),
+    );
+  }
+
+  Widget _buildImage() {
+    if (widget.imagePath.startsWith('assets/')) {
+      return Image.asset(
+        widget.imagePath,
+        fit: BoxFit.contain,
+        errorBuilder: (context, error, stackTrace) => Icon(
+          Icons.broken_image,
+          color: Colors.white,
+          size: widget.layout.errorIconSize,
+        ),
+      );
+    } else {
+      if (widget.basePath == null) {
+        return Icon(
+          Icons.error,
+          color: Colors.red,
+          size: widget.layout.errorIconSize,
+        );
+      }
+
+      final percorsoAssoluto = '${widget.basePath}/${widget.imagePath}';
+
+      return Image.file(
+        File(percorsoAssoluto),
+        fit: BoxFit.contain,
+        errorBuilder: (context, error, stackTrace) => Icon(
+          Icons.broken_image,
+          color: Colors.white,
+          size: widget.layout.errorIconSize,
+        ),
+      );
+    }
+  }
+}
 
 // --- HEADER ---
 class ImageDialogHeader extends StatelessWidget {
@@ -222,48 +293,6 @@ class ImageDialogHeader extends StatelessWidget {
             constraints: const BoxConstraints(),
           ),
         ],
-      ),
-    );
-  }
-}
-
-// --- CAROSELLO ---
-class ImageCarousel extends StatelessWidget {
-  final ImageDialogLayout layout;
-  final PageController pageController;
-  final List<MediaItem> immagini;
-  final ValueChanged<int> onPageChanged;
-  final Widget Function(BuildContext, String) imageBuilder;
-
-  const ImageCarousel({
-    super.key,
-    required this.layout,
-    required this.pageController,
-    required this.immagini,
-    required this.onPageChanged,
-    required this.imageBuilder,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Flexible(
-      child: ClipRRect(
-        borderRadius: BorderRadius.vertical(
-          bottom: Radius.circular(layout.borderRadius),
-        ),
-        child: Container(
-          color: Colors.black,
-          child: PageView.builder(
-            controller: pageController,
-            itemCount: immagini.length,
-            onPageChanged: onPageChanged,
-            itemBuilder: (context, index) {
-              return InteractiveViewer(
-                child: imageBuilder(context, immagini[index].url),
-              );
-            },
-          ),
-        ),
       ),
     );
   }
