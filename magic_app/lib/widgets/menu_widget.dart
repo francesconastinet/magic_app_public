@@ -15,7 +15,7 @@ class MenuWidget extends StatefulWidget {
 }
 
 class _MenuWidgetState extends State<MenuWidget> {
-  // TODO; rimuovere quando disponibile login
+  // TODO: rimuovere quando disponibile login
   static String? _mockLoggedUser;
 
   @override
@@ -112,29 +112,7 @@ class _MenuWidgetState extends State<MenuWidget> {
 // WIDGET
 // ==========================================
 
-// --- TITOLO SEZIONE GENERICA ---
-class DrawerSectionTitle extends StatelessWidget {
-  final String titolo;
-
-  const DrawerSectionTitle({super.key, required this.titolo});
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      child: Text(
-        titolo,
-        style: TextStyle(
-          fontWeight: FontWeight.bold,
-          fontSize: 12,
-          color: Theme.of(context).colorScheme.onSurfaceVariant,
-        ),
-      ),
-    );
-  }
-}
-
-// --- Pulsante: CONDIVIDI CHAT ---
+// --- PULSANTE: CONDIVIDI CHAT ---
 class ShareChatTile extends StatelessWidget {
   const ShareChatTile({super.key});
 
@@ -158,7 +136,7 @@ class ShareChatTile extends StatelessWidget {
         final codice = await chatService.generaCodiceCondivisione();
 
         if (!context.mounted) return;
-        Navigator.pop(context); // Chiude il loader
+        Navigator.pop(context);
 
         if (codice != null) {
           showDialog(
@@ -365,6 +343,7 @@ class RestoreChatDialog extends StatefulWidget {
 
 class _RestoreChatDialogState extends State<RestoreChatDialog> {
   final TextEditingController _codeController = TextEditingController();
+  bool _isLoading = false;
 
   @override
   void dispose() {
@@ -388,9 +367,7 @@ class _RestoreChatDialogState extends State<RestoreChatDialog> {
               Icons.settings_backup_restore,
               color: colorScheme.onPrimaryContainer,
             ),
-
             const SizedBox(width: 12),
-
             Text(
               'Ripristina Chat',
               style: TextStyle(
@@ -409,13 +386,12 @@ class _RestoreChatDialogState extends State<RestoreChatDialog> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const Text('Usa un codice per continuare una conversazione.'),
-
             const SizedBox(height: 16),
-
             TextField(
               controller: _codeController,
               maxLength: 6,
               textCapitalization: TextCapitalization.characters,
+              enabled: !_isLoading,
               decoration: InputDecoration(
                 labelText: 'Codice di 6 caratteri',
                 border: OutlineInputBorder(
@@ -432,48 +408,56 @@ class _RestoreChatDialogState extends State<RestoreChatDialog> {
       ),
       actions: [
         TextButton(
-          onPressed: () => Navigator.pop(context),
+          onPressed: _isLoading ? null : () => Navigator.pop(context),
           child: const Text('Annulla'),
         ),
         FilledButton(
-          onPressed: () async {
-            final codice = _codeController.text.trim();
-            if (codice.length != 6) return;
+          onPressed: _isLoading
+              ? null
+              : () async {
+                  final codice = _codeController.text.trim();
+                  if (codice.length != 6) return;
 
-            Navigator.pop(context);
+                  setState(() => _isLoading = true);
 
-            showDialog(
-              context: context,
-              barrierDismissible: false,
-              builder: (_) => const Center(child: CircularProgressIndicator()),
-            );
+                  final navigator = Navigator.of(context);
+                  final scaffoldMessenger = ScaffoldMessenger.of(context);
 
-            final successo = await context
-                .read<ChatService>()
-                .ripristinaSessione(codice);
+                  final successo = await context
+                      .read<ChatService>()
+                      .ripristinaSessione(codice);
 
-            if (!context.mounted) return;
+                  if (!mounted) return;
 
-            Navigator.pop(context);
-            Navigator.pop(context);
+                  navigator.pop();
+                  navigator.pop();
 
-            if (successo) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Sessione ripristinata con successo!'),
-                  duration: Duration(seconds: 2),
-                ),
-              );
-            } else {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Codice invalido o scaduto'),
-                  duration: Duration(seconds: 2),
-                ),
-              );
-            }
-          },
-          child: const Text('Ripristina'),
+                  if (successo) {
+                    scaffoldMessenger.showSnackBar(
+                      const SnackBar(
+                        content: Text('Sessione ripristinata con successo!'),
+                        duration: Duration(seconds: 2),
+                      ),
+                    );
+                  } else {
+                    scaffoldMessenger.showSnackBar(
+                      const SnackBar(
+                        content: Text('Codice invalido o scaduto'),
+                        duration: Duration(seconds: 2),
+                      ),
+                    );
+                  }
+                },
+          child: _isLoading
+              ? const SizedBox(
+                  width: 20,
+                  height: 20,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    color: Colors.white,
+                  ),
+                )
+              : const Text('Ripristina'),
         ),
       ],
     );
@@ -549,7 +533,7 @@ class ProfileSection extends StatelessWidget {
 }
 
 // --- MOCK LOGIN ---
-// TODO: Sostituire con login di AuthService
+// TODO: sostituire con login di AuthService
 class LoginDialog extends StatefulWidget {
   final ValueChanged<String> onLogin;
 

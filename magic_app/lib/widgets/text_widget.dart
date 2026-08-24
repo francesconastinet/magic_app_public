@@ -30,11 +30,41 @@ class TextLayout {
 // SCHERMATA
 // ==========================================
 
-class TextWidget extends StatelessWidget {
+class TextWidget extends StatefulWidget {
   final String titolo;
   final String textPath;
 
   const TextWidget({super.key, required this.titolo, required this.textPath});
+
+  @override
+  State<TextWidget> createState() => _TextWidgetState();
+}
+
+class _TextWidgetState extends State<TextWidget> {
+  late Future<String?> _futureText;
+
+  @override
+  void initState() {
+    super.initState();
+    _futureText = _inizializzaTesto();
+  }
+
+  Future<String?> _inizializzaTesto() async {
+    try {
+      if (widget.textPath.startsWith('assets/')) {
+        return await rootBundle.loadString(widget.textPath);
+      } else {
+        final storageService = context.read<StorageService>();
+        return await storageService.leggiFile(
+          AppConfig.packageId,
+          widget.textPath,
+        );
+      }
+    } catch (e) {
+      debugPrint('Errore lettura file testo: $e');
+      return null;
+    }
+  }
 
   // --- RENDERING ---
   @override
@@ -47,35 +77,16 @@ class TextWidget extends StatelessWidget {
         borderRadius: BorderRadius.circular(layout.borderRadius),
       ),
       title: TextDialogHeader(
-        titolo: titolo,
+        titolo: widget.titolo,
         layout: layout,
         onClose: () => Navigator.pop(context),
       ),
       content: TextDialogContent(
-        futureText: _inizializzaTesto(context),
-        textPath: textPath,
+        futureText: _futureText,
+        textPath: widget.textPath,
         layout: layout,
       ),
     );
-  }
-
-  // --- LOGICA ---
-  Future<String?> _inizializzaTesto(BuildContext context) async {
-    try {
-      // CASO 1: Modalità Test (File negli asset)
-      // TODO: rimuovere quando il client sarà collegato al backend
-      if (textPath.startsWith('assets/')) {
-        return await rootBundle.loadString(textPath);
-      }
-      // CASO 2: Modalità Produzione (File estratti su disco dallo ZIP)
-      else {
-        final storageService = context.read<StorageService>();
-        return await storageService.leggiFile(AppConfig.packageId, textPath);
-      }
-    } catch (e) {
-      debugPrint('Errore lettura file testo: $e');
-      return null;
-    }
   }
 }
 
@@ -157,7 +168,7 @@ class TextDialogContent extends StatelessWidget {
             child: Text(
               'Impossibile caricare il testo.\nPercorso cercato: $textPath',
               style: TextStyle(
-                color: Colors.orangeAccent,
+                color: Theme.of(context).colorScheme.error,
                 fontSize: layout.contentFontSize,
               ),
             ),
