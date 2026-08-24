@@ -48,7 +48,9 @@ class ARLayout {
       screenSize.width * (isLandscape ? 0.3 : (isTablet ? 0.75 : 0.9));
   double get infoTop => safePadding.top;
   double get infoLeft => safePadding.left + (_sS * 0.04);
-  double get infoRight => safePadding.right + (isTablet ? (isLandscape ? _sS * 0.05 : _sS * 0.04) : _sS * 0.04);
+  double get infoRight =>
+      safePadding.right +
+      (isTablet ? (isLandscape ? _sS * 0.05 : _sS * 0.04) : _sS * 0.04);
   double get infoTitleFontSize => _sS * (isTablet ? 0.026 : 0.04);
   double get infoTextFontSize => _sS * (isTablet ? 0.018 : 0.032);
   double get infoIconSize => _sS * (isTablet ? 0.033 : 0.05);
@@ -89,9 +91,11 @@ class ARLayout {
   // --- BOTTONE CHAT ---
   double get chatBottom =>
       safePadding.bottom + (isLandscape ? 0.0 : _lS * 0.06);
-  double get chatRight => safePadding.right + (_sS * (isTablet ? (isLandscape ? 0.05 : 0.026) : 0.04));
+  double get chatRight =>
+      safePadding.right +
+      (_sS * (isTablet ? (isLandscape ? 0.05 : 0.026) : 0.04));
   double get chatSize => _sS * (isTablet ? 0.078 : 0.14);
-  double get chatIconSize => _sS * (isTablet ? 0.041 : 0.06);
+  double get chatIconSize => _sS * (isTablet ? 0.041 : 0.07);
 
   // --- BOTTONE CHIUDI ---
   double get closeBottom => safePadding.bottom;
@@ -370,8 +374,9 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
           if (risultato.isAffidabile) {
             _fermaScansioneAutomatica();
 
-            // FIX: Salviamo l'opera nello stato LOCALE della schermata AR
-            _operaRiconosciuta = OperaRepository.trovaPerNomeML(risultato.nomeOpera);
+            _operaRiconosciuta = OperaRepository.trovaPerNomeML(
+              risultato.nomeOpera,
+            );
 
             _mostraOverlay();
           } else {
@@ -930,11 +935,10 @@ class ARChatButton extends StatelessWidget {
               shape: const CircleBorder(),
               tooltip: 'Chiedi alla Chat',
               onPressed: () {
-                // FIX: Aggiorna lo stato globale per la chat SOLO quando si preme questo tasto!
                 context.read<AppState>().selezionaOpera(opera);
                 context.go('/');
               },
-              child: Icon(Icons.chat_bubble, size: layout.chatIconSize),
+              child: Icon(Icons.contact_support, size: layout.chatIconSize),
             ),
           ),
         ),

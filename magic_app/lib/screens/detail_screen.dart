@@ -65,7 +65,7 @@ class _DetailScreenState extends State<DetailScreen> {
       ),
       actions: [
         IconButton(
-          icon: const Icon(Icons.chat_bubble_outline),
+          icon: const Icon(Icons.contact_support_outlined),
           tooltip: 'Chiedi all\'Assistente',
           onPressed: () {
             context.read<AppState>().selezionaOpera(widget.book);
