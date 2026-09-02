@@ -613,90 +613,106 @@ class InfoStatoDialog extends StatelessWidget {
     }
 
     return AlertDialog(
-      titlePadding: const EdgeInsets.all(20),
-      contentPadding: const EdgeInsets.symmetric(horizontal: 20),
-      title: Row(
-        children: [
-          Icon(Icons.info_outline, color: colorScheme.onSurface),
-          const SizedBox(width: 12),
-          const Text('Stato della Chat', style: TextStyle(fontSize: 18)),
-        ],
-      ),
-      content: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'MANOSCRITTI SELEZIONATI:',
-            style: TextStyle(
-              fontWeight: FontWeight.bold,
-              color: colorScheme.onSurfaceVariant,
-              fontSize: 11,
-              letterSpacing: 1.2,
-            ),
-          ),
+      titlePadding: EdgeInsets.zero,
+      clipBehavior: Clip.hardEdge,
+      contentPadding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
+      title: Container(
+        color: colorScheme.primaryContainer,
+        padding: const EdgeInsets.all(20),
+        child: Row(
+          children: [
+            Icon(Icons.info_outline, color: colorScheme.onPrimaryContainer),
 
-          const SizedBox(height: 6),
+            const SizedBox(width: 12),
 
-          Text(
-            isSmartMode ? 'Nessuno' : titoloFonte,
-            style: const TextStyle(fontSize: 14),
-          ),
-
-          const Padding(
-            padding: EdgeInsets.symmetric(vertical: 16.0),
-            child: Divider(height: 1),
-          ),
-
-          Text(
-            'STATO CONNESSIONE:',
-            style: TextStyle(
-              fontWeight: FontWeight.bold,
-              color: colorScheme.onSurfaceVariant,
-              fontSize: 11,
-              letterSpacing: 1.2,
-            ),
-          ),
-
-          const SizedBox(height: 12),
-
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Icon(statoIcona, color: statoColore, size: 28),
-
-              const SizedBox(width: 12),
-
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      statoTitolo,
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        color: statoColore,
-                        fontSize: 14,
-                      ),
-                    ),
-
-                    const SizedBox(height: 4),
-
-                    Text(
-                      statoDescrizione,
-                      style: TextStyle(
-                        fontSize: 13,
-                        color: colorScheme.onSurfaceVariant,
-                      ),
-                    ),
-                  ],
-                ),
+            Text(
+              'Stato della Chat',
+              style: TextStyle(
+                color: colorScheme.onPrimaryContainer,
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
               ),
-            ],
-          ),
+            ),
+          ],
+        ),
+      ),
+      content: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'CONTESTO DI RIFERIMENTO:',
+              style: TextStyle(
+                fontWeight: FontWeight.bold,
+                color: colorScheme.onSurfaceVariant,
+                fontSize: 11,
+                letterSpacing: 1.2,
+              ),
+            ),
 
-          const SizedBox(height: 8),
-        ],
+            const SizedBox(height: 6),
+
+            Text(
+              isSmartMode ? 'Catalogo completo' : titoloFonte,
+              style: const TextStyle(fontSize: 14),
+            ),
+
+            const Padding(
+              padding: EdgeInsets.symmetric(vertical: 16.0),
+              child: Divider(height: 1),
+            ),
+
+            Text(
+              'STATO DELLA CONNESSIONE:',
+              style: TextStyle(
+                fontWeight: FontWeight.bold,
+                color: colorScheme.onSurfaceVariant,
+                fontSize: 11,
+                letterSpacing: 1.2,
+              ),
+            ),
+
+            const SizedBox(height: 12),
+
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Icon(statoIcona, color: statoColore, size: 28),
+
+                const SizedBox(width: 12),
+
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        statoTitolo,
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          color: statoColore,
+                          fontSize: 14,
+                        ),
+                      ),
+
+                      const SizedBox(height: 4),
+
+                      Text(
+                        statoDescrizione,
+                        style: TextStyle(
+                          fontSize: 13,
+                          color: colorScheme.onSurfaceVariant,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+
+            const SizedBox(height: 8),
+          ],
+        ),
       ),
       actions: [
         TextButton(

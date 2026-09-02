@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../data/models.dart';
-import '../data/opera_repository.dart'; // TODO: rimuovere opere hardcodate
+import '../data/opera_repository.dart';
 
 // ==========================================
 // SCHERMATA
@@ -63,7 +63,9 @@ class _CatalogueWidgetState extends State<CatalogueWidget> {
             onReset: () {
               setState(() => _selectedBookIds.clear());
             },
-            onClose: () => Navigator.pop(context),
+            onClose: () {
+              if (context.canPop()) context.pop();
+            },
             haSelezioni: _selectedBookIds.isNotEmpty,
           ),
 
@@ -78,73 +80,116 @@ class _CatalogueWidgetState extends State<CatalogueWidget> {
           ),
 
           Expanded(
-            child: ListView(
-              padding: EdgeInsets.zero,
-              children: [
-                FontiCollectionsSection(
-                  collezioni: _collezioni,
-                  selectedCollectionId: _selectedCollectionId,
-                  onCollectionSelected: (id) {
-                    setState(() => _selectedCollectionId = id);
-                  },
-                ),
+            child: FutureBuilder<List<CollectionV2Model>>(
+              future: _collezioni,
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const Center(child: CircularProgressIndicator());
+                }
 
-                if (_selectedCollectionId != null &&
-                    _collezioniCache.isNotEmpty)
-                  Padding(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 16.0,
-                      vertical: 8.0,
+                final collezioni = snapshot.data ?? [];
+                var opereFiltrate = OperaRepository.tutteLeOpere().toList();
+
+                if (_selectedCollectionId != null) {
+                  final activeColl = collezioni.firstWhere(
+                    (c) => c.id == _selectedCollectionId,
+                    orElse: () => CollectionV2Model(
+                      id: '',
+                      name: '',
+                      description: '',
+                      bookIds: [],
                     ),
-                    child: Builder(
-                      builder: (context) {
-                        final activeColl = _collezioniCache.firstWhere(
-                          (c) => c.id == _selectedCollectionId,
-                        );
-                        final allSelected = activeColl.bookIds.every(
-                          (id) => _selectedBookIds.contains(id),
-                        );
-                        return OutlinedButton.icon(
-                          icon: Icon(
-                            allSelected ? Icons.deselect : Icons.select_all,
-                          ),
-                          label: Text(
-                            allSelected
-                                ? 'Deseleziona tutta la collezione'
-                                : 'Seleziona tutta la collezione',
-                          ),
-                          onPressed: () =>
-                              _toggleCollectionSelection(activeColl),
-                        );
+                  );
+                  opereFiltrate = opereFiltrate
+                      .where((o) => activeColl.bookIds.contains(o.id))
+                      .toList();
+                }
+
+                if (_searchQuery.isNotEmpty) {
+                  final query = _searchQuery.toLowerCase();
+                  opereFiltrate = opereFiltrate
+                      .where(
+                        (o) =>
+                            o.titolo.toLowerCase().contains(query) ||
+                            o.autore.toLowerCase().contains(query),
+                      )
+                      .toList();
+                }
+
+                final initialSelectedIds = Set<String>.from(
+                  widget.idsFonteIniziale ?? [],
+                );
+
+                opereFiltrate.sort((a, b) {
+                  final aSelezionato = initialSelectedIds.contains(a.id);
+                  final bSelezionato = initialSelectedIds.contains(b.id);
+
+                  if (aSelezionato && !bSelezionato) return -1;
+                  if (!aSelezionato && bSelezionato) return 1;
+
+                  return a.titolo.compareTo(b.titolo);
+                });
+
+                return ListView(
+                  padding: EdgeInsets.zero,
+                  children: [
+                    FontiCollectionsSection(
+                      collezioni: collezioni,
+                      selectedCollectionId: _selectedCollectionId,
+                      onCollectionSelected: (id) {
+                        setState(() => _selectedCollectionId = id);
                       },
                     ),
-                  ),
 
-                FontiBooksSection(
-                  searchQuery: _searchQuery,
-                  selectedCollectionId: _selectedCollectionId,
-                  selectedBookIds: _selectedBookIds,
-                  initialSelectedIds: Set<String>.from(
-                    widget.idsFonteIniziale ?? [],
-                  ),
-                  collezioni: _collezioni,
-                  onBookToggled: (id, isSelected) {
-                    setState(() {
-                      if (isSelected) {
-                        _selectedBookIds.add(id);
-                      } else {
-                        _selectedBookIds.remove(id);
-                      }
-                    });
-                  },
-                ),
+                    if (_selectedCollectionId != null && collezioni.isNotEmpty)
+                      Padding(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 16.0,
+                          vertical: 8.0,
+                        ),
+                        child: Builder(
+                          builder: (context) {
+                            final activeColl = collezioni.firstWhere(
+                              (c) => c.id == _selectedCollectionId,
+                            );
+                            final allSelected = activeColl.bookIds.every(
+                              (id) => _selectedBookIds.contains(id),
+                            );
+                            return OutlinedButton.icon(
+                              icon: Icon(
+                                allSelected ? Icons.deselect : Icons.select_all,
+                              ),
+                              label: Text(
+                                allSelected
+                                    ? 'Deseleziona tutta la collezione'
+                                    : 'Seleziona tutta la collezione',
+                              ),
+                              onPressed: () =>
+                                  _toggleCollectionSelection(activeColl),
+                            );
+                          },
+                        ),
+                      ),
 
-                FontiEmptySearchResults(
-                  searchQuery: _searchQuery,
-                  selectedCollectionId: _selectedCollectionId,
-                  collezioni: _collezioni,
-                ),
-              ],
+                    if (opereFiltrate.isEmpty)
+                      const FontiEmptySearchResults()
+                    else
+                      FontiBooksSection(
+                        opere: opereFiltrate,
+                        selectedBookIds: _selectedBookIds,
+                        onBookToggled: (id, isSelected) {
+                          setState(() {
+                            if (isSelected) {
+                              _selectedBookIds.add(id);
+                            } else {
+                              _selectedBookIds.remove(id);
+                            }
+                          });
+                        },
+                      ),
+                  ],
+                );
+              },
             ),
           ),
 
@@ -223,7 +268,7 @@ class _CatalogueWidgetState extends State<CatalogueWidget> {
       }
     }
 
-    Navigator.pop(context);
+    if (context.canPop()) context.pop();
   }
 
   void _toggleCollectionSelection(CollectionV2Model collezione) {
@@ -370,7 +415,7 @@ class FontiSearchBar extends StatelessWidget {
 
 // --- FILTRO COLLEZIONI ---
 class FontiCollectionsSection extends StatelessWidget {
-  final Future<List<CollectionV2Model>> collezioni;
+  final List<CollectionV2Model> collezioni;
   final String? selectedCollectionId;
   final ValueChanged<String?> onCollectionSelected;
 
@@ -385,92 +430,74 @@ class FontiCollectionsSection extends StatelessWidget {
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
 
-    return FutureBuilder<List<CollectionV2Model>>(
-      future: this.collezioni,
-      builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return const SizedBox(
-            height: 50,
-            child: Center(child: CircularProgressIndicator()),
-          );
-        }
+    if (collezioni.isEmpty) return const SizedBox.shrink();
 
-        final collezioni = snapshot.data ?? [];
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          child: Text(
+            'Filtra per Collezione',
+            style: TextStyle(
+              fontWeight: FontWeight.bold,
+              fontSize: 12,
+              color: colorScheme.onSurfaceVariant,
+            ),
+          ),
+        ),
 
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              child: Text(
-                'Filtra per Collezione',
-                style: TextStyle(
-                  fontWeight: FontWeight.bold,
-                  fontSize: 12,
-                  color: colorScheme.onSurfaceVariant,
+        SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          child: Row(
+            children: [
+              Padding(
+                padding: const EdgeInsets.only(right: 8.0),
+                child: ChoiceChip(
+                  label: const Text('Tutti i manoscritti'),
+                  selected: selectedCollectionId == null,
+                  onSelected: (selected) {
+                    if (selected) onCollectionSelected(null);
+                  },
                 ),
               ),
-            ),
 
-            SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: Row(
-                children: [
-                  Padding(
-                    padding: const EdgeInsets.only(right: 8.0),
-                    child: ChoiceChip(
-                      label: const Text('Tutti i manoscritti'),
-                      selected: selectedCollectionId == null,
-                      onSelected: (selected) {
-                        if (selected) onCollectionSelected(null);
-                      },
-                    ),
+              ...collezioni.map(
+                (collection) => Padding(
+                  padding: const EdgeInsets.only(right: 8.0),
+                  child: ChoiceChip(
+                    label: Text(collection.name),
+                    selected: selectedCollectionId == collection.id,
+                    onSelected: (selected) {
+                      if (selected) onCollectionSelected(collection.id);
+                    },
                   ),
-
-                  ...collezioni.map(
-                    (collection) => Padding(
-                      padding: const EdgeInsets.only(right: 8.0),
-                      child: ChoiceChip(
-                        label: Text(collection.name),
-                        selected: selectedCollectionId == collection.id,
-                        onSelected: (selected) {
-                          if (selected) onCollectionSelected(collection.id);
-                        },
-                      ),
-                    ),
-                  ),
-                ],
+                ),
               ),
-            ),
+            ],
+          ),
+        ),
 
-            const Padding(
-              padding: EdgeInsets.symmetric(vertical: 8.0),
-              child: Divider(height: 1),
-            ),
-          ],
-        );
-      },
+        const Padding(
+          padding: EdgeInsets.symmetric(vertical: 8.0),
+          child: Divider(height: 1),
+        ),
+      ],
     );
   }
 }
 
 // --- SEZIONE MANOSCRITTI ---
 class FontiBooksSection extends StatelessWidget {
-  final String searchQuery;
-  final String? selectedCollectionId;
+  final List<dynamic> opere;
   final Set<String> selectedBookIds;
-  final Set<String> initialSelectedIds;
-  final Future<List<CollectionV2Model>> collezioni;
   final void Function(String id, bool isSelected) onBookToggled;
 
   const FontiBooksSection({
     super.key,
-    required this.searchQuery,
-    required this.selectedCollectionId,
+    required this.opere,
     required this.selectedBookIds,
-    required this.initialSelectedIds,
-    required this.collezioni,
     required this.onBookToggled,
   });
 
@@ -478,177 +505,85 @@ class FontiBooksSection extends StatelessWidget {
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
 
-    return FutureBuilder<List<CollectionV2Model>>(
-      future: collezioni,
-      builder: (context, snapshot) {
-        if (!snapshot.hasData) return const SizedBox.shrink();
-
-        var opere = OperaRepository.tutteLeOpere();
-
-        if (selectedCollectionId != null) {
-          final collezioneSelezionata = snapshot.data!.firstWhere(
-            (c) => c.id == selectedCollectionId,
-            orElse: () => CollectionV2Model(
-              id: '',
-              name: '',
-              description: '',
-              bookIds: [],
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          child: Text(
+            'Risultati',
+            style: TextStyle(
+              fontWeight: FontWeight.bold,
+              fontSize: 12,
+              color: colorScheme.onSurfaceVariant,
             ),
-          );
-          opere = opere
-              .where((o) => collezioneSelezionata.bookIds.contains(o.id))
-              .toList();
-        }
+          ),
+        ),
 
-        if (searchQuery.isNotEmpty) {
-          final query = searchQuery.toLowerCase();
-          opere = opere
-              .where(
-                (o) =>
-                    o.titolo.toLowerCase().contains(query) ||
-                    o.autore.toLowerCase().contains(query),
-              )
-              .toList();
-        }
+        ...opere.map((opera) {
+          final isAttiva = selectedBookIds.contains(opera.id);
 
-        if (opere.isEmpty) return const SizedBox.shrink();
-
-        opere.sort((a, b) {
-          final aSelezionato = initialSelectedIds.contains(a.id);
-          final bSelezionato = initialSelectedIds.contains(b.id);
-
-          if (aSelezionato && !bSelezionato) return -1;
-          if (!aSelezionato && bSelezionato) return 1;
-
-          return a.titolo.compareTo(b.titolo);
-        });
-
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              child: Text(
-                'Risultati',
-                style: TextStyle(
-                  fontWeight: FontWeight.bold,
-                  fontSize: 12,
-                  color: colorScheme.onSurfaceVariant,
+          return CheckboxListTile(
+            secondary: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                IconButton(
+                  icon: const Icon(Icons.info_outline),
+                  tooltip: 'Dettagli Manoscritto',
+                  color: colorScheme.primary,
+                  onPressed: () {
+                    final router = GoRouter.of(context);
+                    router.pop();
+                    router.push('/opera/${opera.id}', extra: opera);
+                  },
                 ),
+              ],
+            ),
+            title: Text(
+              opera.titolo,
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: isAttiva ? FontWeight.bold : FontWeight.normal,
+                color: isAttiva ? colorScheme.primary : null,
               ),
             ),
-
-            ...opere.map((opera) {
-              final isAttiva = selectedBookIds.contains(opera.id);
-
-              return CheckboxListTile(
-                secondary: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    IconButton(
-                      icon: const Icon(Icons.info_outline),
-                      tooltip: 'Dettagli Manoscritto',
-                      color: colorScheme.primary,
-                      onPressed: () {
-                        context.pop();
-                        GoRouter.of(context).push('/opera/${opera.id}');
-                      },
-                    ),
-                  ],
-                ),
-                title: Text(
-                  opera.titolo,
-                  style: TextStyle(
-                    fontSize: 14,
-                    fontWeight: isAttiva ? FontWeight.bold : FontWeight.normal,
-                    color: isAttiva ? colorScheme.primary : null,
-                  ),
-                ),
-                subtitle: Text(
-                  opera.autore,
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: isAttiva
-                        ? colorScheme.primary.withValues(alpha: 0.8)
-                        : null,
-                  ),
-                ),
-                value: isAttiva,
-                onChanged: (bool? value) {
-                  onBookToggled(opera.id, value ?? false);
-                },
-                controlAffinity: ListTileControlAffinity.trailing,
-              );
-            }),
-          ],
-        );
-      },
+            subtitle: Text(
+              opera.autore,
+              style: TextStyle(
+                fontSize: 12,
+                color: isAttiva
+                    ? colorScheme.primary.withValues(alpha: 0.8)
+                    : null,
+              ),
+            ),
+            value: isAttiva,
+            onChanged: (bool? value) {
+              onBookToggled(opera.id, value ?? false);
+            },
+            controlAffinity: ListTileControlAffinity.trailing,
+          );
+        }),
+      ],
     );
   }
 }
 
 // --- NESSUN RISULTATO RICERCA ---
 class FontiEmptySearchResults extends StatelessWidget {
-  final String searchQuery;
-  final String? selectedCollectionId;
-  final Future<List<CollectionV2Model>> collezioni;
-
-  const FontiEmptySearchResults({
-    super.key,
-    required this.searchQuery,
-    required this.selectedCollectionId,
-    required this.collezioni,
-  });
+  const FontiEmptySearchResults({super.key});
 
   @override
   Widget build(BuildContext context) {
-    return FutureBuilder<List<CollectionV2Model>>(
-      future: collezioni,
-      builder: (context, snapshot) {
-        if (!snapshot.hasData) return const SizedBox.shrink();
-
-        var opere = OperaRepository.tutteLeOpere();
-
-        if (selectedCollectionId != null) {
-          final coll = snapshot.data!.firstWhere(
-            (c) => c.id == selectedCollectionId,
-            orElse: () => CollectionV2Model(
-              id: '',
-              name: '',
-              description: '',
-              bookIds: [],
-            ),
-          );
-          opere = opere.where((o) => coll.bookIds.contains(o.id)).toList();
-        }
-
-        if (searchQuery.isNotEmpty) {
-          final query = searchQuery.toLowerCase();
-          opere = opere
-              .where(
-                (o) =>
-                    o.titolo.toLowerCase().contains(query) ||
-                    o.autore.toLowerCase().contains(query),
-              )
-              .toList();
-        }
-
-        if (opere.isEmpty) {
-          return Padding(
-            padding: const EdgeInsets.all(32.0),
-            child: Center(
-              child: Text(
-                'Nessun manoscritto trovato.',
-                style: TextStyle(
-                  color: Theme.of(context).colorScheme.onSurfaceVariant,
-                ),
-              ),
-            ),
-          );
-        }
-
-        return const SizedBox.shrink();
-      },
+    return Padding(
+      padding: const EdgeInsets.all(32.0),
+      child: Center(
+        child: Text(
+          'Nessun manoscritto trovato.',
+          style: TextStyle(
+            color: Theme.of(context).colorScheme.onSurfaceVariant,
+          ),
+        ),
+      ),
     );
   }
 }

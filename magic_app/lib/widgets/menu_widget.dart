@@ -112,7 +112,7 @@ class _MenuWidgetState extends State<MenuWidget> {
 // WIDGET
 // ==========================================
 
-// --- PULSANTE: CONDIVIDI CHAT ---
+// --- PULSANTE: CONDIVISIONE STANZA ---
 class ShareChatTile extends StatelessWidget {
   const ShareChatTile({super.key});
 
@@ -123,7 +123,7 @@ class ShareChatTile extends StatelessWidget {
     return ListTile(
       dense: true,
       leading: Icon(Icons.mobile_screen_share, color: colorScheme.primary),
-      title: const Text('Condividi Chat'),
+      title: const Text('Condividi la stanza'),
       onTap: () async {
         final chatService = context.read<ChatService>();
 
@@ -149,7 +149,7 @@ class ShareChatTile extends StatelessWidget {
   }
 }
 
-// --- DIALOG: CONDIVISIONE CODICE ---
+// --- DIALOG: CONDIVISIONE STANZA ---
 class ShareCodeDialog extends StatefulWidget {
   final String codice;
   const ShareCodeDialog({super.key, required this.codice});
@@ -181,7 +181,7 @@ class _ShareCodeDialogState extends State<ShareCodeDialog> {
             const SizedBox(width: 12),
 
             Text(
-              'Codice di Ripristino',
+              'Codice di Condivisione',
               style: TextStyle(
                 color: colorScheme.onPrimaryContainer,
                 fontWeight: FontWeight.bold,
@@ -311,7 +311,7 @@ class _ShareCodeDialogState extends State<ShareCodeDialog> {
   }
 }
 
-// --- PULSANTE: RIPRISTINA CHAT ---
+// --- PULSANTE: COLLEGAMENTO A STANZA ---
 class RestoreChatTile extends StatelessWidget {
   const RestoreChatTile({super.key});
 
@@ -322,7 +322,7 @@ class RestoreChatTile extends StatelessWidget {
     return ListTile(
       dense: true,
       leading: Icon(Icons.settings_backup_restore, color: colorScheme.primary),
-      title: const Text('Ripristina Chat'),
+      title: const Text('Collegati a una stanza'),
       onTap: () {
         showDialog(
           context: context,
@@ -333,7 +333,7 @@ class RestoreChatTile extends StatelessWidget {
   }
 }
 
-// --- DIALOG: RIPRISTINA CHAT ---
+// --- DIALOG: COLLEGAMENTO A STANZA ---
 class RestoreChatDialog extends StatefulWidget {
   const RestoreChatDialog({super.key});
 
@@ -369,7 +369,7 @@ class _RestoreChatDialogState extends State<RestoreChatDialog> {
             ),
             const SizedBox(width: 12),
             Text(
-              'Ripristina Chat',
+              'Codice di collegamento',
               style: TextStyle(
                 color: colorScheme.onPrimaryContainer,
                 fontWeight: FontWeight.bold,
