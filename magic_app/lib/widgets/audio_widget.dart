@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:audioplayers/audioplayers.dart';
@@ -70,29 +71,55 @@ class AudioWidget extends StatefulWidget {
 class _AudioWidgetState extends State<AudioWidget> {
   final AudioPlayer _audioPlayer = AudioPlayer();
   bool _isPlaying = false;
-  Duration _duration = Duration.zero;
-  Duration _position = Duration.zero;
+
+  StreamSubscription? _stateSub;
+  StreamSubscription? _durSub;
+  StreamSubscription? _posSub;
+
+  final ValueNotifier<Duration> _durationNotifier = ValueNotifier(
+    Duration.zero,
+  );
+  final ValueNotifier<Duration> _positionNotifier = ValueNotifier(
+    Duration.zero,
+  );
 
   @override
   void initState() {
     super.initState();
     _inizializzaAudio();
 
-    _audioPlayer.onPlayerStateChanged.listen((state) {
+    _stateSub = _audioPlayer.onPlayerStateChanged.listen((state) {
       if (mounted) setState(() => _isPlaying = state == PlayerState.playing);
     });
 
-    _audioPlayer.onDurationChanged.listen((newDuration) {
-      if (mounted) setState(() => _duration = newDuration);
+    _durSub = _audioPlayer.onDurationChanged.listen((duration) {
+      _durationNotifier.value = duration;
     });
 
-    _audioPlayer.onPositionChanged.listen((newPosition) {
-      if (mounted) setState(() => _position = newPosition);
+    _posSub = _audioPlayer.onPositionChanged.listen((position) {
+      _positionNotifier.value = position;
     });
   }
 
   @override
+  void didUpdateWidget(covariant AudioWidget oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.audioPath != widget.audioPath) {
+      _audioPlayer.stop();
+      _isPlaying = false;
+      _durationNotifier.value = Duration.zero;
+      _positionNotifier.value = Duration.zero;
+      _inizializzaAudio();
+    }
+  }
+
+  @override
   void dispose() {
+    _stateSub?.cancel();
+    _durSub?.cancel();
+    _posSub?.cancel();
+    _durationNotifier.dispose();
+    _positionNotifier.dispose();
     _audioPlayer.dispose();
     super.dispose();
   }
@@ -109,14 +136,11 @@ class _AudioWidgetState extends State<AudioWidget> {
     return ExpandedAudioPlayer(
       titolo: widget.titolo,
       isPlaying: _isPlaying,
-      duration: _duration,
-      position: _position,
+      audioPlayer: _audioPlayer,
+      durationNotifier: _durationNotifier,
+      positionNotifier: _positionNotifier,
       layout: layout,
       onTogglePlay: _togglePlayPause,
-      onSeek: (value) async {
-        final position = Duration(seconds: value.toInt());
-        await _audioPlayer.seek(position);
-      },
       onMinimize: widget.onMinimizeToggle,
       onClose: widget.onClose,
     );
@@ -125,14 +149,11 @@ class _AudioWidgetState extends State<AudioWidget> {
   // --- LOGICA ---
   Future<void> _inizializzaAudio() async {
     try {
-      // CASO 1: Modalità Test (File negli asset)
       // TODO: rimuovere quando il client sarà collegato al backend
       if (widget.audioPath.startsWith('assets/')) {
         final assetPath = widget.audioPath.replaceFirst('assets/', '');
         await _audioPlayer.setSource(AssetSource(assetPath));
-      }
-      // CASO 2: Modalità Produzione (File estratti su disco dallo ZIP)
-      else {
+      } else {
         final storageService = context.read<StorageService>();
         final basePath = await storageService.percorsoPacchetto(
           AppConfig.packageId,
@@ -163,11 +184,11 @@ class _AudioWidgetState extends State<AudioWidget> {
 class ExpandedAudioPlayer extends StatelessWidget {
   final String titolo;
   final bool isPlaying;
-  final Duration duration;
-  final Duration position;
+  final AudioPlayer audioPlayer;
+  final ValueNotifier<Duration> durationNotifier;
+  final ValueNotifier<Duration> positionNotifier;
   final AudioLayout layout;
   final VoidCallback onTogglePlay;
-  final ValueChanged<double> onSeek;
   final VoidCallback onMinimize;
   final VoidCallback onClose;
 
@@ -175,11 +196,11 @@ class ExpandedAudioPlayer extends StatelessWidget {
     super.key,
     required this.titolo,
     required this.isPlaying,
-    required this.duration,
-    required this.position,
+    required this.audioPlayer,
+    required this.durationNotifier,
+    required this.positionNotifier,
     required this.layout,
     required this.onTogglePlay,
-    required this.onSeek,
     required this.onMinimize,
     required this.onClose,
   });
@@ -232,9 +253,9 @@ class ExpandedAudioPlayer extends StatelessWidget {
                       SizedBox(height: layout.verticalSpacing),
 
                       AudioProgressBar(
-                        duration: duration,
-                        position: position,
-                        onSeek: onSeek,
+                        audioPlayer: audioPlayer,
+                        durationNotifier: durationNotifier,
+                        positionNotifier: positionNotifier,
                         layout: layout,
                       ),
 
@@ -329,16 +350,16 @@ class ExpandedPlayerTitle extends StatelessWidget {
 
 // --- BARRA PROGRESSIONE ---
 class AudioProgressBar extends StatelessWidget {
-  final Duration duration;
-  final Duration position;
-  final ValueChanged<double> onSeek;
+  final AudioPlayer audioPlayer;
+  final ValueNotifier<Duration> durationNotifier;
+  final ValueNotifier<Duration> positionNotifier;
   final AudioLayout layout;
 
   const AudioProgressBar({
     super.key,
-    required this.duration,
-    required this.position,
-    required this.onSeek,
+    required this.audioPlayer,
+    required this.durationNotifier,
+    required this.positionNotifier,
     required this.layout,
   });
 
@@ -350,42 +371,58 @@ class AudioProgressBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Slider(
-          activeColor: Colors.blueAccent,
-          inactiveColor: Colors.white24,
-          min: 0.0,
-          max: duration.inSeconds > 0 ? duration.inSeconds.toDouble() : 1.0,
-          value: position.inSeconds.toDouble().clamp(
-            0.0,
-            duration.inSeconds > 0 ? duration.inSeconds.toDouble() : 1.0,
-          ),
-          onChanged: onSeek,
-        ),
+    return ValueListenableBuilder<Duration>(
+      valueListenable: durationNotifier,
+      builder: (context, duration, _) {
+        return ValueListenableBuilder<Duration>(
+          valueListenable: positionNotifier,
+          builder: (context, position, _) {
+            return Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Slider(
+                  activeColor: Colors.blueAccent,
+                  inactiveColor: Colors.white24,
+                  min: 0.0,
+                  max: duration.inSeconds > 0
+                      ? duration.inSeconds.toDouble()
+                      : 1.0,
+                  value: position.inSeconds.toDouble().clamp(
+                    0.0,
+                    duration.inSeconds > 0
+                        ? duration.inSeconds.toDouble()
+                        : 1.0,
+                  ),
+                  onChanged: (valore) async {
+                    await audioPlayer.seek(Duration(seconds: valore.toInt()));
+                  },
+                ),
 
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Text(
-              _formatDuration(position),
-              style: TextStyle(
-                color: Colors.white54,
-                fontSize: layout.timeFontSize,
-              ),
-            ),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      _formatDuration(position),
+                      style: TextStyle(
+                        color: Colors.white54,
+                        fontSize: layout.timeFontSize,
+                      ),
+                    ),
 
-            Text(
-              _formatDuration(duration),
-              style: TextStyle(
-                color: Colors.white54,
-                fontSize: layout.timeFontSize,
-              ),
-            ),
-          ],
-        ),
-      ],
+                    Text(
+                      _formatDuration(duration),
+                      style: TextStyle(
+                        color: Colors.white54,
+                        fontSize: layout.timeFontSize,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            );
+          },
+        );
+      },
     );
   }
 }

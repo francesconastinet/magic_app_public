@@ -189,6 +189,7 @@ class _VideoWidgetState extends State<VideoWidget> {
   // --- LOGICA ---
   Future<void> _inizializzaVideo() async {
     try {
+      // TODO: rimuovere quando il client sarà collegato al backend
       if (widget.videoPath.startsWith('assets/')) {
         _controller = VideoPlayerController.asset(widget.videoPath);
       } else {
