@@ -58,48 +58,50 @@ class _MenuWidgetState extends State<MenuWidget> {
 
           const Spacer(),
 
-          Container(
-            width: double.infinity,
+          Material(
             color: Colors.white,
-            padding: EdgeInsets.only(top: 8, bottom: safePadding.bottom + 8),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const ShareChatTile(),
+            child: Container(
+              width: double.infinity,
+              padding: EdgeInsets.only(top: 8, bottom: safePadding.bottom + 8),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const ShareChatTile(),
 
-                const RestoreChatTile(),
+                  const RestoreChatTile(),
 
-                const Padding(
-                  padding: EdgeInsets.symmetric(vertical: 8.0),
-                  child: Divider(height: 1),
-                ),
+                  const Padding(
+                    padding: EdgeInsets.symmetric(vertical: 8.0),
+                    child: Divider(height: 1),
+                  ),
 
-                ProfileSection(
-                  mockLoggedUser: _mockLoggedUser,
-                  onLogin: (user) {
-                    setState(() => _mockLoggedUser = user);
-                    Navigator.pop(context);
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text(
-                          'Benvenuto, $_mockLoggedUser!',
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
+                  ProfileSection(
+                    mockLoggedUser: _mockLoggedUser,
+                    onLogin: (user) {
+                      setState(() => _mockLoggedUser = user);
+                      Navigator.pop(context);
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text(
+                            'Benvenuto, $_mockLoggedUser!',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          duration: const Duration(seconds: 2),
                         ),
-                        duration: const Duration(seconds: 2),
-                      ),
-                    );
-                  },
-                  onLogout: () {
-                    setState(() => _mockLoggedUser = null);
-                    Navigator.pop(context);
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Logout effettuato')),
-                    );
-                  },
-                ),
-              ],
+                      );
+                    },
+                    onLogout: () {
+                      setState(() => _mockLoggedUser = null);
+                      Navigator.pop(context);
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('Logout effettuato')),
+                      );
+                    },
+                  ),
+                ],
+              ),
             ),
           ),
         ],
@@ -133,7 +135,7 @@ class ShareChatTile extends StatelessWidget {
           builder: (ctx) => const Center(child: CircularProgressIndicator()),
         );
 
-        final codice = await chatService.generaCodiceCondivisione();
+        final codice = await chatService.recuperaCodiceStanza();
 
         if (!context.mounted) return;
         Navigator.pop(context);
@@ -425,7 +427,7 @@ class _RestoreChatDialogState extends State<RestoreChatDialog> {
 
                   final successo = await context
                       .read<ChatService>()
-                      .ripristinaSessione(codice);
+                      .leggiStanza(codice);
 
                   if (!mounted) return;
 

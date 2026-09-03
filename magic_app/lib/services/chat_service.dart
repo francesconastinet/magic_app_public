@@ -1,5 +1,4 @@
 import 'dart:convert';
-import 'dart:math' as math; // TODO: rimuovere quando disponibile api
 import 'package:dio/dio.dart';
 import 'package:uuid/uuid.dart';
 import 'package:flutter/foundation.dart';
@@ -68,17 +67,12 @@ class ChatService extends ChangeNotifier {
   List<MessaggioChat> messaggi = [];
   List<FonteChat> fontiTotali = [];
 
-  // Mappa statica per simulare il database del server
-  // TODO: rimuovere quando disponibile api
-  static final Map<String, Map<String, dynamic>> _mockDbSessioni = {};
-
   String get sessionId => _sessionId;
   String? get contextSessionId => _contextSessionId;
 
-  void aggiungiMessaggio(MessaggioChat msg) {
-    messaggi.add(msg);
-    notifyListeners();
-  }
+  // ==========================================
+  // GESTIONE CONTESTO E DOMANDE
+  // ==========================================
 
   void aggiornaFonti(List<FonteChat> nuoveFonti) {
     for (final fonte in nuoveFonti) {
@@ -91,50 +85,7 @@ class ChatService extends ChangeNotifier {
     notifyListeners();
   }
 
-  // POST /chat/session/share
-  // TODO: modificare quando disponibile api
-  Future<String?> generaCodiceCondivisione() async {
-    if (messaggi.isEmpty) return null;
-
-    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
-    final rnd = math.Random();
-    final codice = String.fromCharCodes(
-      Iterable.generate(6, (_) => chars.codeUnitAt(rnd.nextInt(chars.length))),
-    );
-
-    _mockDbSessioni[codice] = {
-      'session_id': _sessionId,
-      'context_session_id': _contextSessionId,
-      'history': List<MessaggioChat>.from(messaggi),
-    };
-
-    return codice;
-  }
-
-  // POST /chat/session/restore
-  // TODO: modificare quando disponibile api
-  Future<bool> ripristinaSessione(String codice) async {
-    final codiceUpper = codice.toUpperCase();
-
-    if (!_mockDbSessioni.containsKey(codiceUpper)) return false;
-
-    final dati = _mockDbSessioni[codiceUpper]!;
-
-    _sessionId = dati['session_id'];
-    _contextSessionId = dati['context_session_id'];
-    messaggi = List<MessaggioChat>.from(dati['history']);
-
-    fontiTotali.clear();
-    for (var msg in messaggi) {
-      aggiornaFonti(msg.fonti);
-    }
-
-    notifyListeners();
-    return true;
-  }
-
   // Crea una context session vincolata a uno o piu' libri
-  // POST /chat/context-sessions con lista book_ids
   Future<bool> creaContextSession(List<String> bookIds) async {
     try {
       final body = {'book_ids': bookIds};
@@ -163,13 +114,17 @@ class ChatService extends ChangeNotifier {
 
   void resetContextSession() {
     _contextSessionId = null;
-    fontiTotali.clear(); // Svuota la lista delle fonti consultate finora
-    notifyListeners(); // Aggiorna l'interfaccia (il Dialog risulterà vuoto)
+    fontiTotali.clear();
+    notifyListeners();
     debugPrint('[CHAT] Context session resettata — modalità fonti libere');
   }
 
+  void aggiungiMessaggio(MessaggioChat msg) {
+    messaggi.add(msg);
+    notifyListeners();
+  }
+
   // Invia messaggio al server
-  // POST /query con question, session_id, select_code
   Future<MessaggioChat> inviaMessaggio(String domanda) async {
     final body = {
       'question': domanda,
@@ -207,7 +162,6 @@ class ChatService extends ChangeNotifier {
         '[CHAT] Risposta ricevuta: '
         '${testo.substring(0, testo.length.clamp(0, 50))}...',
       );
-      debugPrint('[CHAT] Libri usati: ${fonti.map((f) => f.title).join(', ')}');
 
       return MessaggioChat(
         testo: testo,
@@ -225,7 +179,6 @@ class ChatService extends ChangeNotifier {
   }
 
   // Recupera dettagli libro tramite identifier
-  // GET /book/{identifier}
   Future<Map<String, dynamic>?> dettagliLibro(String identifier) async {
     try {
       final response = await _dio.get(
@@ -240,6 +193,142 @@ class ChatService extends ChangeNotifier {
     } catch (e, stack) {
       debugPrint('[CHAT] Errore parsing JSON dettagli libro: $e\n$stack');
       return null;
+    }
+  }
+
+  // ==========================================
+  // GESTIONE ROOM
+  // ==========================================
+
+  // Crea o recupera la room associata a questa sessione (POST /rooms)
+  Future<String?> recuperaCodiceStanza() async {
+    if (messaggi.isEmpty) return null;
+
+    try {
+      debugPrint('[CHAT] POST /rooms per sessione: $_sessionId');
+      final response = await _dio.post(
+        '${AppConfig.chatBaseUrl}/rooms',
+        data: {'session_id': _sessionId},
+      );
+
+      final data = response.data is String
+          ? jsonDecode(response.data)
+          : response.data;
+
+      // Restituiamo il codice ADMIN in modo che l'utente possa riprendere la conversazione attivamente
+      // Si potrebbe restituire il guest_room_id per una condivisione in sola lettura
+      final adminCode = data['admin_room_id']?.toString();
+      debugPrint('[CHAT] Room creata, admin_code: $adminCode');
+
+      return adminCode;
+    } on DioException catch (e) {
+      debugPrint(
+        '[CHAT] Errore di rete genera codice: '
+        '${e.response?.statusCode} - ${e.message}',
+      );
+      return null;
+    } catch (e, stack) {
+      debugPrint('[CHAT] Errore imprevisto genera codice: $e\n$stack');
+      return null;
+    }
+  }
+
+  // Legge una room tramite codice (GET /rooms/{room_code}) e ripristina lo stato
+  Future<bool> leggiStanza(String codice) async {
+    final codiceUpper = codice.trim().toUpperCase();
+
+    try {
+      debugPrint('[CHAT] GET /rooms/$codiceUpper');
+      final response = await _dio.get(
+        '${AppConfig.chatBaseUrl}/rooms/$codiceUpper',
+      );
+
+      final data = response.data is String
+          ? jsonDecode(response.data)
+          : response.data;
+
+      // Sovrascriviamo l'ID di sessione attuale con quello della stanza recuperata
+      _sessionId = data['session_id']?.toString() ?? _sessionId;
+
+      // Estraiamo la cronologia dei messaggi dal payload
+      final payload = data['payload'];
+      if (payload != null && payload is Map) {
+        final history = payload['conversation_history'] as List? ?? [];
+        messaggi.clear();
+
+        for (var item in history) {
+          if (item is Map<String, dynamic>) {
+            // Il backend supporta 3 formati diversi per l'history. Li gestiamo tutti.
+
+            // 1. Formato "user" / "assistant"
+            if (item.containsKey('user') && item.containsKey('assistant')) {
+              messaggi.add(
+                MessaggioChat(
+                  testo: item['user'].toString(),
+                  isUtente: true,
+                  timestamp: DateTime.now(),
+                ),
+              );
+              messaggi.add(
+                MessaggioChat(
+                  testo: item['assistant'].toString(),
+                  isUtente: false,
+                  timestamp: DateTime.now(),
+                ),
+              );
+            }
+            // 2. Formato "question" / "answer"
+            else if (item.containsKey('question') &&
+                item.containsKey('answer')) {
+              messaggi.add(
+                MessaggioChat(
+                  testo: item['question'].toString(),
+                  isUtente: true,
+                  timestamp: DateTime.now(),
+                ),
+              );
+              messaggi.add(
+                MessaggioChat(
+                  testo: item['answer'].toString(),
+                  isUtente: false,
+                  timestamp: DateTime.now(),
+                ),
+              );
+            }
+            // 3. Formato "role" / "content"
+            else if (item.containsKey('role') && item.containsKey('content')) {
+              final isUtente = item['role'] == 'user';
+              messaggi.add(
+                MessaggioChat(
+                  testo: item['content'].toString(),
+                  isUtente: isUtente,
+                  timestamp: DateTime.now(),
+                ),
+              );
+            }
+          }
+        }
+
+        // Ripristino Fonti usate nella room (se il backend le espone in "sources")
+        fontiTotali.clear();
+        final sources = payload['sources'] as List? ?? [];
+        for (var s in sources) {
+          if (s is Map<String, dynamic>) {
+            fontiTotali.add(FonteChat.fromJson(s));
+          }
+        }
+      }
+
+      notifyListeners();
+      return true;
+    } on DioException catch (e) {
+      debugPrint(
+        '[CHAT] Errore di rete ripristina sessione (codice errato o server down): ${e.response?.statusCode}',
+      );
+      return false;
+    } catch (e, stack) {
+      debugPrint('[CHAT] Errore parsing JSON ripristina sessione: $e\n$stack');
+      return false;
     }
   }
 }

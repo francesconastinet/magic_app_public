@@ -224,8 +224,7 @@ class _ChatWidgetState extends State<ChatWidget> {
       chatService.aggiungiMessaggio(
         MessaggioChat(
           testo:
-              'Ciao! Sono il tuo assistente virtuale per la '
-              'Biblioteca dei Girolamini. Come posso aiutarti?',
+              'Ciao! Sono il tuo bibliotecario virtuale, come posso aiutarti?',
           isUtente: false,
           timestamp: DateTime.now(),
         ),
