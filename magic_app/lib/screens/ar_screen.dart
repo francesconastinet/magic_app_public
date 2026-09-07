@@ -110,10 +110,10 @@ class ARLayout {
   double get backSize => (isTablet && isLandscape) ? _sS * 0.06 : _sS * 0.12;
 
   // --- MENU DEBUG ---
-  double get debugTop => safePadding.top + (_lS * 0.14);
-  double get debugLeft => _sS * 0.025;
+  double get debugTop => safePadding.top + (_lS * 0.16);
+  double get debugLeft => _sS * 0.02;
   double get debugWidth =>
-      (isTablet && isLandscape) ? _lS * 0.25 : screenSize.width * 0.5;
+      isLandscape ? _lS * 0.25 : screenSize.width * 0.45;
 }
 
 // ==========================================
@@ -575,16 +575,29 @@ class AROperaInfoPanel extends StatelessWidget {
                 ),
 
                 Expanded(
-                  child: Text(
-                    opera.titolo,
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.bold,
-                      fontSize: layout.infoTitleFontSize,
-                      height: 1.2,
+                  child: ConstrainedBox(
+                    constraints: BoxConstraints(
+                      maxHeight: layout.infoTitleFontSize * 1.2 * 2.5,
                     ),
-                    maxLines: 3,
-                    overflow: TextOverflow.ellipsis,
+                    child: RawScrollbar(
+                      thumbColor: Colors.white54,
+                      thickness: 3,
+                      radius: const Radius.circular(8),
+                      child: SingleChildScrollView(
+                        child: Padding(
+                          padding: const EdgeInsets.only(right: 8.0),
+                          child: Text(
+                            opera.titolo,
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold,
+                              fontSize: layout.infoTitleFontSize,
+                              height: 1.2,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
                   ),
                 ),
               ],
@@ -613,6 +626,8 @@ class AROperaInfoPanel extends StatelessWidget {
                 color: Colors.white70,
                 fontSize: layout.infoTextFontSize,
               ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
             ),
           ],
         ),
