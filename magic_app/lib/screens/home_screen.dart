@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../core/app_config.dart';
 import '../core/app_state.dart';
+import '../data/catalogue_repository.dart';
 import '../data/models.dart';
 import '../widgets/chat_widget.dart';
 import '../widgets/menu_widget.dart';
@@ -43,6 +44,7 @@ class _HomeScreenState extends State<HomeScreen> {
     _onAppStateChanged();
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      context.read<CatalogueRepository>().caricaDatiLocali();
       _sincronizzaPacchettoInBackground();
     });
   }
@@ -154,6 +156,7 @@ class _HomeScreenState extends State<HomeScreen> {
       );
 
       if (risultato.successo && risultato.scaricato && mounted) {
+        await context.read<CatalogueRepository>().caricaDatiLocali();
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('Pacchetto aggiornato in background'),

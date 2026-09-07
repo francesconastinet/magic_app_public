@@ -6,7 +6,7 @@ import 'package:go_router/go_router.dart';
 import 'package:camera/camera.dart';
 import 'package:permission_handler/permission_handler.dart';
 import '../core/app_state.dart';
-import '../data/opera_repository.dart';
+import '../data/catalogue_repository.dart';
 import '../data/models.dart';
 import '../services/media_service.dart';
 import '../services/recognition_service.dart';
@@ -139,8 +139,6 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
   MediaItem? _audioInEsecuzione;
   bool _audioMinimizzato = false;
   Timer? _scanTimer;
-
-  // FIX: Variabile locale per gestire l'opera riconosciuta senza sporcare lo stato globale!
   BookModel? _operaRiconosciuta;
 
   late AnimationController _fadeController;
@@ -188,9 +186,7 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
   // --- RENDERING ---
   @override
   Widget build(BuildContext context) {
-    // FIX: Ora la UI legge la variabile locale _operaAttuale invece dello stato globale
     final opera = _operaRiconosciuta;
-
     final isLandscape =
         MediaQuery.orientationOf(context) == Orientation.landscape;
     final colorScheme = Theme.of(context).colorScheme;
@@ -260,7 +256,6 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
             layout: layout,
             onSimulate: (book) {
               setState(() {
-                // FIX: Aggiorniamo solo l'opera locale!
                 _operaRiconosciuta = book;
                 _audioInEsecuzione = null;
               });
@@ -327,10 +322,18 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
       setState(() => _cameraReady = true);
 
       if (widget.nomeOperaIniziale != null) {
-        // FIX: Inizializziamo la variabile locale invece che lo stato globale
-        _operaRiconosciuta = OperaRepository.tutteLeOpere().firstWhere(
+        final repo = context.read<CatalogueRepository>();
+        _operaRiconosciuta = repo.libri.firstWhere(
           (o) => o.titolo == widget.nomeOperaIniziale,
-          orElse: () => OperaRepository.tutteLeOpere().first,
+          orElse: () => repo.libri.isNotEmpty
+              ? repo.libri.first
+              : BookModel(
+                  id: 'err',
+                  titolo: 'Errore',
+                  autore: '',
+                  anno: '',
+                  multimedia: [],
+                ),
         );
         _mostraOverlay();
       } else {
@@ -374,9 +377,9 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
           if (risultato.isAffidabile) {
             _fermaScansioneAutomatica();
 
-            _operaRiconosciuta = OperaRepository.trovaPerNomeML(
-              risultato.nomeOpera,
-            );
+            _operaRiconosciuta = context
+                .read<CatalogueRepository>()
+                .trovaPerNome(risultato.nomeOpera);
 
             _mostraOverlay();
           } else {
@@ -1030,8 +1033,7 @@ class ARBackButton extends StatelessWidget {
 
 // --- MENU DEBUG ---
 class ARDebugMenu extends StatelessWidget {
-  final void Function(BookModel book)
-  onSimulate; // FIX: Passa l'opera selezionata
+  final void Function(BookModel book) onSimulate;
   final ARLayout layout;
 
   const ARDebugMenu({
@@ -1042,6 +1044,17 @@ class ARDebugMenu extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final libriScaricati = context
+        .read<CatalogueRepository>()
+        .libri
+        .take(3)
+        .toList();
+    final List<Color> colori = [
+      Colors.pink.shade800,
+      Colors.cyan.shade800,
+      Colors.lime.shade800,
+    ];
+
     return Positioned(
       top: layout.debugTop,
       left: layout.debugLeft,
@@ -1057,39 +1070,25 @@ class ARDebugMenu extends StatelessWidget {
                 'MENU DEBUG',
                 style: TextStyle(color: Colors.white70, fontSize: 11),
               ),
-
               const SizedBox(height: 10),
 
-              _buildButton(
-                context: context,
-                color: Colors.pink.shade800,
-                label: 'Antifonario',
-                book: OperaRepository.tutteLeOpere().firstWhere(
-                  (opera) => opera.titolo == 'Antifonario',
+              if (libriScaricati.isEmpty)
+                const Text(
+                  'Nessun libro',
+                  style: TextStyle(color: Colors.white),
                 ),
-              ),
 
-              const SizedBox(height: 8),
-
-              _buildButton(
-                context: context,
-                color: Colors.cyan.shade800,
-                label: 'Divina Commedia',
-                book: OperaRepository.tutteLeOpere().firstWhere(
-                  (opera) => opera.titolo == 'Divina Commedia',
-                ),
-              ),
-
-              const SizedBox(height: 8),
-
-              _buildButton(
-                context: context,
-                color: Colors.lime.shade800,
-                label: 'Promessi Sposi',
-                book: OperaRepository.tutteLeOpere().firstWhere(
-                  (opera) => opera.titolo == 'Promessi Sposi',
-                ),
-              ),
+              ...List.generate(libriScaricati.length, (index) {
+                return Padding(
+                  padding: const EdgeInsets.only(bottom: 8.0),
+                  child: _buildButton(
+                    context: context,
+                    color: colori[index % colori.length],
+                    label: libriScaricati[index].titolo,
+                    book: libriScaricati[index],
+                  ),
+                );
+              }),
             ],
           ),
         ),
@@ -1112,7 +1111,6 @@ class ARDebugMenu extends StatelessWidget {
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         ),
         onPressed: () {
-          // FIX: Non aggiorna più lo stato globale, passa l'opera alla callback
           onSimulate(book);
         },
         child: Text(

@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import 'core/app_router.dart';
 import 'core/app_theme.dart';
 import 'core/app_state.dart';
+import 'data/catalogue_repository.dart';
 import 'services/chat_service.dart';
 import 'services/auth_service.dart';
 import 'services/storage_service.dart';
@@ -22,6 +23,12 @@ void main() {
         ChangeNotifierProvider(create: (context) => ChatService()),
         Provider(create: (context) => StorageService()),
         Provider(create: (context) => MediaService()),
+        ChangeNotifierProxyProvider<StorageService, CatalogueRepository>(
+          create: (context) =>
+              CatalogueRepository(storage: context.read<StorageService>()),
+          update: (context, storage, previous) =>
+              previous ?? CatalogueRepository(storage: storage),
+        ),
       ],
       child: const MagicApp(),
     ),

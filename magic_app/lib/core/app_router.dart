@@ -1,5 +1,5 @@
 import 'package:go_router/go_router.dart';
-import '../data/opera_repository.dart';
+import '../data/models.dart';
 import '../screens/detail_screen.dart';
 import '../screens/home_screen.dart';
 import '../screens/ar_screen.dart';
@@ -18,10 +18,7 @@ final appRouter = GoRouter(
     GoRoute(
       path: '/opera/:id',
       builder: (context, state) {
-        final id = state.pathParameters['id']!;
-        final book = OperaRepository.tutteLeOpere().firstWhere(
-          (o) => o.id == id,
-        );
+        final book = state.extra as BookModel;
         return DetailScreen(book: book);
       },
     ),
