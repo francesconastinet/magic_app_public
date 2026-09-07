@@ -1,11 +1,9 @@
-import 'dart:convert';
 import 'package:archive/archive.dart';
 import 'package:flutter/services.dart';
 import 'storage_service.dart';
 import 'package:flutter/foundation.dart';
 import 'download_service.dart';
 import 'update_service.dart';
-import '../data/models.dart';
 import 'auth_service.dart';
 
 // Risultato della sincronizzazione automatica in background.
@@ -162,7 +160,10 @@ class PackageService {
   }) async {
     if (!_authService.isLoggato) {
       onStato?.call('Autenticazione in corso...');
-      final loginRiuscito = await _authService.login('utente2', 'utente2');
+      final loginRiuscito = await _authService.login(
+        'tenant_magic ',
+        'tenant_magic ',
+      );
       if (!loginRiuscito) {
         debugPrint('[PKG] Login fallito');
         return false;
@@ -196,13 +197,6 @@ class PackageService {
 
     return true;
   }
-
-  // Controlla con l'endpoint reale (/check/) se il pacchetto sul
-  // server e' cambiato, e lo scarica SOLO in quel caso. Sostituisce il
-  // criterio "a tempo" (24h) usato in precedenza come unico criterio di
-  // verita' — ora le 24h in UpdateService servono solo a decidere OGNI
-  // QUANTO chiamare questo metodo (throttling), non piu' se scaricare.
-  // MODIFICATO — usa _authService iniettato, stesso beneficio del metodo sopra.
   Future<SyncResult> sincronizzaSeCambiato({
     required String packageId,
     required String versione,
@@ -210,7 +204,10 @@ class PackageService {
   }) async {
     if (!_authService.isLoggato) {
       onStato?.call('Autenticazione in corso...');
-      final loginRiuscito = await _authService.login('utente2', 'utente2');
+      final loginRiuscito = await _authService.login(
+        'tenant_magic ',
+        'tenant_magic ',
+      );
       if (!loginRiuscito) {
         debugPrint(
           '[PKG] Login fallito — impossibile controllare aggiornamenti',
@@ -221,27 +218,36 @@ class PackageService {
       debugPrint('[PKG] Gia\' loggato — salto il login');
     }
 
+    // 1. Controlla se l'app ha già scaricato i file in passato
+    final versioneLocale = await _updateService.leggiVersioneInstallata(
+      packageId,
+    );
+    final pacchettoEsisteLocalmente = versioneLocale != null;
+
     // 2. Controlla se il pacchetto e' cambiato sul server
     onStato?.call('Controllo aggiornamenti...');
     final cambiato = await _authService.pacchettoCambiato();
 
-    if (cambiato == false) {
-      debugPrint('[PKG] Pacchetto non cambiato — nessun download necessario');
-      // Aggiorniamo comunque il timestamp di controllo, cosi' UpdateService
-      // sa che abbiamo verificato di recente (throttling, non "verita'")
+    // 3. Salta il download solo se non ci sono novità sul server
+    // e se ci sono già i file fisicamente sul dispositivo
+    if (cambiato == false && pacchettoEsisteLocalmente) {
+      debugPrint(
+        '[PKG] Pacchetto non cambiato e già presente — nessun download necessario',
+      );
       await _updateService.salvaVersioneInstallata(packageId, versione);
       return const SyncResult(successo: true, scaricato: false);
     }
 
-    if (cambiato == null) {
+    // Log per capire perché sta scaricando
+    if (!pacchettoEsisteLocalmente) {
       debugPrint(
-        '[PKG] Check fallito (errore di rete) — provo comunque a scaricare per sicurezza',
+        '[PKG] Dati locali mancanti (prima installazione) — forzo il download',
       );
-    } else {
-      debugPrint('[PKG] Pacchetto cambiato sul server — scarico');
+    } else if (cambiato == true) {
+      debugPrint('[PKG] Pacchetto cambiato sul server — scarico aggiornamento');
     }
 
-    // 3. Scarica il pacchetto ZIP come bytes
+    // 4. Scarica il pacchetto ZIP come bytes
     onStato?.call('Download pacchetto in corso...');
     final bytes = await _authService.scaricaPacchetto();
 
@@ -250,7 +256,7 @@ class PackageService {
       return const SyncResult(successo: false, scaricato: false);
     }
 
-    // 4. Estrae i file su disco con gestione errori dettagliata
+    // 5. Estrae i file su disco con gestione errori dettagliata
     onStato?.call('Estrazione in corso...');
     try {
       await _estraiBytes(bytes, packageId);
@@ -260,32 +266,11 @@ class PackageService {
       return const SyncResult(successo: false, scaricato: false);
     }
 
-    // 5. Salva versione installata
+    // 6. Salva versione installata
     await _updateService.salvaVersioneInstallata(packageId, versione);
     debugPrint('[PKG] Pacchetto aggiornato — versione $versione (check reale)');
 
     return const SyncResult(successo: true, scaricato: true);
-  }
-
-  // Legge info.json di un manoscritto dal disco (vecchia struttura)
-  Future<Map<String, dynamic>?> leggiInfoManoscritto(
-    String packageId,
-    String collectionId,
-    String msId,
-  ) async {
-    final path = 'collections/$collectionId/manuscripts/$msId/info.json';
-    return await _storage.leggiJson(packageId, path);
-  }
-
-  // Legge collection.json dal disco (vecchia struttura)
-  Future<Map<String, dynamic>?> leggiCollection(
-    String packageId,
-    String collectionId,
-  ) async {
-    return await _storage.leggiJson(
-      packageId,
-      'collections/$collectionId/collection.json',
-    );
   }
 
   // Verifica se il pacchetto e' gia' estratto
@@ -308,53 +293,5 @@ class PackageService {
   Future<List<String>> listaFile() async {
     final archive = await _caricaArchivio();
     return archive.files.where((f) => f.isFile).map((f) => f.name).toList();
-  }
-
-  // --- NUOVA STRUTTURA PACCHETTO ---
-
-  // Legge books.json — lista di tutti i libri
-  Future<List<BookModel>> leggiLibri(String packageId) async {
-    final contenuto = await _storage.leggiFile(packageId, 'books.json');
-    if (contenuto == null) return [];
-    final lista = jsonDecode(contenuto) as List;
-    return lista.map((b) => BookModel.fromJson(b)).toList();
-  }
-
-  // Legge un singolo libro da books.json per id
-  Future<BookModel?> leggiLibro(String packageId, String bookId) async {
-    final libri = await leggiLibri(packageId);
-    try {
-      return libri.firstWhere((b) => b.id == bookId);
-    } catch (_) {
-      return null;
-    }
-  }
-
-  // Legge collections.json — raggruppamento libri in percorsi
-  Future<List<CollectionV2Model>> leggiCollezioniV2(String packageId) async {
-    final contenuto = await _storage.leggiFile(packageId, 'collections.json');
-    if (contenuto == null) return [];
-    // Debug temporaneo — stampa il contenuto raw per vedere la struttura
-    debugPrint('[PKG] collections.json raw: $contenuto');
-    final lista = jsonDecode(contenuto) as List;
-    return lista.map((c) => CollectionV2Model.fromJson(c)).toList();
-  }
-
-  // Legge i libri di una specifica collezione
-  Future<List<BookModel>> leggiLibriDiCollezione(
-    String packageId,
-    String collectionId,
-  ) async {
-    final collezioni = await leggiCollezioniV2(packageId);
-    final collezione = collezioni.where((c) => c.id == collectionId);
-    if (collezione.isEmpty) return [];
-    final bookIds = collezione.first.bookIds;
-    final tuttiLibri = await leggiLibri(packageId);
-    // Restituisce i libri nell'ordine della collezione
-    return bookIds
-        .map((id) => tuttiLibri.where((b) => b.id == id))
-        .where((list) => list.isNotEmpty)
-        .map((list) => list.first)
-        .toList();
   }
 }

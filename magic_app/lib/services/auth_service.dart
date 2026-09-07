@@ -10,8 +10,8 @@ import '../core/app_config.dart';
 class AuthService extends ChangeNotifier {
   final Dio _dio = Dio(
     BaseOptions(
-      connectTimeout: const Duration(seconds: 30),
-      receiveTimeout: const Duration(seconds: 60),
+      connectTimeout: const Duration(seconds: 120),
+      receiveTimeout: const Duration(seconds: 120),
     ),
   );
 

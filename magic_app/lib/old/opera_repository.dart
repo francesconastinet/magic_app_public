@@ -1,4 +1,4 @@
-import 'models.dart';
+import '../data/models.dart';
 
 // TODO: il catalogo va letto dal pacchetto
 class OperaRepository {
