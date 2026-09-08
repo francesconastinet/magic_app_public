@@ -63,7 +63,9 @@ class ChatService extends ChangeNotifier {
   final String _selectCode = AppConfig.chatSelectCode;
   String _sessionId = const Uuid().v4();
   String? _contextSessionId;
-
+  String? _activeRoomCode;
+  int? _lastRevision;
+  String? _lastUpdatedAt;
   List<MessaggioChat> messaggi = [];
   List<FonteChat> fontiTotali = [];
 
@@ -206,6 +208,7 @@ class ChatService extends ChangeNotifier {
 
     try {
       debugPrint('[CHAT] POST /rooms per sessione: $_sessionId');
+
       final response = await _dio.post(
         '${AppConfig.chatBaseUrl}/rooms',
         data: {'session_id': _sessionId},
@@ -215,9 +218,12 @@ class ChatService extends ChangeNotifier {
           ? jsonDecode(response.data)
           : response.data;
 
-      // Restituiamo il codice ADMIN in modo che l'utente possa riprendere la conversazione attivamente
-      // Si potrebbe restituire il guest_room_id per una condivisione in sola lettura
       final adminCode = data['admin_room_id']?.toString();
+
+      _activeRoomCode = adminCode;
+      _lastRevision = data['revision'] as int?;
+      _lastUpdatedAt = data['updated_at']?.toString();
+
       debugPrint('[CHAT] Room creata, admin_code: $adminCode');
 
       return adminCode;
@@ -233,7 +239,7 @@ class ChatService extends ChangeNotifier {
     }
   }
 
-  // Legge una room tramite codice (GET /rooms/{room_code}) e ripristina lo stato
+  // Legge una room con il codice (GET /rooms/{room_code}) e ripristina lo stato
   Future<bool> leggiStanza(String codice) async {
     final codiceUpper = codice.trim().toUpperCase();
 
@@ -247,20 +253,19 @@ class ChatService extends ChangeNotifier {
           ? jsonDecode(response.data)
           : response.data;
 
-      // Sovrascriviamo l'ID di sessione attuale con quello della stanza recuperata
       _sessionId = data['session_id']?.toString() ?? _sessionId;
+      _activeRoomCode = codiceUpper;
+      _lastRevision = data['revision'] as int?;
+      _lastUpdatedAt = data['updated_at']?.toString();
 
-      // Estraiamo la cronologia dei messaggi dal payload
       final payload = data['payload'];
+
       if (payload != null && payload is Map) {
         final history = payload['conversation_history'] as List? ?? [];
         messaggi.clear();
 
         for (var item in history) {
           if (item is Map<String, dynamic>) {
-            // Il backend supporta 3 formati diversi per l'history. Li gestiamo tutti.
-
-            // 1. Formato "user" / "assistant"
             if (item.containsKey('user') && item.containsKey('assistant')) {
               messaggi.add(
                 MessaggioChat(
@@ -276,9 +281,7 @@ class ChatService extends ChangeNotifier {
                   timestamp: DateTime.now(),
                 ),
               );
-            }
-            // 2. Formato "question" / "answer"
-            else if (item.containsKey('question') &&
+            } else if (item.containsKey('question') &&
                 item.containsKey('answer')) {
               messaggi.add(
                 MessaggioChat(
@@ -294,9 +297,8 @@ class ChatService extends ChangeNotifier {
                   timestamp: DateTime.now(),
                 ),
               );
-            }
-            // 3. Formato "role" / "content"
-            else if (item.containsKey('role') && item.containsKey('content')) {
+            } else if (item.containsKey('role') &&
+                item.containsKey('content')) {
               final isUtente = item['role'] == 'user';
               messaggi.add(
                 MessaggioChat(
@@ -309,7 +311,6 @@ class ChatService extends ChangeNotifier {
           }
         }
 
-        // Ripristino Fonti usate nella room (se il backend le espone in "sources")
         fontiTotali.clear();
         final sources = payload['sources'] as List? ?? [];
         for (var s in sources) {
@@ -323,12 +324,42 @@ class ChatService extends ChangeNotifier {
       return true;
     } on DioException catch (e) {
       debugPrint(
-        '[CHAT] Errore di rete ripristina sessione (codice errato o server down): ${e.response?.statusCode}',
+        '[CHAT] Errore ripristino sessione: ${e.response?.statusCode}',
       );
       return false;
     } catch (e, stack) {
       debugPrint('[CHAT] Errore parsing JSON ripristina sessione: $e\n$stack');
       return false;
+    }
+  }
+
+  // --- Polling per gli aggiornamenti ---
+  Future<void> controllaAggiornamenti() async {
+    if (_activeRoomCode == null) return; // Nessuna stanza connessa
+
+    try {
+      String url = '${AppConfig.chatBaseUrl}/rooms/$_activeRoomCode/status';
+
+      if (_lastRevision != null) {
+        url += '?last_known_revision=$_lastRevision';
+      } else if (_lastUpdatedAt != null) {
+        url += '?last_known_updated_at=$_lastUpdatedAt';
+      }
+
+      final response = await _dio.get(url);
+      final data = response.data is String
+          ? jsonDecode(response.data)
+          : response.data;
+
+      if (data['has_updates'] == true) {
+        debugPrint(
+          '[POLLING] Nuovi messaggi rilevati nella stanza $_activeRoomCode. '
+          'Scaricamento in corso...',
+        );
+        await leggiStanza(_activeRoomCode!);
+      }
+    } catch (e) {
+      debugPrint('[POLLING] Errore silenzioso: $e');
     }
   }
 }

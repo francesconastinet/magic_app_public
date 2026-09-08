@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import 'package:go_router/go_router.dart';
@@ -32,18 +33,25 @@ class _ChatWidgetState extends State<ChatWidget> {
   bool _botStaScrivendo = false;
   bool _contextSessionCreata = false;
   bool _contextSessionInCorso = false;
+  Timer? _pollingTimer;
 
   @override
   void initState() {
     super.initState();
     Future.microtask(() {
-      _aggiungiMessaggioBenvenuto();
       _gestisciInizializzazioneContesto(widget.bookIds);
+    });
+
+    _pollingTimer = Timer.periodic(const Duration(seconds: 5), (_) {
+      if (mounted) {
+        context.read<ChatService>().controllaAggiornamenti();
+      }
     });
   }
 
   @override
   void dispose() {
+    _pollingTimer?.cancel();
     _controller.dispose();
     _scrollController.dispose();
     super.dispose();
@@ -54,6 +62,7 @@ class _ChatWidgetState extends State<ChatWidget> {
   Widget build(BuildContext context) {
     final chatService = context.watch<ChatService>();
     final messaggi = chatService.messaggi;
+    final colorScheme = Theme.of(context).colorScheme;
 
     return GestureDetector(
       onTap: () {
@@ -85,11 +94,15 @@ class _ChatWidgetState extends State<ChatWidget> {
               bottom: false,
               child: Stack(
                 children: [
+                  if (messaggi.isEmpty && !_botStaScrivendo)
+                    _buildWelcomeOverlay(colorScheme),
+
                   ChatMessagesList(
                     scrollController: _scrollController,
                     messaggi: messaggi,
                     botStaScrivendo: _botStaScrivendo,
                   ),
+
                   ChatFloatingButtons(
                     bookIds: widget.bookIds,
                     onFonteSelezionata: widget.onFonteSelezionata,
@@ -218,18 +231,32 @@ class _ChatWidgetState extends State<ChatWidget> {
     _scrollaInFondo();
   }
 
-  void _aggiungiMessaggioBenvenuto() {
-    final chatService = context.read<ChatService>();
-    if (chatService.messaggi.isEmpty) {
-      chatService.aggiungiMessaggio(
-        MessaggioChat(
-          testo:
+  Widget _buildWelcomeOverlay(ColorScheme colorScheme) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(56.0),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              Icons.forum_outlined,
+              size: 48,
+              color: colorScheme.onSurfaceVariant.withValues(alpha: 0.4),
+            ),
+            const SizedBox(height: 16),
+            Text(
               'Ciao! Sono il tuo bibliotecario virtuale, come posso aiutarti?',
-          isUtente: false,
-          timestamp: DateTime.now(),
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                color: colorScheme.onSurfaceVariant.withValues(alpha: 0.7),
+                fontSize: 14,
+                fontStyle: FontStyle.italic,
+              ),
+            ),
+          ],
         ),
-      );
-    }
+      ),
+    );
   }
 
   void _scrollaInFondo() {

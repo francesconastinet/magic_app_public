@@ -112,8 +112,7 @@ class ARLayout {
   // --- MENU DEBUG ---
   double get debugTop => safePadding.top + (_lS * 0.16);
   double get debugLeft => _sS * 0.02;
-  double get debugWidth =>
-      isLandscape ? _lS * 0.25 : screenSize.width * 0.45;
+  double get debugWidth => isLandscape ? _lS * 0.25 : screenSize.width * 0.45;
 }
 
 // ==========================================

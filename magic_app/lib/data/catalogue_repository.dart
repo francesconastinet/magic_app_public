@@ -46,7 +46,9 @@ class CatalogueRepository extends ChangeNotifier {
         collezione.bookIds.retainWhere((id) => idLibriValidi.contains(id));
       }
 
-      debugPrint('[CATALOGUE REPO] Caricati in RAM: ${_libri.length} opere, ${_collezioni.length} collezioni.');
+      debugPrint(
+        '[CATALOGUE REPO] Caricati in RAM: ${_libri.length} opere, ${_collezioni.length} collezioni.',
+      );
       notifyListeners();
     } catch (e) {
       debugPrint('[CATALOGUE REPO] Errore caricamento JSON: $e');

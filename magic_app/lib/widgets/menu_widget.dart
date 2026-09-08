@@ -437,7 +437,7 @@ class _RestoreChatDialogState extends State<RestoreChatDialog> {
                   if (successo) {
                     scaffoldMessenger.showSnackBar(
                       const SnackBar(
-                        content: Text('Sessione ripristinata con successo!'),
+                        content: Text('Collegamento avvenuto successo!'),
                         duration: Duration(seconds: 2),
                       ),
                     );
@@ -459,7 +459,7 @@ class _RestoreChatDialogState extends State<RestoreChatDialog> {
                     color: Colors.white,
                   ),
                 )
-              : const Text('Ripristina'),
+              : const Text('Collegati'),
         ),
       ],
     );
