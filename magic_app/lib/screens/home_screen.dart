@@ -151,7 +151,8 @@ class _HomeScreenState extends State<HomeScreen> {
 
       final risultato = await packageService.sincronizzaSeCambiato(
         packageId: AppConfig.packageId,
-        versione: 'api-latest',
+        versione:
+            'api-latest', // placeholder: non ha ancora un endpoint di versione numerica
         onStato: (msg) => debugPrint('[SYNC] $msg'),
       );
 

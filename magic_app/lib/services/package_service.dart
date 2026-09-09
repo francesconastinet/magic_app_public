@@ -161,8 +161,8 @@ class PackageService {
     if (!_authService.isLoggato) {
       onStato?.call('Autenticazione in corso...');
       final loginRiuscito = await _authService.login(
-        'utente2 ',
-        'utente2 ',
+        'tenant_magic ',
+        'tenant_magic ',
       );
       if (!loginRiuscito) {
         debugPrint('[PKG] Login fallito');
@@ -197,6 +197,7 @@ class PackageService {
 
     return true;
   }
+
   Future<SyncResult> sincronizzaSeCambiato({
     required String packageId,
     required String versione,
@@ -205,8 +206,8 @@ class PackageService {
     if (!_authService.isLoggato) {
       onStato?.call('Autenticazione in corso...');
       final loginRiuscito = await _authService.login(
-        'utente2 ',
-        'utente2 ',
+        'tenant_magic ',
+        'tenant_magic ',
       );
       if (!loginRiuscito) {
         debugPrint(

@@ -149,7 +149,6 @@ class _AudioWidgetState extends State<AudioWidget> {
   // --- LOGICA ---
   Future<void> _inizializzaAudio() async {
     try {
-      // TODO: rimuovere quando il client sarà collegato al backend
       if (widget.audioPath.startsWith('assets/')) {
         final assetPath = widget.audioPath.replaceFirst('assets/', '');
         await _audioPlayer.setSource(AssetSource(assetPath));
