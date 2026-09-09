@@ -44,6 +44,7 @@ class ARViewModel extends ChangeNotifier {
   }
 
   // --- LOGICA ---
+
   Future<void> inizializzaCamera({String? nomeOperaIniziale}) async {
     final permesso = await Permission.camera.request();
     if (!permesso.isGranted) {

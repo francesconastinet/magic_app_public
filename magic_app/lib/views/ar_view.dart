@@ -37,7 +37,6 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
   void initState() {
     super.initState();
 
-    // 1. Inizializzazione Animazioni
     _fadeController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 400),
@@ -57,10 +56,8 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
     );
     _scanController.repeat(reverse: true);
 
-    // 2. Inizializzazione ViewModel
     _viewModel = ARViewModel(repository: context.read<CatalogueRepository>());
 
-    // 3. Binding dei side-effects
     _viewModel.onShowWarning = (msg) {
       ScaffoldMessenger.of(context).hideCurrentSnackBar();
       ScaffoldMessenger.of(context).showSnackBar(
@@ -89,7 +86,6 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
       });
     };
 
-    // Avvio della camera
     _viewModel.inizializzaCamera(nomeOperaIniziale: widget.nomeOperaIniziale);
   }
 
