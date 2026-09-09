@@ -4,11 +4,11 @@ import 'package:provider/provider.dart';
 import '../core/app_state.dart';
 import '../data/models.dart';
 import '../services/media_service.dart';
-import '../widgets/audio_widget.dart';
-import '../widgets/image_widget.dart';
-import '../widgets/pdf_widget.dart';
-import '../widgets/text_widget.dart';
-import '../widgets/video_widget.dart';
+import 'audio_widget.dart';
+import 'image_widget.dart';
+import 'pdf_widget.dart';
+import 'text_widget.dart';
+import 'video_widget.dart';
 
 // ==========================================
 // SCHERMATA

@@ -1,20 +1,225 @@
-import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
 import 'package:camera/camera.dart';
-import 'package:permission_handler/permission_handler.dart';
 import '../core/app_state.dart';
 import '../data/catalogue_repository.dart';
 import '../data/models.dart';
 import '../services/media_service.dart';
-import '../services/recognition_service.dart';
-import '../widgets/audio_widget.dart';
-import '../widgets/image_widget.dart';
-import '../widgets/pdf_widget.dart';
-import '../widgets/text_widget.dart';
-import '../widgets/video_widget.dart';
+import 'audio_widget.dart';
+import 'image_widget.dart';
+import 'pdf_widget.dart';
+import 'text_widget.dart';
+import 'video_widget.dart';
+import '../viewmodels/ar_viewmodel.dart';
+
+// ==========================================
+// SCHERMATA
+// ==========================================
+
+class ARScreen extends StatefulWidget {
+  final String? nomeOperaIniziale;
+  const ARScreen({super.key, this.nomeOperaIniziale});
+
+  @override
+  State<ARScreen> createState() => _ARScreenState();
+}
+
+class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
+  late ARViewModel _viewModel;
+  late AnimationController _fadeController;
+  late Animation<double> _fadeAnimation;
+  late AnimationController _scanController;
+  late Animation<double> _scanAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+
+    // 1. Inizializzazione Animazioni
+    _fadeController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 400),
+    );
+    _fadeAnimation = CurvedAnimation(
+      parent: _fadeController,
+      curve: Curves.easeIn,
+    );
+
+    _scanController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1200),
+    );
+    _scanAnimation = CurvedAnimation(
+      parent: _scanController,
+      curve: Curves.easeInOut,
+    );
+    _scanController.repeat(reverse: true);
+
+    // 2. Inizializzazione ViewModel
+    _viewModel = ARViewModel(repository: context.read<CatalogueRepository>());
+
+    // 3. Binding dei side-effects
+    _viewModel.onShowWarning = (msg) {
+      ScaffoldMessenger.of(context).hideCurrentSnackBar();
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(msg), backgroundColor: Colors.orange),
+      );
+    };
+
+    _viewModel.onShowError = (msg) {
+      ScaffoldMessenger.of(context).hideCurrentSnackBar();
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(msg), backgroundColor: Colors.red));
+    };
+
+    _viewModel.onMostraOverlayAnimation = () {
+      _scanController.stop();
+      _fadeController.forward();
+    };
+
+    _viewModel.onNascondiOverlayAnimation = () {
+      _fadeController.reverse().then((_) {
+        if (mounted) {
+          _scanController.repeat(reverse: true);
+          _viewModel.onAnimazioneChiusuraCompletata();
+        }
+      });
+    };
+
+    // Avvio della camera
+    _viewModel.inizializzaCamera(nomeOperaIniziale: widget.nomeOperaIniziale);
+  }
+
+  @override
+  void dispose() {
+    _fadeController.dispose();
+    _scanController.dispose();
+    _viewModel.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return ChangeNotifierProvider.value(
+      value: _viewModel,
+      child: Consumer<ARViewModel>(
+        builder: (context, vm, child) {
+          final isLandscape =
+              MediaQuery.orientationOf(context) == Orientation.landscape;
+          final colorScheme = Theme.of(context).colorScheme;
+
+          return Stack(
+            fit: StackFit.expand,
+            children: [
+              Scaffold(
+                appBar: isLandscape
+                    ? null
+                    : AppBar(
+                        backgroundColor: colorScheme.primary,
+                        foregroundColor: colorScheme.onPrimary,
+                        title: const Text(
+                          'Realtà Aumentata',
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                body: _buildBody(vm),
+              ),
+
+              if (vm.audioInEsecuzione != null)
+                Material(
+                  type: MaterialType.transparency,
+                  child: AudioWidget(
+                    titolo: vm.audioInEsecuzione!.titolo,
+                    audioPath: vm.audioInEsecuzione!.url,
+                    isMinimized: vm.audioMinimizzato,
+                    onMinimizeToggle: () => vm.impostaAudio(
+                      vm.audioInEsecuzione,
+                      minimizzato: true,
+                    ),
+                    onClose: () => vm.impostaAudio(null),
+                  ),
+                ),
+            ],
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildBody(ARViewModel vm) {
+    if (vm.errore != null) {
+      return Center(
+        child: Text(
+          vm.errore!,
+          style: const TextStyle(color: Colors.redAccent, fontSize: 18),
+        ),
+      );
+    }
+
+    if (!vm.cameraReady || vm.camController == null) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
+    final layout = ARLayout(context);
+
+    return Stack(
+      fit: StackFit.expand,
+      children: [
+        ARCameraFeed(controller: vm.camController!, layout: layout),
+
+        if (!vm.overlayVisibile)
+          ARCameraViewfinder(
+            scanAnimation: _scanAnimation,
+            layout: layout,
+            isScanning: vm.elaborazione,
+          ),
+
+        if (kDebugMode)
+          ARDebugMenu(
+            layout: layout,
+            onSimulate: (book) => vm.simulaRiconoscimento(book),
+          ),
+
+        if (vm.overlayVisibile && vm.operaRiconosciuta != null) ...[
+          AROperaInfoPanel(
+            opera: vm.operaRiconosciuta!,
+            fadeAnimation: _fadeAnimation,
+            layout: layout,
+          ),
+          ARChatButton(
+            opera: vm.operaRiconosciuta!,
+            overlayVisibile: vm.overlayVisibile,
+            fadeAnimation: _fadeAnimation,
+            layout: layout,
+          ),
+          ARCloseButton(
+            overlayVisibile: vm.overlayVisibile,
+            fadeAnimation: _fadeAnimation,
+            layout: layout,
+            onClose: vm.nascondiOverlay,
+          ),
+          ARMediaBubblesPanel(
+            opera: vm.operaRiconosciuta!,
+            fadeAnimation: _fadeAnimation,
+            layout: layout,
+            audioInEsecuzione: vm.audioInEsecuzione,
+            onPlayAudio: (item) => vm.impostaAudio(item, minimizzato: false),
+            onReopenAudio: () =>
+                vm.impostaAudio(vm.audioInEsecuzione, minimizzato: false),
+          ),
+        ],
+
+        if (layout.isLandscape) ARBackButton(layout: layout),
+      ],
+    );
+  }
+}
 
 // ==========================================
 // CONFIGURAZIONE LAYOUT
@@ -113,321 +318,6 @@ class ARLayout {
   double get debugTop => safePadding.top + (_lS * 0.16);
   double get debugLeft => _sS * 0.02;
   double get debugWidth => isLandscape ? _lS * 0.25 : screenSize.width * 0.45;
-}
-
-// ==========================================
-// SCHERMATA
-// ==========================================
-
-class ARScreen extends StatefulWidget {
-  final String? nomeOperaIniziale;
-  const ARScreen({super.key, this.nomeOperaIniziale});
-
-  @override
-  State<ARScreen> createState() => _ARScreenState();
-}
-
-class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
-  final _recognitionService = RecognitionService();
-  bool _elaborazione = false;
-  bool _isAutoScanning = false;
-  String? _errore;
-  bool _overlayVisibile = false;
-  CameraController? _camController;
-  bool _cameraReady = false;
-  MediaItem? _audioInEsecuzione;
-  bool _audioMinimizzato = false;
-  Timer? _scanTimer;
-  BookModel? _operaRiconosciuta;
-
-  late AnimationController _fadeController;
-  late Animation<double> _fadeAnimation;
-  late AnimationController _scanController;
-  late Animation<double> _scanAnimation;
-
-  @override
-  void initState() {
-    super.initState();
-    _recognitionService.inizializza();
-
-    _fadeController = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 400),
-    );
-    _fadeAnimation = CurvedAnimation(
-      parent: _fadeController,
-      curve: Curves.easeIn,
-    );
-
-    _scanController = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 1200),
-    );
-    _scanAnimation = CurvedAnimation(
-      parent: _scanController,
-      curve: Curves.easeInOut,
-    );
-    _scanController.repeat(reverse: true);
-
-    _inizializzaCamera();
-  }
-
-  @override
-  void dispose() {
-    _fermaScansioneAutomatica();
-    _camController?.dispose();
-    _fadeController.dispose();
-    _scanController.dispose();
-    _recognitionService.dispose();
-    super.dispose();
-  }
-
-  // --- RENDERING ---
-  @override
-  Widget build(BuildContext context) {
-    final opera = _operaRiconosciuta;
-    final isLandscape =
-        MediaQuery.orientationOf(context) == Orientation.landscape;
-    final colorScheme = Theme.of(context).colorScheme;
-
-    return Stack(
-      fit: StackFit.expand,
-      children: [
-        Scaffold(
-          appBar: isLandscape
-              ? null
-              : AppBar(
-                  backgroundColor: colorScheme.primary,
-                  foregroundColor: colorScheme.onPrimary,
-                  title: const Text(
-                    'Realtà Aumentata',
-                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                  ),
-                ),
-          body: _buildBody(opera),
-        ),
-
-        if (_audioInEsecuzione != null)
-          Material(
-            type: MaterialType.transparency,
-            child: AudioWidget(
-              titolo: _audioInEsecuzione!.titolo,
-              audioPath: _audioInEsecuzione!.url,
-              isMinimized: _audioMinimizzato,
-              onMinimizeToggle: () => setState(() => _audioMinimizzato = true),
-              onClose: () => setState(() => _audioInEsecuzione = null),
-            ),
-          ),
-      ],
-    );
-  }
-
-  Widget _buildBody(BookModel? opera) {
-    if (_errore != null) {
-      return Center(
-        child: Text(
-          _errore!,
-          style: const TextStyle(color: Colors.redAccent, fontSize: 18),
-        ),
-      );
-    }
-
-    if (!_cameraReady) {
-      return const Center(child: CircularProgressIndicator());
-    }
-
-    final layout = ARLayout(context);
-
-    return Stack(
-      fit: StackFit.expand,
-      children: [
-        ARCameraFeed(controller: _camController!, layout: layout),
-
-        if (!_overlayVisibile)
-          ARCameraViewfinder(
-            scanAnimation: _scanAnimation,
-            layout: layout,
-            isScanning: _elaborazione,
-          ),
-
-        if (kDebugMode)
-          ARDebugMenu(
-            layout: layout,
-            onSimulate: (book) {
-              setState(() {
-                _operaRiconosciuta = book;
-                _audioInEsecuzione = null;
-              });
-              _mostraOverlay();
-            },
-          ),
-
-        if (_overlayVisibile && opera != null) ...[
-          AROperaInfoPanel(
-            opera: opera,
-            fadeAnimation: _fadeAnimation,
-            layout: layout,
-          ),
-          ARChatButton(
-            opera: opera,
-            overlayVisibile: _overlayVisibile,
-            fadeAnimation: _fadeAnimation,
-            layout: layout,
-          ),
-          ARCloseButton(
-            overlayVisibile: _overlayVisibile,
-            fadeAnimation: _fadeAnimation,
-            layout: layout,
-            onClose: _nascondiOverlay,
-          ),
-          ARMediaBubblesPanel(
-            opera: opera,
-            fadeAnimation: _fadeAnimation,
-            layout: layout,
-            audioInEsecuzione: _audioInEsecuzione,
-            onPlayAudio: (item) => setState(() {
-              _audioInEsecuzione = item;
-              _audioMinimizzato = false;
-            }),
-            onReopenAudio: () => setState(() {
-              _audioMinimizzato = false;
-            }),
-          ),
-        ],
-
-        if (layout.isLandscape) ARBackButton(layout: layout),
-      ],
-    );
-  }
-
-  // --- LOGICA ---
-  Future<void> _inizializzaCamera() async {
-    final permesso = await Permission.camera.request();
-    if (!permesso.isGranted) {
-      setState(() => _errore = 'Permesso fotocamera negato');
-      return;
-    }
-
-    final cameras = await availableCameras();
-    if (cameras.isEmpty) {
-      setState(() => _errore = 'Nessuna fotocamera trovata');
-      return;
-    }
-
-    _camController = CameraController(cameras.first, ResolutionPreset.medium);
-    await _camController!.initialize();
-
-    if (mounted) {
-      setState(() => _cameraReady = true);
-
-      if (widget.nomeOperaIniziale != null) {
-        final repo = context.read<CatalogueRepository>();
-        _operaRiconosciuta = repo.libri.firstWhere(
-          (o) => o.titolo == widget.nomeOperaIniziale,
-          orElse: () => repo.libri.isNotEmpty
-              ? repo.libri.first
-              : BookModel(
-                  id: 'err',
-                  titolo: 'Errore',
-                  autore: '',
-                  anno: '',
-                  multimedia: [],
-                ),
-        );
-        _mostraOverlay();
-      } else {
-        _avviaScansioneAutomatica();
-      }
-    }
-  }
-
-  void _avviaScansioneAutomatica() {
-    if (_isAutoScanning) return;
-    _isAutoScanning = true;
-
-    _scanTimer = Timer.periodic(const Duration(seconds: 2), (timer) {
-      if (_cameraReady && !_overlayVisibile && !_elaborazione && mounted) {
-        _riconosci();
-      }
-    });
-  }
-
-  void _fermaScansioneAutomatica() {
-    _isAutoScanning = false;
-    _scanTimer?.cancel();
-  }
-
-  Future<void> _riconosci() async {
-    if (_camController == null ||
-        !_camController!.value.isInitialized ||
-        _camController!.value.isTakingPicture) {
-      return;
-    }
-
-    setState(() => _elaborazione = true);
-
-    try {
-      final foto = await _camController!.takePicture();
-      final bytes = await foto.readAsBytes();
-      final risultato = await _recognitionService.riconosci(bytes);
-
-      if (mounted && !_overlayVisibile) {
-        if (risultato != null) {
-          if (risultato.isAffidabile) {
-            _fermaScansioneAutomatica();
-
-            _operaRiconosciuta = context
-                .read<CatalogueRepository>()
-                .trovaPerNome(risultato.nomeOpera);
-
-            _mostraOverlay();
-          } else {
-            ScaffoldMessenger.of(context).hideCurrentSnackBar();
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text(
-                  'Confidenza bassa. Avvicinati all\'opera e inquadrala bene.',
-                ),
-                backgroundColor: Colors.orange,
-                duration: Duration(seconds: 2),
-              ),
-            );
-          }
-        }
-      }
-    } catch (e) {
-      debugPrint('Errore Riconoscimento ML: $e');
-      if (mounted && !_overlayVisibile) {
-        ScaffoldMessenger.of(context).hideCurrentSnackBar();
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Errore della fotocamera. Riprovo...'),
-            backgroundColor: Colors.red,
-            duration: Duration(seconds: 2),
-          ),
-        );
-      }
-    } finally {
-      if (mounted) setState(() => _elaborazione = false);
-    }
-  }
-
-  void _mostraOverlay() {
-    setState(() => _overlayVisibile = true);
-    _scanController.stop();
-    _fadeController.forward();
-  }
-
-  void _nascondiOverlay() {
-    _fadeController.reverse().then((_) {
-      if (mounted) {
-        setState(() => _overlayVisibile = false);
-        setState(() => _audioInEsecuzione = null);
-        _scanController.repeat(reverse: true);
-        _avviaScansioneAutomatica();
-      }
-    });
-  }
 }
 
 // ==========================================
