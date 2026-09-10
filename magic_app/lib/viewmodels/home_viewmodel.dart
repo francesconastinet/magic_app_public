@@ -98,10 +98,15 @@ class HomeViewModel extends ChangeNotifier {
 
       if (risultato.successo && risultato.scaricato) {
         await _repository.caricaDatiLocali();
-        onShowMessage?.call('Pacchetto aggiornato in background');
+        onShowMessage?.call('Pacchetto aggiornato in background.');
+      } else if (!risultato.successo) {
+        onShowMessage?.call(
+          'Impossibile scaricare il pacchetto. Riprova più tardi.',
+        );
       }
     } catch (e) {
       debugPrint('[SYNC] Errore sync automatica: $e');
+      onShowMessage?.call('Errore di connessione durante l\'aggiornamento.');
     } finally {
       syncInCorso = false;
       notifyListeners();

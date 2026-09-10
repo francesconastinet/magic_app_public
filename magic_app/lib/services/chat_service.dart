@@ -204,8 +204,6 @@ class ChatService extends ChangeNotifier {
 
   // Crea o recupera la room associata a questa sessione (POST /rooms)
   Future<String?> recuperaCodiceStanza() async {
-    if (messaggi.isEmpty) return null;
-
     try {
       debugPrint('[CHAT] POST /rooms per sessione: $_sessionId');
 

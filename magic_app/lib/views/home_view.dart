@@ -4,25 +4,21 @@ import '../core/app_state.dart';
 import '../data/catalogue_repository.dart';
 import '../services/auth_service.dart';
 import '../services/storage_service.dart';
-import 'chat_widget.dart';
-import 'menu_widget.dart';
+import 'chat_view.dart';
+import 'menu_view.dart';
 import '../viewmodels/home_viewmodel.dart';
 
-class HomeScreen extends StatefulWidget {
+class HomeView extends StatefulWidget {
   final String? titoloFonteIniziale;
   final List<String>? idsFonteIniziale;
 
-  const HomeScreen({
-    super.key,
-    this.titoloFonteIniziale,
-    this.idsFonteIniziale,
-  });
+  const HomeView({super.key, this.titoloFonteIniziale, this.idsFonteIniziale});
 
   @override
-  State<HomeScreen> createState() => _HomeScreenState();
+  State<HomeView> createState() => _HomeViewState();
 }
 
-class _HomeScreenState extends State<HomeScreen> {
+class _HomeViewState extends State<HomeView> {
   late HomeViewModel _viewModel;
 
   @override
@@ -88,18 +84,9 @@ class _HomeScreenState extends State<HomeScreen> {
                 height: 30,
                 fit: BoxFit.contain,
               ),
-              bottom: vm.syncInCorso
-                  ? PreferredSize(
-                      preferredSize: const Size.fromHeight(3),
-                      child: LinearProgressIndicator(
-                        minHeight: 3,
-                        color: colorScheme.onPrimary,
-                      ),
-                    )
-                  : null,
             ),
-            endDrawer: const MenuWidget(),
-            body: ChatWidget(
+            endDrawer: const MenuView(),
+            body: ChatView(
               titoloFonteSelezionata: vm.titoloFonteSelezionata,
               bookIds: vm.idsFonteSelezionata,
               onFonteSelezionata: vm.selezionaFonte,
