@@ -2,29 +2,42 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../services/chat_service.dart';
+import '../viewmodels/menu_viewmodel.dart';
 
 // ==========================================
 // SCHERMATA
 // ==========================================
 
-class MenuWidget extends StatefulWidget {
-  const MenuWidget({super.key});
+class MenuView extends StatefulWidget {
+  const MenuView({super.key});
 
   @override
-  State<MenuWidget> createState() => _MenuWidgetState();
+  State<MenuView> createState() => _MenuViewState();
 }
 
-class _MenuWidgetState extends State<MenuWidget> {
-  // TODO: rimuovere quando disponibile login
-  static String? _mockLoggedUser;
+class _MenuViewState extends State<MenuView> {
+  late MenuViewModel _viewModel;
 
   @override
   void initState() {
     super.initState();
+    _viewModel = MenuViewModel(chatService: context.read<ChatService>());
+
+    _viewModel.onShowMessage = (msg) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(msg, maxLines: 1, overflow: TextOverflow.ellipsis),
+            duration: const Duration(seconds: 2),
+          ),
+        );
+      }
+    };
   }
 
   @override
   void dispose() {
+    _viewModel.dispose();
     super.dispose();
   }
 
@@ -33,78 +46,75 @@ class _MenuWidgetState extends State<MenuWidget> {
   Widget build(BuildContext context) {
     final safePadding = MediaQuery.paddingOf(context);
 
-    return Drawer(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Container(
-            width: double.infinity,
-            padding: EdgeInsets.only(
-              top: safePadding.top + 24,
-              bottom: 24,
-              left: 16,
-              right: 16,
-            ),
-            color: Colors.white,
-            child: Center(
-              child: Image.asset(
-                'assets/magic-logo.png',
-                height: 40,
-                fit: BoxFit.contain,
-                color: Theme.of(context).colorScheme.primary,
-              ),
-            ),
-          ),
-
-          const Spacer(),
-
-          Material(
-            color: Colors.white,
-            child: Container(
-              width: double.infinity,
-              padding: EdgeInsets.only(top: 8, bottom: safePadding.bottom + 8),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const ShareChatTile(),
-
-                  const RestoreChatTile(),
-
-                  const Padding(
-                    padding: EdgeInsets.symmetric(vertical: 8.0),
-                    child: Divider(height: 1),
+    return ChangeNotifierProvider.value(
+      value: _viewModel,
+      child: Consumer<MenuViewModel>(
+        builder: (context, vm, child) {
+          return Drawer(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Container(
+                  width: double.infinity,
+                  padding: EdgeInsets.only(
+                    top: safePadding.top + 24,
+                    bottom: 24,
+                    left: 16,
+                    right: 16,
                   ),
+                  color: Colors.white,
+                  child: Center(
+                    child: Image.asset(
+                      'assets/magic-logo.png',
+                      height: 40,
+                      fit: BoxFit.contain,
+                      color: Theme.of(context).colorScheme.primary,
+                    ),
+                  ),
+                ),
 
-                  ProfileSection(
-                    mockLoggedUser: _mockLoggedUser,
-                    onLogin: (user) {
-                      setState(() => _mockLoggedUser = user);
-                      Navigator.pop(context);
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text(
-                            'Benvenuto, $_mockLoggedUser!',
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                          duration: const Duration(seconds: 2),
+                const Spacer(),
+
+                Material(
+                  color: Colors.white,
+                  child: Container(
+                    width: double.infinity,
+                    padding: EdgeInsets.only(
+                      top: 8,
+                      bottom: safePadding.bottom + 8,
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        ShareChatTile(onShare: vm.condividiStanza),
+
+                        RestoreChatTile(onRestore: vm.collegatiAStanza),
+
+                        const Padding(
+                          padding: EdgeInsets.symmetric(vertical: 8.0),
+                          child: Divider(height: 1),
                         ),
-                      );
-                    },
-                    onLogout: () {
-                      setState(() => _mockLoggedUser = null);
-                      Navigator.pop(context);
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Logout effettuato')),
-                      );
-                    },
+
+                        ProfileSection(
+                          mockLoggedUser: vm.mockLoggedUser,
+                          onLogin: (user) {
+                            Navigator.pop(context);
+                            vm.login(user);
+                          },
+                          onLogout: () {
+                            Navigator.pop(context);
+                            vm.logout();
+                          },
+                        ),
+                      ],
+                    ),
                   ),
-                ],
-              ),
+                ),
+              ],
             ),
-          ),
-        ],
+          );
+        },
       ),
     );
   }
@@ -116,7 +126,9 @@ class _MenuWidgetState extends State<MenuWidget> {
 
 // --- PULSANTE: CONDIVISIONE STANZA ---
 class ShareChatTile extends StatelessWidget {
-  const ShareChatTile({super.key});
+  final Future<String?> Function() onShare;
+
+  const ShareChatTile({super.key, required this.onShare});
 
   @override
   Widget build(BuildContext context) {
@@ -127,7 +139,8 @@ class ShareChatTile extends StatelessWidget {
       leading: Icon(Icons.mobile_screen_share, color: colorScheme.primary),
       title: const Text('Condividi la stanza'),
       onTap: () async {
-        final chatService = context.read<ChatService>();
+        final navigator = Navigator.of(context, rootNavigator: true);
+        navigator.pop();
 
         showDialog(
           context: context,
@@ -135,14 +148,13 @@ class ShareChatTile extends StatelessWidget {
           builder: (ctx) => const Center(child: CircularProgressIndicator()),
         );
 
-        final codice = await chatService.recuperaCodiceStanza();
+        final codice = await onShare();
 
-        if (!context.mounted) return;
-        Navigator.pop(context);
+        navigator.pop();
 
-        if (codice != null) {
+        if (codice != null && navigator.context.mounted) {
           showDialog(
-            context: context,
+            context: navigator.context,
             builder: (ctx) => ShareCodeDialog(codice: codice),
           );
         }
@@ -166,7 +178,6 @@ class _ShareCodeDialogState extends State<ShareCodeDialog> {
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
-
     return AlertDialog(
       titlePadding: EdgeInsets.zero,
       clipBehavior: Clip.hardEdge,
@@ -179,9 +190,7 @@ class _ShareCodeDialogState extends State<ShareCodeDialog> {
               Icons.mobile_screen_share,
               color: colorScheme.onPrimaryContainer,
             ),
-
             const SizedBox(width: 12),
-
             Text(
               'Codice di Condivisione',
               style: TextStyle(
@@ -199,10 +208,11 @@ class _ShareCodeDialogState extends State<ShareCodeDialog> {
           const Padding(
             padding: EdgeInsets.only(top: 8.0, bottom: 24.0),
             child: Text(
-              'Usa questo codice per continuare la '
-              'conversazione su un altro dispositivo:',
+              'Usa questo codice per continuare la conversazione '
+              'su un altro dispositivo:',
             ),
           ),
+
           Stack(
             clipBehavior: Clip.none,
             children: [
@@ -242,10 +252,8 @@ class _ShareCodeDialogState extends State<ShareCodeDialog> {
                         await Clipboard.setData(
                           ClipboardData(text: widget.codice),
                         );
-
                         if (!mounted) return;
                         setState(() => _isCopied = true);
-
                         Future.delayed(const Duration(seconds: 2), () {
                           if (mounted) setState(() => _isCopied = false);
                         });
@@ -315,7 +323,9 @@ class _ShareCodeDialogState extends State<ShareCodeDialog> {
 
 // --- PULSANTE: COLLEGAMENTO A STANZA ---
 class RestoreChatTile extends StatelessWidget {
-  const RestoreChatTile({super.key});
+  final Future<bool> Function(String) onRestore;
+
+  const RestoreChatTile({super.key, required this.onRestore});
 
   @override
   Widget build(BuildContext context) {
@@ -326,9 +336,11 @@ class RestoreChatTile extends StatelessWidget {
       leading: Icon(Icons.settings_backup_restore, color: colorScheme.primary),
       title: const Text('Collegati a una stanza'),
       onTap: () {
+        Navigator.pop(context);
+
         showDialog(
           context: context,
-          builder: (ctx) => const RestoreChatDialog(),
+          builder: (ctx) => RestoreChatDialog(onRestore: onRestore),
         );
       },
     );
@@ -337,7 +349,9 @@ class RestoreChatTile extends StatelessWidget {
 
 // --- DIALOG: COLLEGAMENTO A STANZA ---
 class RestoreChatDialog extends StatefulWidget {
-  const RestoreChatDialog({super.key});
+  final Future<bool> Function(String) onRestore;
+
+  const RestoreChatDialog({super.key, required this.onRestore});
 
   @override
   State<RestoreChatDialog> createState() => _RestoreChatDialogState();
@@ -369,7 +383,9 @@ class _RestoreChatDialogState extends State<RestoreChatDialog> {
               Icons.settings_backup_restore,
               color: colorScheme.onPrimaryContainer,
             ),
+
             const SizedBox(width: 12),
+
             Text(
               'Codice di collegamento',
               style: TextStyle(
@@ -388,7 +404,9 @@ class _RestoreChatDialogState extends State<RestoreChatDialog> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const Text('Usa un codice per continuare una conversazione.'),
+
             const SizedBox(height: 16),
+
             TextField(
               controller: _codeController,
               maxLength: 6,
@@ -422,33 +440,22 @@ class _RestoreChatDialogState extends State<RestoreChatDialog> {
 
                   setState(() => _isLoading = true);
 
-                  final navigator = Navigator.of(context);
-                  final scaffoldMessenger = ScaffoldMessenger.of(context);
-
-                  final successo = await context
-                      .read<ChatService>()
-                      .leggiStanza(codice);
+                  final successo = await widget.onRestore(codice);
 
                   if (!mounted) return;
 
-                  navigator.pop();
-                  navigator.pop();
+                  Navigator.pop(context);
 
-                  if (successo) {
-                    scaffoldMessenger.showSnackBar(
-                      const SnackBar(
-                        content: Text('Collegamento avvenuto successo!'),
-                        duration: Duration(seconds: 2),
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(
+                        successo
+                            ? 'Collegamento avvenuto con successo!'
+                            : 'Codice invalido o scaduto',
                       ),
-                    );
-                  } else {
-                    scaffoldMessenger.showSnackBar(
-                      const SnackBar(
-                        content: Text('Codice invalido o scaduto'),
-                        duration: Duration(seconds: 2),
-                      ),
-                    );
-                  }
+                      duration: const Duration(seconds: 2),
+                    ),
+                  );
                 },
           child: _isLoading
               ? const SizedBox(
@@ -534,8 +541,8 @@ class ProfileSection extends StatelessWidget {
   }
 }
 
+// TODO: implementare login
 // --- MOCK LOGIN ---
-// TODO: sostituire con login di AuthService
 class LoginDialog extends StatefulWidget {
   final ValueChanged<String> onLogin;
 
