@@ -18,15 +18,15 @@ import '../viewmodels/ar_viewmodel.dart';
 // SCHERMATA
 // ==========================================
 
-class ARScreen extends StatefulWidget {
+class ARView extends StatefulWidget {
   final String? nomeOperaIniziale;
-  const ARScreen({super.key, this.nomeOperaIniziale});
+  const ARView({super.key, this.nomeOperaIniziale});
 
   @override
-  State<ARScreen> createState() => _ARScreenState();
+  State<ARView> createState() => _ARViewState();
 }
 
-class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
+class _ARViewState extends State<ARView> with TickerProviderStateMixin {
   late ARViewModel _viewModel;
   late AnimationController _fadeController;
   late Animation<double> _fadeAnimation;

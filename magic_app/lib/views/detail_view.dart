@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../core/app_state.dart';
 import '../data/models.dart';
 import '../services/media_service.dart';
+import '../viewmodels/detail_viewmodel.dart';
 import 'audio_widget.dart';
 import 'image_widget.dart';
 import 'pdf_widget.dart';
@@ -14,48 +15,53 @@ import 'video_widget.dart';
 // SCHERMATA
 // ==========================================
 
-class DetailScreen extends StatefulWidget {
+class DetailView extends StatelessWidget {
   final BookModel book;
 
-  const DetailScreen({super.key, required this.book});
+  const DetailView({super.key, required this.book});
 
-  @override
-  State<DetailScreen> createState() => _DetailScreenState();
-}
-
-class _DetailScreenState extends State<DetailScreen> {
-  MediaItem? _audioInEsecuzione;
-  bool _audioMinimizzato = false;
-
-  // --- RENDERING ---
   @override
   Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
+    return ChangeNotifierProvider(
+      create: (context) =>
+          DetailViewModel(appState: context.read<AppState>(), book: book),
+      child: Consumer<DetailViewModel>(
+        builder: (context, vm, child) {
+          final colorScheme = Theme.of(context).colorScheme;
 
-    return Material(
-      type: MaterialType.transparency,
-      child: Stack(
-        fit: StackFit.expand,
-        children: [
-          Scaffold(appBar: _buildAppBar(colorScheme), body: _buildBody()),
+          return Material(
+            type: MaterialType.transparency,
+            child: Stack(
+              fit: StackFit.expand,
+              children: [
+                Scaffold(
+                  appBar: _buildAppBar(context, vm, colorScheme),
+                  body: _buildBody(vm),
+                ),
 
-          if (_audioInEsecuzione != null)
-            SafeArea(
-              child: AudioWidget(
-                titolo: _audioInEsecuzione!.titolo,
-                audioPath: _audioInEsecuzione!.url,
-                isMinimized: _audioMinimizzato,
-                onMinimizeToggle: () =>
-                    setState(() => _audioMinimizzato = true),
-                onClose: () => setState(() => _audioInEsecuzione = null),
-              ),
+                if (vm.audioInEsecuzione != null)
+                  SafeArea(
+                    child: AudioWidget(
+                      titolo: vm.audioInEsecuzione!.titolo,
+                      audioPath: vm.audioInEsecuzione!.url,
+                      isMinimized: vm.audioMinimizzato,
+                      onMinimizeToggle: vm.minimizeAudio,
+                      onClose: vm.closeAudio,
+                    ),
+                  ),
+              ],
             ),
-        ],
+          );
+        },
       ),
     );
   }
 
-  PreferredSizeWidget _buildAppBar(ColorScheme colorScheme) {
+  PreferredSizeWidget _buildAppBar(
+    BuildContext context,
+    DetailViewModel vm,
+    ColorScheme colorScheme,
+  ) {
     return AppBar(
       backgroundColor: colorScheme.primary,
       foregroundColor: colorScheme.onPrimary,
@@ -68,7 +74,7 @@ class _DetailScreenState extends State<DetailScreen> {
           icon: const Icon(Icons.contact_support_outlined),
           tooltip: 'Chiedi all\'Assistente',
           onPressed: () {
-            context.read<AppState>().selezionaOpera(widget.book);
+            vm.chiediAllAssistente();
             context.go('/');
           },
         ),
@@ -76,7 +82,7 @@ class _DetailScreenState extends State<DetailScreen> {
     );
   }
 
-  Widget _buildBody() {
+  Widget _buildBody(DetailViewModel vm) {
     return SafeArea(
       top: false,
       child: SingleChildScrollView(
@@ -84,19 +90,14 @@ class _DetailScreenState extends State<DetailScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _BookHeaderCard(book: widget.book),
+            _BookHeaderCard(book: vm.book),
 
             const SizedBox(height: 16),
 
             _MultimediaSection(
-              book: widget.book,
-              audioInEsecuzione: _audioInEsecuzione,
-              onPlayAudio: (item) {
-                setState(() {
-                  _audioInEsecuzione = item;
-                  _audioMinimizzato = false;
-                });
-              },
+              book: vm.book,
+              audioInEsecuzione: vm.audioInEsecuzione,
+              onPlayAudio: vm.playAudio,
             ),
           ],
         ),
@@ -136,7 +137,9 @@ class _BookHeaderCard extends StatelessWidget {
                     color: colorScheme.onPrimaryContainer,
                   ),
                 ),
+
                 const SizedBox(width: 12),
+
                 Expanded(
                   child: Text(
                     book.titolo,
@@ -158,7 +161,9 @@ class _BookHeaderCard extends StatelessWidget {
                   size: 16,
                   color: colorScheme.onSurfaceVariant,
                 ),
+
                 const SizedBox(width: 8),
+
                 Expanded(
                   child: Text(
                     book.autore,
@@ -180,7 +185,9 @@ class _BookHeaderCard extends StatelessWidget {
                   size: 16,
                   color: colorScheme.onSurfaceVariant,
                 ),
+
                 const SizedBox(width: 8),
+
                 Expanded(
                   child: Text(
                     book.anno,
