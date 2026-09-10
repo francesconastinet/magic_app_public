@@ -98,10 +98,10 @@ class HomeViewModel extends ChangeNotifier {
 
       if (risultato.successo && risultato.scaricato) {
         await _repository.caricaDatiLocali();
-        onShowMessage?.call('Pacchetto aggiornato in background.');
+        onShowMessage?.call('Catalogo aggiornato.');
       } else if (!risultato.successo) {
         onShowMessage?.call(
-          'Impossibile scaricare il pacchetto. Riprova più tardi.',
+          'Impossibile aggiornare il catalogo. Riprova più tardi.',
         );
       }
     } catch (e) {
