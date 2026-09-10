@@ -1,21 +1,21 @@
-import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import 'catalogue_widget.dart';
 import '../services/chat_service.dart';
+import '../viewmodels/chat_viewmodel.dart';
 
 // ==========================================
 // SCHERMATA
 // ==========================================
 
-class ChatWidget extends StatefulWidget {
+class ChatView extends StatefulWidget {
   final String? titoloFonteSelezionata;
   final List<String>? bookIds;
   final void Function(String? titolo, List<String>? ids)? onFonteSelezionata;
 
-  const ChatWidget({
+  const ChatView({
     super.key,
     this.titoloFonteSelezionata,
     this.bookIds,
@@ -23,212 +23,145 @@ class ChatWidget extends StatefulWidget {
   });
 
   @override
-  State<ChatWidget> createState() => _ChatWidgetState();
+  State<ChatView> createState() => _ChatViewState();
 }
 
-class _ChatWidgetState extends State<ChatWidget> {
+class _ChatViewState extends State<ChatView> {
+  late ChatViewModel _viewModel;
   final TextEditingController _controller = TextEditingController();
   final ScrollController _scrollController = ScrollController();
-
-  bool _botStaScrivendo = false;
-  bool _contextSessionCreata = false;
-  bool _contextSessionInCorso = false;
-  Timer? _pollingTimer;
 
   @override
   void initState() {
     super.initState();
-    Future.microtask(() {
-      _gestisciInizializzazioneContesto(widget.bookIds);
-    });
 
-    _pollingTimer = Timer.periodic(const Duration(seconds: 5), (_) {
+    _viewModel = ChatViewModel(chatService: context.read<ChatService>());
+
+    _viewModel.onScrollToBottom = _scrollaInFondo;
+    _viewModel.onShowError = (msg) {
       if (mounted) {
-        context.read<ChatService>().controllaAggiornamenti();
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(msg)));
       }
+    };
+
+    Future.microtask(() {
+      _viewModel.inizializza(widget.bookIds, widget.titoloFonteSelezionata);
     });
   }
 
   @override
+  void didUpdateWidget(covariant ChatView oldWidget) {
+    super.didUpdateWidget(oldWidget);
+
+    final bool idsCambiati = !listEquals(widget.bookIds, oldWidget.bookIds);
+    final bool titoloCambiato =
+        widget.titoloFonteSelezionata != oldWidget.titoloFonteSelezionata;
+
+    if (idsCambiati || titoloCambiato) {
+      _viewModel.aggiornaContesto(
+        widget.bookIds,
+        widget.titoloFonteSelezionata,
+      );
+    }
+  }
+
+  @override
   void dispose() {
-    _pollingTimer?.cancel();
     _controller.dispose();
     _scrollController.dispose();
+    _viewModel.dispose();
     super.dispose();
+  }
+
+  void _scrollaInFondo() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (_scrollController.hasClients) {
+        _scrollController.animateTo(
+          _scrollController.position.maxScrollExtent,
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.easeOut,
+        );
+      }
+    });
+  }
+
+  void _inviaMessaggio() {
+    final testo = _controller.text.trim();
+    if (testo.isNotEmpty) {
+      _controller.clear();
+      _viewModel.inviaMessaggio(testo);
+    }
   }
 
   // --- RENDERING ---
   @override
   Widget build(BuildContext context) {
-    final chatService = context.watch<ChatService>();
-    final messaggi = chatService.messaggi;
     final colorScheme = Theme.of(context).colorScheme;
 
-    return GestureDetector(
-      onTap: () {
-        FocusManager.instance.primaryFocus?.unfocus();
-      },
-      child: Column(
-        children: [
-          ChatHeaderBar(
-            titoloFonte: widget.titoloFonteSelezionata,
-            inCorso: _contextSessionInCorso,
-            creata: _contextSessionCreata,
-            onMostraFontiConsultate: () {
+    return ChangeNotifierProvider.value(
+      value: _viewModel,
+      child: Consumer<ChatViewModel>(
+        builder: (context, vm, child) {
+          return GestureDetector(
+            onTap: () {
               FocusManager.instance.primaryFocus?.unfocus();
-              Future.delayed(const Duration(milliseconds: 50), () {
-                if (!context.mounted) return;
-                showDialog(
-                  context: context,
-                  builder: (ctx) => FontiConsultateDialog(
-                    fonteTotali: chatService.fontiTotali,
-                  ),
-                );
-              });
             },
-          ),
+            child: Column(
+              children: [
+                ChatHeaderBar(
+                  titoloFonte: widget.titoloFonteSelezionata,
+                  inCorso: vm.contextSessionInCorso,
+                  creata: vm.contextSessionCreata,
+                  onMostraFontiConsultate: () {
+                    FocusManager.instance.primaryFocus?.unfocus();
+                    Future.microtask(() {
+                      if (!context.mounted) return;
+                      showDialog(
+                        context: context,
+                        builder: (ctx) =>
+                            FontiConsultateDialog(fonteTotali: vm.fontiTotali),
+                      );
+                    });
+                  },
+                ),
 
-          Expanded(
-            child: SafeArea(
-              top: false,
-              bottom: false,
-              child: Stack(
-                children: [
-                  if (messaggi.isEmpty && !_botStaScrivendo)
-                    _buildWelcomeOverlay(colorScheme),
+                Expanded(
+                  child: SafeArea(
+                    top: false,
+                    bottom: false,
+                    child: Stack(
+                      children: [
+                        if (vm.messaggi.isEmpty && !vm.botStaScrivendo)
+                          _buildWelcomeOverlay(colorScheme),
 
-                  ChatMessagesList(
-                    scrollController: _scrollController,
-                    messaggi: messaggi,
-                    botStaScrivendo: _botStaScrivendo,
+                        ChatMessagesList(
+                          scrollController: _scrollController,
+                          messaggi: vm.messaggi,
+                          botStaScrivendo: vm.botStaScrivendo,
+                        ),
+
+                        ChatFloatingButtons(
+                          bookIds: widget.bookIds,
+                          onFonteSelezionata: widget.onFonteSelezionata,
+                        ),
+                      ],
+                    ),
                   ),
+                ),
 
-                  ChatFloatingButtons(
-                    bookIds: widget.bookIds,
-                    onFonteSelezionata: widget.onFonteSelezionata,
-                  ),
-                ],
-              ),
+                ChatInputArea(
+                  controller: _controller,
+                  isWriting: vm.botStaScrivendo,
+                  onSend: _inviaMessaggio,
+                ),
+              ],
             ),
-          ),
-
-          ChatInputArea(
-            controller: _controller,
-            isWriting: _botStaScrivendo,
-            onSend: _inviaMessaggio,
-          ),
-        ],
+          );
+        },
       ),
     );
-  }
-
-  // --- LOGICA ---
-  @override
-  void didUpdateWidget(covariant ChatWidget oldWidget) {
-    super.didUpdateWidget(oldWidget);
-
-    final bool idsCambiati = !listEquals(widget.bookIds, oldWidget.bookIds);
-
-    final bool titoloCambiato =
-        widget.titoloFonteSelezionata != oldWidget.titoloFonteSelezionata;
-
-    if (idsCambiati || titoloCambiato) {
-      final chatService = context.read<ChatService>();
-
-      if (widget.bookIds != null && widget.bookIds!.isNotEmpty) {
-        _inizializzaContextSession(
-          widget.bookIds!,
-          widget.titoloFonteSelezionata ?? 'Manoscritto',
-        );
-      } else {
-        chatService.resetContextSession();
-
-        chatService.aggiungiMessaggio(
-          MessaggioChat(
-            testo: 'Modalità Smart',
-            isUtente: false,
-            timestamp: DateTime.now(),
-            isSystem: true,
-          ),
-        );
-
-        chatService.aggiungiMessaggio(
-          MessaggioChat(
-            testo:
-                'Nessun manoscritto selezionato.\n'
-                'Chat in modalità smart.',
-            isUtente: false,
-            timestamp: DateTime.now(),
-          ),
-        );
-
-        _scrollaInFondo();
-      }
-    }
-  }
-
-  void _gestisciInizializzazioneContesto(List<String>? ids) {
-    if (ids != null && ids.isNotEmpty) {
-      _inizializzaContextSession(
-        ids,
-        widget.titoloFonteSelezionata ?? 'Manoscritto',
-      );
-    }
-  }
-
-  Future<void> _inizializzaContextSession(
-    List<String> ids,
-    String nomeContesto,
-  ) async {
-    final chatService = context.read<ChatService>();
-
-    if (!mounted) return;
-
-    setState(() {
-      _contextSessionInCorso = true;
-    });
-
-    chatService.aggiungiMessaggio(
-      MessaggioChat(
-        testo: nomeContesto,
-        isUtente: false,
-        timestamp: DateTime.now(),
-        isSystem: true,
-      ),
-    );
-
-    chatService.aggiungiMessaggio(
-      MessaggioChat(
-        testo: 'Sto recuperando le fonti per "$nomeContesto"...',
-        isUtente: false,
-        timestamp: DateTime.now(),
-      ),
-    );
-
-    _scrollaInFondo();
-
-    final successo = await chatService.creaContextSession(ids);
-
-    if (!mounted) return;
-
-    setState(() {
-      _contextSessionCreata = successo;
-      _contextSessionInCorso = false;
-    });
-
-    chatService.aggiungiMessaggio(
-      MessaggioChat(
-        testo: successo
-            ? 'Fonti recuperate con successo! Ora le mie risposte '
-                  'saranno limitate a questa selezione.'
-            : 'Si è verificato un problema col recupero delle fonti, '
-                  'ma proverò comunque ad aiutarti.',
-        isUtente: false,
-        timestamp: DateTime.now(),
-      ),
-    );
-
-    _scrollaInFondo();
   }
 
   Widget _buildWelcomeOverlay(ColorScheme colorScheme) {
@@ -257,61 +190,6 @@ class _ChatWidgetState extends State<ChatWidget> {
         ),
       ),
     );
-  }
-
-  void _scrollaInFondo() {
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (_scrollController.hasClients) {
-        _scrollController.animateTo(
-          _scrollController.position.maxScrollExtent,
-          duration: const Duration(milliseconds: 300),
-          curve: Curves.easeOut,
-        );
-      }
-    });
-  }
-
-  Future<void> _inviaMessaggio() async {
-    final testo = _controller.text.trim();
-    if (testo.isEmpty || _botStaScrivendo) return;
-
-    final chatService = context.read<ChatService>();
-
-    setState(() {
-      _botStaScrivendo = true;
-      _controller.clear();
-    });
-
-    chatService.aggiungiMessaggio(
-      MessaggioChat(testo: testo, isUtente: true, timestamp: DateTime.now()),
-    );
-
-    _scrollaInFondo();
-
-    try {
-      final risposta = await chatService.inviaMessaggio(testo);
-      if (!mounted) return;
-
-      chatService.aggiungiMessaggio(risposta);
-      chatService.aggiornaFonti(risposta.fonti);
-    } catch (e) {
-      if (!mounted) return;
-
-      chatService.aggiungiMessaggio(
-        MessaggioChat(
-          testo:
-              'Si è verificato un errore di comunicazione con il server. '
-              'Verifica la tua connessione e riprova.',
-          isUtente: false,
-          timestamp: DateTime.now(),
-        ),
-      );
-    } finally {
-      if (mounted) {
-        setState(() => _botStaScrivendo = false);
-        _scrollaInFondo();
-      }
-    }
   }
 }
 
