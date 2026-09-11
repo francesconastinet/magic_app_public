@@ -83,6 +83,7 @@ class HomeViewModel extends ChangeNotifier {
       if (!necessaria) return;
 
       syncInCorso = true;
+      _appState.setSyncing(true);
       notifyListeners();
 
       final packageService = PackageService(
@@ -98,17 +99,18 @@ class HomeViewModel extends ChangeNotifier {
 
       if (risultato.successo && risultato.scaricato) {
         await _repository.caricaDatiLocali();
-        onShowMessage?.call('Catalogo aggiornato.');
+        onShowMessage?.call('Pacchetto aggiornato con successo');
       } else if (!risultato.successo) {
         onShowMessage?.call(
-          'Impossibile aggiornare il catalogo. Riprova più tardi.',
+          'Impossibile scaricare il pacchetto, riprova più tardi',
         );
       }
     } catch (e) {
       debugPrint('[SYNC] Errore sync automatica: $e');
-      onShowMessage?.call('Errore di connessione durante l\'aggiornamento.');
+      onShowMessage?.call('Errore di connessione durante l\'aggiornamento');
     } finally {
       syncInCorso = false;
+      _appState.setSyncing(false);
       notifyListeners();
     }
   }

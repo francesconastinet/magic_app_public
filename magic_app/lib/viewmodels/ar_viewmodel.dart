@@ -17,10 +17,8 @@ class ARViewModel extends ChangeNotifier {
   String? errore;
   bool overlayVisibile = false;
   BookModel? operaRiconosciuta;
-
   MediaItem? audioInEsecuzione;
   bool audioMinimizzato = false;
-
   bool _isAutoScanning = false;
   Timer? _scanTimer;
 

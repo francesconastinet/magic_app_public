@@ -11,8 +11,7 @@ class DetailViewModel extends ChangeNotifier {
   MediaItem? audioInEsecuzione;
   bool audioMinimizzato = false;
 
-  DetailViewModel({required AppState appState, required this.book})
-    : _appState = appState;
+  DetailViewModel({required this._appState, required this.book});
 
   // --- LOGICA ---
 

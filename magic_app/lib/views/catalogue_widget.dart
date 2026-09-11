@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
+import '../core/app_state.dart';
 import '../data/catalogue_repository.dart';
 import '../data/models.dart';
 
@@ -42,13 +43,14 @@ class _CatalogueWidgetState extends State<CatalogueWidget> {
 
   @override
   Widget build(BuildContext context) {
-    final isLandscape =
-        MediaQuery.orientationOf(context) == Orientation.landscape;
-    final isTablet = MediaQuery.sizeOf(context).shortestSide >= 600;
-
+    final isSyncing = context.watch<AppState>().isSyncing;
     final repo = context.watch<CatalogueRepository>();
     final collezioni = repo.collezioni;
-    var opereFiltrate = repo.libri.toList();
+    final tuttiILibri = repo.libri;
+    var opereFiltrate = tuttiILibri.toList();
+    final isTablet = MediaQuery.sizeOf(context).shortestSide >= 600;
+    final isLandscape =
+        MediaQuery.orientationOf(context) == Orientation.landscape;
 
     if (_selectedCollectionId != null) {
       final activeColl = collezioni.firstWhere(
@@ -102,7 +104,6 @@ class _CatalogueWidgetState extends State<CatalogueWidget> {
               setState(() => _searchQuery = '');
             },
           ),
-
           Expanded(
             child: ListView(
               padding: EdgeInsets.zero,
@@ -113,7 +114,6 @@ class _CatalogueWidgetState extends State<CatalogueWidget> {
                   onCollectionSelected: (id) =>
                       setState(() => _selectedCollectionId = id),
                 ),
-
                 if (_selectedCollectionId != null && opereFiltrate.isNotEmpty)
                   Padding(
                     padding: const EdgeInsets.symmetric(
@@ -148,7 +148,11 @@ class _CatalogueWidgetState extends State<CatalogueWidget> {
                     ),
                   ),
 
-                if (opereFiltrate.isEmpty)
+                if (isSyncing)
+                  const FontiDownloadingMessage()
+                else if (tuttiILibri.isEmpty)
+                  const FontiEmptyCatalogMessage()
+                else if (opereFiltrate.isEmpty)
                   const FontiEmptySearchResults()
                 else
                   FontiBooksSection(
@@ -165,7 +169,6 @@ class _CatalogueWidgetState extends State<CatalogueWidget> {
               ],
             ),
           ),
-
           Container(
             padding: const EdgeInsets.all(16),
             color: Theme.of(context).colorScheme.surface,
@@ -195,7 +198,6 @@ class _CatalogueWidgetState extends State<CatalogueWidget> {
       widget.onFonteSelezionata(null, null);
     } else if (_selectedBookIds.length == 1) {
       final idSingolo = _selectedBookIds.first;
-      // Legge l'opera corretta dal Provider in RAM
       final opera = repo.libri.firstWhere((o) => o.id == idSingolo);
       widget.onFonteSelezionata(opera.titolo, [idSingolo]);
     } else {
@@ -277,7 +279,6 @@ class FontiHeaderSection extends StatelessWidget {
                   color: colorScheme.onPrimaryContainer,
                 ),
               ),
-
               IconButton(
                 icon: const Icon(Icons.close),
                 onPressed: onClose,
@@ -286,7 +287,6 @@ class FontiHeaderSection extends StatelessWidget {
               ),
             ],
           ),
-
           if (haSelezioni)
             Padding(
               padding: const EdgeInsets.only(top: 12.0),
@@ -398,7 +398,6 @@ class FontiCollectionsSection extends StatelessWidget {
             ),
           ),
         ),
-
         SingleChildScrollView(
           scrollDirection: Axis.horizontal,
           padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -414,7 +413,6 @@ class FontiCollectionsSection extends StatelessWidget {
                   },
                 ),
               ),
-
               ...collezioni.map(
                 (collection) => Padding(
                   padding: const EdgeInsets.only(right: 8.0),
@@ -430,7 +428,6 @@ class FontiCollectionsSection extends StatelessWidget {
             ],
           ),
         ),
-
         const Padding(
           padding: EdgeInsets.symmetric(vertical: 8.0),
           child: Divider(height: 1),
@@ -471,7 +468,6 @@ class FontiBooksSection extends StatelessWidget {
             ),
           ),
         ),
-
         ...opere.map((opera) {
           final isAttiva = selectedBookIds.contains(opera.id);
 
@@ -534,6 +530,67 @@ class FontiEmptySearchResults extends StatelessWidget {
           style: TextStyle(
             color: Theme.of(context).colorScheme.onSurfaceVariant,
           ),
+        ),
+      ),
+    );
+  }
+}
+
+// --- CATALOGO VUOTO ---
+class FontiEmptyCatalogMessage extends StatelessWidget {
+  const FontiEmptyCatalogMessage({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.all(32.0),
+      child: Center(
+        child: Text(
+          'Il catalogo è vuoto.\nNon ci sono manoscritti disponibili al momento.',
+          textAlign: TextAlign.center,
+          style: TextStyle(
+            color: Theme.of(context).colorScheme.onSurfaceVariant,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// --- DOWNLOAD IN CORSO ---
+class FontiDownloadingMessage extends StatelessWidget {
+  const FontiDownloadingMessage({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+
+    return Padding(
+      padding: const EdgeInsets.all(32.0),
+      child: Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            CircularProgressIndicator(color: colorScheme.primary),
+            const SizedBox(height: 16),
+            Text(
+              'Sincronizzazione in corso...',
+              style: TextStyle(
+                fontWeight: FontWeight.bold,
+                fontSize: 16,
+                color: colorScheme.onSurfaceVariant,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Sto scaricando i manoscritti dal server.\nAttendere prego.',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                color: colorScheme.onSurfaceVariant,
+                fontSize: 14,
+              ),
+            ),
+          ],
         ),
       ),
     );

@@ -12,15 +12,15 @@ class ChatViewModel extends ChangeNotifier {
   bool contextSessionInCorso = false;
   Timer? _pollingTimer;
 
+  // --- GETTER ---
   List<MessaggioChat> get messaggi => _chatService.messaggi;
   List<FonteChat> get fontiTotali => _chatService.fontiTotali;
 
-  // --- EVENTI UI (Callback) ---
+  // --- EVENTI UI ---
   VoidCallback? onScrollToBottom;
   void Function(String)? onShowError;
 
-  ChatViewModel({required ChatService chatService})
-    : _chatService = chatService {
+  ChatViewModel({required this._chatService}) {
     _pollingTimer = Timer.periodic(const Duration(seconds: 5), (_) {
       _chatService.controllaAggiornamenti();
       notifyListeners();
