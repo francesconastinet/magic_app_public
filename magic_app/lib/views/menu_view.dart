@@ -33,6 +33,12 @@ class _MenuViewState extends State<MenuView> {
         );
       }
     };
+
+    _viewModel.onCloseMenu = () {
+      if (mounted && Navigator.canPop(context)) {
+        Navigator.pop(context);
+      }
+    };
   }
 
   @override
@@ -45,6 +51,7 @@ class _MenuViewState extends State<MenuView> {
   @override
   Widget build(BuildContext context) {
     final safePadding = MediaQuery.paddingOf(context);
+    final colorScheme = Theme.of(context).colorScheme;
 
     return ChangeNotifierProvider.value(
       value: _viewModel,
@@ -68,17 +75,110 @@ class _MenuViewState extends State<MenuView> {
                       'assets/magic-logo.png',
                       height: 40,
                       fit: BoxFit.contain,
-                      color: Theme.of(context).colorScheme.primary,
+                      color: colorScheme.primary,
                     ),
                   ),
                 ),
 
-                const Spacer(),
+                Padding(
+                  padding: const EdgeInsets.all(16.0),
+                  child: FilledButton.icon(
+                    onPressed: vm.createNewChat,
+                    icon: const Icon(Icons.add),
+                    label: const Text(
+                      'Nuova Chat',
+                      style: TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                    style: FilledButton.styleFrom(
+                      minimumSize: const Size(double.infinity, 48),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                  ),
+                ),
+
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                  child: TextField(
+                    decoration: InputDecoration(
+                      hintText: 'Cerca nelle chat...',
+                      hintStyle: TextStyle(
+                        color: colorScheme.onSurfaceVariant,
+                        fontSize: 14,
+                      ),
+                      prefixIcon: Icon(
+                        Icons.search,
+                        color: colorScheme.onSurfaceVariant,
+                      ),
+                      filled: true,
+                      fillColor: colorScheme.surfaceContainerHighest.withValues(
+                        alpha: 0.5,
+                      ),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide.none,
+                      ),
+                      contentPadding: EdgeInsets.zero,
+                    ),
+                    onChanged: vm.searchHistory,
+                  ),
+                ),
+
+                const SizedBox(height: 8),
+
+                Expanded(
+                  child: vm.filteredHistory.isEmpty
+                      ? Center(
+                          child: Text(
+                            'Nessuna chat trovata.',
+                            style: TextStyle(
+                              color: colorScheme.onSurfaceVariant,
+                            ),
+                          ),
+                        )
+                      : ListView.builder(
+                          padding: EdgeInsets.zero,
+                          itemCount: vm.filteredHistory.length,
+                          itemBuilder: (context, index) {
+                            final chat = vm.filteredHistory[index];
+                            return ListTile(
+                              title: Text(
+                                chat.title,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                              subtitle: Text(
+                                '${chat.date.day.toString().padLeft(2, '0')}/'
+                                '${chat.date.month.toString().padLeft(2, '0')}/'
+                                '${chat.date.year}',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: colorScheme.onSurfaceVariant,
+                                ),
+                              ),
+                              onTap: () => vm.loadChat(chat.id),
+                            );
+                          },
+                        ),
+                ),
 
                 Material(
                   color: Colors.white,
                   child: Container(
                     width: double.infinity,
+                    decoration: BoxDecoration(
+                      border: Border(
+                        top: BorderSide(
+                          color: colorScheme.outlineVariant,
+                          width: 1,
+                        ),
+                      ),
+                    ),
                     padding: EdgeInsets.only(
                       top: 8,
                       bottom: safePadding.bottom + 8,
@@ -88,18 +188,14 @@ class _MenuViewState extends State<MenuView> {
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         ShareChatTile(onShare: vm.condividiStanza),
-
                         RestoreChatTile(onRestore: vm.collegatiAStanza),
-
                         const Padding(
                           padding: EdgeInsets.symmetric(vertical: 8.0),
                           child: Divider(height: 1),
                         ),
-
                         ProfileSection(
                           mockLoggedUser: vm.mockLoggedUser,
                           onLogin: (user) {
-                            Navigator.pop(context);
                             vm.login(user);
                           },
                           onLogout: () {
@@ -450,7 +546,7 @@ class _RestoreChatDialogState extends State<RestoreChatDialog> {
                     SnackBar(
                       content: Text(
                         successo
-                            ? 'Collegamento avvenuto con successo!'
+                            ? 'Collegamento avvenuto con successo'
                             : 'Codice invalido o scaduto',
                       ),
                       duration: const Duration(seconds: 2),
@@ -515,7 +611,6 @@ class ProfileSection extends StatelessWidget {
                 side: BorderSide.none,
               ),
             ),
-
             IconButton(
               icon: const Icon(Icons.logout),
               color: colorScheme.error,
@@ -530,10 +625,13 @@ class ProfileSection extends StatelessWidget {
     return ListTile(
       dense: true,
       leading: Icon(Icons.login, color: colorScheme.primary),
-      title: const Text('Accedi / Registrati'),
+      title: const Text('Accedi'),
       onTap: () {
+        final rootNav = Navigator.of(context, rootNavigator: true);
+        rootNav.pop();
+
         showDialog(
-          context: context,
+          context: rootNav.context,
           builder: (ctx) => LoginDialog(onLogin: onLogin),
         );
       },
@@ -577,9 +675,7 @@ class _LoginDialogState extends State<LoginDialog> {
         child: Row(
           children: [
             Icon(Icons.login, color: colorScheme.onPrimaryContainer),
-
             const SizedBox(width: 12),
-
             Text(
               'Accedi',
               style: TextStyle(
@@ -603,11 +699,10 @@ class _LoginDialogState extends State<LoginDialog> {
                 color: colorScheme.onSurfaceVariant,
               ),
             ),
-
             const SizedBox(height: 16),
-
             TextField(
               controller: _userCtrl,
+              enabled: !_isLoading,
               decoration: InputDecoration(
                 labelText: 'Nome Utente',
                 prefixIcon: const Icon(Icons.person_outline),
@@ -620,12 +715,11 @@ class _LoginDialogState extends State<LoginDialog> {
                 ),
               ),
             ),
-
             const SizedBox(height: 12),
-
             TextField(
               controller: _passCtrl,
               obscureText: true,
+              enabled: !_isLoading,
               decoration: InputDecoration(
                 labelText: 'Password',
                 prefixIcon: const Icon(Icons.lock_outline),
@@ -643,7 +737,7 @@ class _LoginDialogState extends State<LoginDialog> {
       ),
       actions: [
         TextButton(
-          onPressed: () => Navigator.pop(context),
+          onPressed: _isLoading ? null : () => Navigator.pop(context),
           child: const Text('Annulla'),
         ),
         FilledButton(
@@ -656,7 +750,9 @@ class _LoginDialogState extends State<LoginDialog> {
                   setState(() => _isLoading = true);
 
                   if (!mounted) return;
+
                   Navigator.pop(context);
+
                   widget.onLogin(user);
                 },
           child: _isLoading
