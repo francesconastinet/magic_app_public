@@ -66,11 +66,15 @@ class ChatService extends ChangeNotifier {
   String? _activeRoomCode;
   int? _lastRevision;
   String? _lastUpdatedAt;
+  String _role = 'admin';
+  String? _adminRoomId;
+  String? _guestRoomId;
   List<MessaggioChat> messaggi = [];
   List<FonteChat> fontiTotali = [];
 
   String get sessionId => _sessionId;
   String? get contextSessionId => _contextSessionId;
+  bool get isGuest => _role == 'guest';
 
   // ==========================================
   // GESTIONE CONTESTO E DOMANDE
@@ -203,7 +207,15 @@ class ChatService extends ChangeNotifier {
   // ==========================================
 
   // Crea o recupera la room associata a questa sessione (POST /rooms)
-  Future<String?> recuperaCodiceStanza() async {
+  Future<Map<String, String?>?> recuperaCodiceStanza() async {
+    if (_role == 'guest') {
+      debugPrint(
+        '[CHAT] Utente Guest: accesso admin bloccato. '
+            'Condivisione limitata al codice guest.',
+      );
+      return {'admin': null, 'guest': _activeRoomCode, 'role': 'guest'};
+    }
+
     try {
       debugPrint('[CHAT] POST /rooms per sessione: $_sessionId');
 
@@ -217,18 +229,35 @@ class ChatService extends ChangeNotifier {
           : response.data;
 
       final adminCode = data['admin_room_id']?.toString();
+      final guestCode = data['guest_room_id']?.toString();
+      final role = data['role']?.toString() ?? 'admin';
 
-      _activeRoomCode = adminCode;
+      if (role == 'guest') {
+        _role = 'guest';
+        _activeRoomCode = guestCode;
+        _guestRoomId = guestCode;
+        return {'admin': null, 'guest': guestCode, 'role': 'guest'};
+      }
+
+      _activeRoomCode = adminCode ?? guestCode;
+      _adminRoomId = (adminCode != null && adminCode.isNotEmpty)
+          ? adminCode
+          : null;
+      _guestRoomId = (guestCode != null && guestCode.isNotEmpty)
+          ? guestCode
+          : null;
+      _role = role;
       _lastRevision = data['revision'] as int?;
       _lastUpdatedAt = data['updated_at']?.toString();
 
-      debugPrint('[CHAT] Room creata, admin_code: $adminCode');
+      debugPrint(
+        '[CHAT] Room creata, admin: $_adminRoomId, guest: $_guestRoomId',
+      );
 
-      return adminCode;
+      return {'admin': _adminRoomId, 'guest': _guestRoomId, 'role': _role};
     } on DioException catch (e) {
       debugPrint(
-        '[CHAT] Errore di rete genera codice: '
-        '${e.response?.statusCode} - ${e.message}',
+        '[CHAT] Errore di rete genera codice: ${e.response?.statusCode}',
       );
       return null;
     } catch (e, stack) {
@@ -238,8 +267,20 @@ class ChatService extends ChangeNotifier {
   }
 
   // Legge una room con il codice (GET /rooms/{room_code}) e ripristina lo stato
-  Future<bool> leggiStanza(String codice) async {
+  Future<bool> leggiStanza(String codice, {bool isPolling = false}) async {
     final codiceUpper = codice.trim().toUpperCase();
+
+    if (!isPolling) {
+      if (codiceUpper == _activeRoomCode ||
+          codiceUpper == _adminRoomId ||
+          codiceUpper == _guestRoomId) {
+        debugPrint(
+          '[CHAT] Il codice inserito appartiene già alla stanza attiva. '
+              'Ignorato.',
+        );
+        return true;
+      }
+    }
 
     try {
       debugPrint('[CHAT] GET /rooms/$codiceUpper');
@@ -251,8 +292,43 @@ class ChatService extends ChangeNotifier {
           ? jsonDecode(response.data)
           : response.data;
 
-      _sessionId = data['session_id']?.toString() ?? _sessionId;
+      final fetchedSessionId = data['session_id']?.toString();
+      final fetchedRole = data['role']?.toString() ?? 'guest';
+
+      if (!isPolling &&
+          fetchedSessionId != null &&
+          fetchedSessionId == _sessionId) {
+        if (_role == 'admin' && fetchedRole == 'guest') {
+          debugPrint(
+            '[CHAT] Tentativo di downgrade ad Admin -> '
+                'Guest nella stessa sessione ignorato.',
+          );
+          _guestRoomId ??= data['guest_room_id']?.toString();
+          return true;
+        }
+
+        if (_role == fetchedRole) {
+          debugPrint(
+            '[CHAT] Stanza già attiva con il medesimo ruolo. Ignorato.',
+          );
+          return true;
+        }
+      }
+
+      _sessionId = fetchedSessionId ?? _sessionId;
       _activeRoomCode = codiceUpper;
+
+      _role = fetchedRole;
+
+      final adminCode = data['admin_room_id']?.toString();
+      final guestCode = data['guest_room_id']?.toString();
+      _adminRoomId = (adminCode != null && adminCode.isNotEmpty)
+          ? adminCode
+          : null;
+      _guestRoomId = (guestCode != null && guestCode.isNotEmpty)
+          ? guestCode
+          : null;
+
       _lastRevision = data['revision'] as int?;
       _lastUpdatedAt = data['updated_at']?.toString();
 
@@ -333,7 +409,7 @@ class ChatService extends ChangeNotifier {
 
   // --- Polling per gli aggiornamenti ---
   Future<void> controllaAggiornamenti() async {
-    if (_activeRoomCode == null) return; // Nessuna stanza connessa
+    if (_activeRoomCode == null) return;
 
     try {
       String url = '${AppConfig.chatBaseUrl}/rooms/$_activeRoomCode/status';
@@ -352,9 +428,9 @@ class ChatService extends ChangeNotifier {
       if (data['has_updates'] == true) {
         debugPrint(
           '[POLLING] Nuovi messaggi rilevati nella stanza $_activeRoomCode. '
-          'Scaricamento in corso...',
+              'Scaricamento in corso...',
         );
-        await leggiStanza(_activeRoomCode!);
+        await leggiStanza(_activeRoomCode!, isPolling: true);
       }
     } catch (e) {
       debugPrint('[POLLING] Errore silenzioso: $e');

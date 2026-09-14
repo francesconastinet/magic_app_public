@@ -94,7 +94,7 @@ class MenuViewModel extends ChangeNotifier {
     onShowMessage?.call('Logout effettuato');
   }
 
-  Future<String?> condividiStanza() async {
+  Future<Map<String, String?>?> condividiStanza() async {
     return await _chatService.recuperaCodiceStanza();
   }
 

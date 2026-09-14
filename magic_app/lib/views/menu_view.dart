@@ -235,7 +235,7 @@ class _MenuViewState extends State<MenuView> {
 
 // --- PULSANTE: CONDIVISIONE STANZA ---
 class ShareChatTile extends StatelessWidget {
-  final Future<String?> Function() onShare;
+  final Future<Map<String, String?>?> Function() onShare;
 
   const ShareChatTile({super.key, required this.onShare});
 
@@ -257,14 +257,14 @@ class ShareChatTile extends StatelessWidget {
           builder: (ctx) => const Center(child: CircularProgressIndicator()),
         );
 
-        final codice = await onShare();
+        final codes = await onShare();
 
         navigator.pop();
 
-        if (codice != null && navigator.context.mounted) {
+        if (codes != null && navigator.context.mounted) {
           showDialog(
             context: navigator.context,
-            builder: (ctx) => ShareCodeDialog(codice: codice),
+            builder: (ctx) => ShareCodeDialog(codes: codes),
           );
         }
       },
@@ -272,21 +272,33 @@ class ShareChatTile extends StatelessWidget {
   }
 }
 
-// --- DIALOG: CONDIVISIONE STANZA ---
 class ShareCodeDialog extends StatefulWidget {
-  final String codice;
-  const ShareCodeDialog({super.key, required this.codice});
+  final Map<String, String?> codes;
+  const ShareCodeDialog({super.key, required this.codes});
 
   @override
   State<ShareCodeDialog> createState() => _ShareCodeDialogState();
 }
 
 class _ShareCodeDialogState extends State<ShareCodeDialog> {
-  bool _isCopied = false;
+  String? _copiedCode;
+
+  void _copyToClipboard(String code, String type) async {
+    await Clipboard.setData(ClipboardData(text: code));
+    if (!mounted) return;
+    setState(() => _copiedCode = type);
+    Future.delayed(const Duration(seconds: 2), () {
+      if (mounted) setState(() => _copiedCode = null);
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
+    final isAdmin = widget.codes['role'] == 'admin';
+    final adminCode = widget.codes['admin'];
+    final guestCode = widget.codes['guest'];
+
     return AlertDialog(
       titlePadding: EdgeInsets.zero,
       clipBehavior: Clip.hardEdge,
@@ -301,7 +313,7 @@ class _ShareCodeDialogState extends State<ShareCodeDialog> {
             ),
             const SizedBox(width: 12),
             Text(
-              'Codice di Condivisione',
+              'Codici di Condivisione',
               style: TextStyle(
                 color: colorScheme.onPrimaryContainer,
                 fontWeight: FontWeight.bold,
@@ -311,120 +323,136 @@ class _ShareCodeDialogState extends State<ShareCodeDialog> {
           ],
         ),
       ),
-      content: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          const Padding(
-            padding: EdgeInsets.only(top: 8.0, bottom: 24.0),
-            child: Text(
-              'Usa questo codice per continuare la conversazione '
-              'su un altro dispositivo:',
+      content: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Padding(
+              padding: const EdgeInsets.only(top: 8.0, bottom: 24.0),
+              child: Text(
+                isAdmin
+                    ? 'Sei l\'amministratore di questa chat. '
+                      'Scegli quale codice condividere:'
+                    : 'Puoi invitare altri utenti a visualizzare questa chat '
+                      'in sola lettura.',
+              ),
             ),
-          ),
 
-          Stack(
-            clipBehavior: Clip.none,
-            children: [
-              Container(
-                padding: const EdgeInsets.only(
-                  left: 24,
-                  right: 8,
-                  top: 8,
-                  bottom: 8,
-                ),
-                decoration: BoxDecoration(
-                  color: colorScheme.surfaceContainerHighest,
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: colorScheme.outlineVariant),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Text(
-                      widget.codice,
-                      style: TextStyle(
-                        fontSize: 28,
-                        fontWeight: FontWeight.bold,
-                        letterSpacing: 6,
-                        color: colorScheme.onSurface,
-                      ),
-                    ),
-
-                    const SizedBox(width: 8),
-
-                    IconButton(
-                      icon: const Icon(Icons.copy),
-                      color: colorScheme.primary,
-                      tooltip: 'Copia negli appunti',
-                      onPressed: () async {
-                        await Clipboard.setData(
-                          ClipboardData(text: widget.codice),
-                        );
-                        if (!mounted) return;
-                        setState(() => _isCopied = true);
-                        Future.delayed(const Duration(seconds: 2), () {
-                          if (mounted) setState(() => _isCopied = false);
-                        });
-                      },
-                    ),
-                  ],
+            if (isAdmin && adminCode != null) ...[
+              Text(
+                'ACCESSO COMPLETO (Admin)',
+                style: TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.bold,
+                  letterSpacing: 1.2,
+                  color: colorScheme.primary,
                 ),
               ),
-
-              Positioned(
-                top: -24,
-                right: -10,
-                child: IgnorePointer(
-                  child: AnimatedOpacity(
-                    opacity: _isCopied ? 1.0 : 0.0,
-                    duration: const Duration(milliseconds: 200),
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 10,
-                        vertical: 6,
-                      ),
-                      decoration: BoxDecoration(
-                        color: Colors.green.shade600,
-                        borderRadius: BorderRadius.circular(12),
-                        boxShadow: const [
-                          BoxShadow(
-                            color: Colors.black26,
-                            blurRadius: 4,
-                            offset: Offset(0, 2),
-                          ),
-                        ],
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: const [
-                          Icon(Icons.check, color: Colors.white, size: 14),
-
-                          SizedBox(width: 6),
-
-                          Text(
-                            'Copiato',
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 12,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-              ),
+              const SizedBox(height: 8),
+              _buildCodeBox(adminCode, 'admin', colorScheme),
+              const SizedBox(height: 24),
             ],
-          ),
-        ],
+
+            if (guestCode != null) ...[
+              Text(
+                'SOLO LETTURA (Guest)',
+                style: TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.bold,
+                  letterSpacing: 1.2,
+                  color: colorScheme.onSurfaceVariant,
+                ),
+              ),
+              const SizedBox(height: 8),
+              _buildCodeBox(guestCode, 'guest', colorScheme),
+            ],
+          ],
+        ),
       ),
       actions: [
         TextButton(
           onPressed: () => Navigator.pop(context),
           child: const Text('Chiudi'),
         ),
+      ],
+    );
+  }
+
+  Widget _buildCodeBox(String code, String type, ColorScheme colorScheme) {
+    final isCopied = _copiedCode == type;
+
+    return Stack(
+      clipBehavior: Clip.none,
+      children: [
+        Container(
+          width: double.infinity,
+          padding: const EdgeInsets.only(left: 20, right: 8, top: 8, bottom: 8),
+          decoration: BoxDecoration(
+            color: colorScheme.surfaceContainerHighest,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: colorScheme.outlineVariant),
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                code,
+                style: TextStyle(
+                  fontSize: 26,
+                  fontWeight: FontWeight.bold,
+                  letterSpacing: 6,
+                  color: colorScheme.onSurface,
+                ),
+              ),
+              IconButton(
+                icon: const Icon(Icons.copy),
+                color: colorScheme.primary,
+                tooltip: 'Copia negli appunti',
+                onPressed: () => _copyToClipboard(code, type),
+              ),
+            ],
+          ),
+        ),
+        if (isCopied)
+          Positioned(
+            top: -12,
+            right: 0,
+            child: IgnorePointer(
+              child: Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 6,
+                ),
+                decoration: BoxDecoration(
+                  color: Colors.green.shade600,
+                  borderRadius: BorderRadius.circular(12),
+                  boxShadow: const [
+                    BoxShadow(
+                      color: Colors.black26,
+                      blurRadius: 4,
+                      offset: Offset(0, 2),
+                    ),
+                  ],
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: const [
+                    Icon(Icons.check, color: Colors.white, size: 14),
+                    SizedBox(width: 6),
+                    Text(
+                      'Copiato',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
       ],
     );
   }

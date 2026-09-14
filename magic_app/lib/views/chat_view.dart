@@ -121,7 +121,7 @@ class _ChatViewState extends State<ChatView> {
                       showDialog(
                         context: context,
                         builder: (ctx) =>
-                            FontiConsultateDialog(fonteTotali: vm.fontiTotali),
+                            FontiConsultateDialog(fontiTotali: vm.fontiTotali),
                       );
                     });
                   },
@@ -154,6 +154,7 @@ class _ChatViewState extends State<ChatView> {
                 ChatInputArea(
                   controller: _controller,
                   isWriting: vm.botStaScrivendo,
+                  isGuest: vm.isGuest,
                   onSend: _inviaMessaggio,
                 ),
               ],
@@ -348,9 +349,9 @@ class ChatHeaderBar extends StatelessWidget {
 
 // --- PANNELLO FONTI CONSULTATE SMART ---
 class FontiConsultateDialog extends StatelessWidget {
-  final List<FonteChat> fonteTotali;
+  final List<FonteChat> fontiTotali;
 
-  const FontiConsultateDialog({super.key, required this.fonteTotali});
+  const FontiConsultateDialog({super.key, required this.fontiTotali});
 
   @override
   Widget build(BuildContext context) {
@@ -387,7 +388,7 @@ class FontiConsultateDialog extends StatelessWidget {
             ),
 
             Text(
-              'Usati: ${fonteTotali.length}',
+              'Usati: ${fontiTotali.length}',
               style: TextStyle(
                 fontSize: 13,
                 color: colorScheme.onPrimaryContainer.withValues(alpha: 0.8),
@@ -400,7 +401,7 @@ class FontiConsultateDialog extends StatelessWidget {
       content: SizedBox(
         width: double.maxFinite,
         height: 400,
-        child: fonteTotali.isEmpty
+        child: fontiTotali.isEmpty
             ? Center(
                 child: Padding(
                   padding: const EdgeInsets.all(24),
@@ -413,9 +414,9 @@ class FontiConsultateDialog extends StatelessWidget {
               )
             : ListView.builder(
                 padding: const EdgeInsets.all(8),
-                itemCount: fonteTotali.length,
+                itemCount: fontiTotali.length,
                 itemBuilder: (context, index) {
-                  final fonte = fonteTotali[index];
+                  final fonte = fontiTotali[index];
                   return Card(
                     margin: const EdgeInsets.symmetric(
                       horizontal: 8,
@@ -691,7 +692,7 @@ class ChatFloatingButtons extends StatelessWidget {
 
     return Positioned(
       right: isLandscape ? 0 : 12,
-      bottom: 0,
+      bottom: 2,
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
@@ -745,18 +746,44 @@ class ChatFloatingButtons extends StatelessWidget {
 class ChatInputArea extends StatelessWidget {
   final TextEditingController controller;
   final bool isWriting;
+  final bool isGuest;
   final VoidCallback onSend;
 
   const ChatInputArea({
     super.key,
     required this.controller,
     required this.isWriting,
+    required this.isGuest,
     required this.onSend,
   });
 
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
+
+    if (isGuest) {
+      return Container(
+        color: colorScheme.surfaceContainerHighest,
+        padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 16),
+        child: SafeArea(
+          top: false,
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(Icons.visibility, color: colorScheme.onSurfaceVariant),
+              const SizedBox(width: 8),
+              Text(
+                'Solo lettura (Guest)',
+                style: TextStyle(
+                  color: colorScheme.onSurfaceVariant,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
 
     return Container(
       decoration: BoxDecoration(color: colorScheme.surface),
@@ -786,9 +813,7 @@ class ChatInputArea extends StatelessWidget {
                 enabled: !isWriting,
               ),
             ),
-
             const SizedBox(width: 8),
-
             FloatingActionButton.small(
               heroTag: 'chat_send',
               elevation: 0,
