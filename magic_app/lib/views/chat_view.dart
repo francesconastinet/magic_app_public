@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
-import 'catalogue_widget.dart';
+import 'catalogue_view.dart';
 import '../services/chat_service.dart';
 import '../viewmodels/chat_viewmodel.dart';
 
@@ -237,7 +237,7 @@ class ChatHeaderBar extends StatelessWidget {
     final colorScheme = Theme.of(context).colorScheme;
     final isSmartMode =
         titoloFonte == null || titoloFonte!.isEmpty || titoloFonte == 'Misti';
-    final testoVisualizzato = isSmartMode ? 'Modalità Smart' : '$titoloFonte';
+    final testoVisualizzato = isSmartMode ? 'Modalità Smart' : titoloFonte!;
 
     return Container(
       width: double.infinity,
@@ -249,67 +249,76 @@ class ChatHeaderBar extends StatelessWidget {
         child: Stack(
           alignment: Alignment.center,
           children: [
-            Material(
-              color: Colors.transparent,
-              child: InkWell(
-                onTap: () =>
-                    _mostraInfoDialog(context, isSmartMode, testoVisualizzato),
-                borderRadius: BorderRadius.circular(16),
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 12.0,
-                    vertical: 4.0,
+            Padding(
+              padding: EdgeInsets.only(
+                left: 12.0,
+                right: isSmartMode ? 40.0 : 12.0,
+              ),
+              child: Material(
+                color: Colors.transparent,
+                child: InkWell(
+                  onTap: () => _mostraInfoDialog(
+                    context,
+                    isSmartMode,
+                    testoVisualizzato,
                   ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      if (inCorso)
-                        SizedBox(
-                          width: 14,
-                          height: 14,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            color: colorScheme.onSecondaryContainer,
+                  borderRadius: BorderRadius.circular(16),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12.0,
+                      vertical: 4.0,
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        if (inCorso)
+                          SizedBox(
+                            width: 14,
+                            height: 14,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: colorScheme.onSecondaryContainer,
+                            ),
+                          )
+                        else
+                          Icon(
+                            creata
+                                ? Icons.check_circle
+                                : (isSmartMode
+                                      ? Icons.auto_awesome
+                                      : Icons.error_outline),
+                            size: 16,
+                            color: isSmartMode
+                                ? Colors.orange
+                                : (creata ? Colors.green : colorScheme.error),
                           ),
-                        )
-                      else
+
+                        const SizedBox(width: 6),
+
+                        Flexible(
+                          child: Text(
+                            testoVisualizzato,
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: colorScheme.onSecondaryContainer,
+                              fontWeight: FontWeight.bold,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+
+                        const SizedBox(width: 4),
+
                         Icon(
-                          creata
-                              ? Icons.check_circle
-                              : (isSmartMode
-                                    ? Icons.auto_awesome
-                                    : Icons.error_outline),
+                          Icons.keyboard_arrow_down,
                           size: 16,
-                          color: isSmartMode
-                              ? Colors.orange
-                              : (creata ? Colors.green : colorScheme.error),
-                        ),
-
-                      const SizedBox(width: 6),
-
-                      Flexible(
-                        child: Text(
-                          testoVisualizzato,
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: colorScheme.onSecondaryContainer,
-                            fontWeight: FontWeight.bold,
+                          color: colorScheme.onSecondaryContainer.withValues(
+                            alpha: 0.7,
                           ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
                         ),
-                      ),
-
-                      const SizedBox(width: 4),
-
-                      Icon(
-                        Icons.keyboard_arrow_down,
-                        size: 16,
-                        color: colorScheme.onSecondaryContainer.withValues(
-                          alpha: 0.7,
-                        ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                 ),
               ),
@@ -699,7 +708,7 @@ class ChatFloatingButtons extends StatelessWidget {
                 showModalBottomSheet(
                   context: context,
                   isScrollControlled: true,
-                  builder: (ctx) => CatalogueWidget(
+                  builder: (ctx) => CatalogueView(
                     idsFonteIniziale: bookIds,
                     onFonteSelezionata: onFonteSelezionata ?? (t, ids) {},
                   ),

@@ -8,32 +8,38 @@ class ChatViewModel extends ChangeNotifier {
 
   // --- STATO ---
   bool botStaScrivendo = false;
-  bool contextSessionCreata = false;
   bool contextSessionInCorso = false;
   Timer? _pollingTimer;
 
   // --- GETTER ---
   List<MessaggioChat> get messaggi => _chatService.messaggi;
   List<FonteChat> get fontiTotali => _chatService.fontiTotali;
+  bool get contextSessionCreata => _chatService.contextSessionId != null;
 
   // --- EVENTI UI ---
   VoidCallback? onScrollToBottom;
   void Function(String)? onShowError;
 
   ChatViewModel({required this._chatService}) {
+    _chatService.addListener(_onServiceUpdate);
+
     _pollingTimer = Timer.periodic(const Duration(seconds: 5), (_) {
       _chatService.controllaAggiornamenti();
-      notifyListeners();
     });
+  }
+
+  void _onServiceUpdate() {
+    notifyListeners();
   }
 
   @override
   void dispose() {
+    _chatService.removeListener(_onServiceUpdate);
     _pollingTimer?.cancel();
     super.dispose();
   }
 
-  // --- LOGICA DI BUSINESS ---
+  // --- LOGICA ---
 
   void inizializza(List<String>? ids, String? titolo) {
     if (ids != null && ids.isNotEmpty) {
@@ -101,7 +107,6 @@ class ChatViewModel extends ChangeNotifier {
 
     final successo = await _chatService.creaContextSession(ids);
 
-    contextSessionCreata = successo;
     contextSessionInCorso = false;
     notifyListeners();
 
