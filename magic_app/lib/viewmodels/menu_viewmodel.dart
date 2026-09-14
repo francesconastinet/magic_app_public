@@ -1,4 +1,4 @@
-// TODO: implementare login e cronologia chat
+// TODO: implementare login, cronologia, nuova chat
 
 import 'package:flutter/foundation.dart';
 import '../services/chat_service.dart';
@@ -107,12 +107,7 @@ class MenuViewModel extends ChangeNotifier {
     notifyListeners();
   }
 
-  void createNewChat() {
-    _chatService.resetContextSession();
-    onCloseMenu?.call();
-  }
+  void createNewChat() {}
 
-  void loadChat(String id) {
-    onCloseMenu?.call();
-  }
+  void loadChat(String id) {}
 }

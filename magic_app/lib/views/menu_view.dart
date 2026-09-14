@@ -1,3 +1,5 @@
+// TODO: implementare login, cronologia, nuova chat
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
@@ -59,7 +61,6 @@ class _MenuViewState extends State<MenuView> {
         builder: (context, vm, child) {
           return Drawer(
             child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Container(
                   width: double.infinity,
@@ -80,67 +81,77 @@ class _MenuViewState extends State<MenuView> {
                   ),
                 ),
 
-                Padding(
-                  padding: const EdgeInsets.all(16.0),
-                  child: FilledButton.icon(
-                    onPressed: vm.createNewChat,
-                    icon: const Icon(Icons.add),
-                    label: const Text(
-                      'Nuova Chat',
-                      style: TextStyle(fontWeight: FontWeight.bold),
-                    ),
-                    style: FilledButton.styleFrom(
-                      minimumSize: const Size(double.infinity, 48),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                    ),
-                  ),
-                ),
-
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                  child: TextField(
-                    decoration: InputDecoration(
-                      hintText: 'Cerca nelle chat...',
-                      hintStyle: TextStyle(
-                        color: colorScheme.onSurfaceVariant,
-                        fontSize: 14,
-                      ),
-                      prefixIcon: Icon(
-                        Icons.search,
-                        color: colorScheme.onSurfaceVariant,
-                      ),
-                      filled: true,
-                      fillColor: colorScheme.surfaceContainerHighest.withValues(
-                        alpha: 0.5,
-                      ),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide: BorderSide.none,
-                      ),
-                      contentPadding: EdgeInsets.zero,
-                    ),
-                    onChanged: vm.searchHistory,
-                  ),
-                ),
-
-                const SizedBox(height: 8),
-
                 Expanded(
-                  child: vm.filteredHistory.isEmpty
-                      ? Center(
-                          child: Text(
-                            'Nessuna chat trovata.',
-                            style: TextStyle(
-                              color: colorScheme.onSurfaceVariant,
+                  child: CustomScrollView(
+                    slivers: [
+                      SliverToBoxAdapter(
+                        child: Padding(
+                          padding: const EdgeInsets.all(16.0),
+                          child: FilledButton.icon(
+                            onPressed: vm.createNewChat,
+                            icon: const Icon(Icons.add),
+                            label: const Text(
+                              'Nuova Chat',
+                              style: TextStyle(fontWeight: FontWeight.bold),
+                            ),
+                            style: FilledButton.styleFrom(
+                              minimumSize: const Size(double.infinity, 48),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+
+                      SliverToBoxAdapter(
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                          child: TextField(
+                            decoration: InputDecoration(
+                              hintText: 'Cerca una chat',
+                              hintStyle: TextStyle(
+                                color: colorScheme.onSurfaceVariant,
+                                fontSize: 14,
+                              ),
+                              prefixIcon: Icon(
+                                Icons.search,
+                                color: colorScheme.onSurfaceVariant,
+                              ),
+                              filled: true,
+                              fillColor: colorScheme.surfaceContainerHighest
+                                  .withValues(alpha: 0.5),
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(12),
+                                borderSide: BorderSide.none,
+                              ),
+                              contentPadding: EdgeInsets.zero,
+                            ),
+                            onChanged: vm.searchHistory,
+                          ),
+                        ),
+                      ),
+
+                      const SliverToBoxAdapter(child: SizedBox(height: 8)),
+
+                      if (vm.filteredHistory.isEmpty)
+                        SliverFillRemaining(
+                          hasScrollBody: false,
+                          child: Center(
+                            child: Text(
+                              'Nessuna chat trovata.',
+                              style: TextStyle(
+                                color: colorScheme.onSurfaceVariant,
+                              ),
                             ),
                           ),
                         )
-                      : ListView.builder(
-                          padding: EdgeInsets.zero,
-                          itemCount: vm.filteredHistory.length,
-                          itemBuilder: (context, index) {
+                      else
+                        SliverList(
+                          delegate: SliverChildBuilderDelegate((
+                            context,
+                            index,
+                          ) {
                             final chat = vm.filteredHistory[index];
                             return ListTile(
                               title: Text(
@@ -163,8 +174,10 @@ class _MenuViewState extends State<MenuView> {
                               ),
                               onTap: () => vm.loadChat(chat.id),
                             );
-                          },
+                          }, childCount: vm.filteredHistory.length),
                         ),
+                    ],
+                  ),
                 ),
 
                 Material(
@@ -181,7 +194,7 @@ class _MenuViewState extends State<MenuView> {
                     ),
                     padding: EdgeInsets.only(
                       top: 8,
-                      bottom: safePadding.bottom + 8,
+                      bottom: safePadding.bottom > 0 ? safePadding.bottom : 8,
                     ),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -626,147 +639,7 @@ class ProfileSection extends StatelessWidget {
       dense: true,
       leading: Icon(Icons.login, color: colorScheme.primary),
       title: const Text('Accedi'),
-      onTap: () {
-        final rootNav = Navigator.of(context, rootNavigator: true);
-        rootNav.pop();
-
-        showDialog(
-          context: rootNav.context,
-          builder: (ctx) => LoginDialog(onLogin: onLogin),
-        );
-      },
-    );
-  }
-}
-
-// TODO: implementare login
-// --- MOCK LOGIN ---
-class LoginDialog extends StatefulWidget {
-  final ValueChanged<String> onLogin;
-
-  const LoginDialog({super.key, required this.onLogin});
-
-  @override
-  State<LoginDialog> createState() => _LoginDialogState();
-}
-
-class _LoginDialogState extends State<LoginDialog> {
-  final TextEditingController _userCtrl = TextEditingController();
-  final TextEditingController _passCtrl = TextEditingController();
-  bool _isLoading = false;
-
-  @override
-  void dispose() {
-    _userCtrl.dispose();
-    _passCtrl.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-
-    return AlertDialog(
-      titlePadding: EdgeInsets.zero,
-      clipBehavior: Clip.hardEdge,
-      title: Container(
-        color: colorScheme.primaryContainer,
-        padding: const EdgeInsets.all(16),
-        child: Row(
-          children: [
-            Icon(Icons.login, color: colorScheme.onPrimaryContainer),
-            const SizedBox(width: 12),
-            Text(
-              'Accedi',
-              style: TextStyle(
-                color: colorScheme.onPrimaryContainer,
-                fontWeight: FontWeight.bold,
-                fontSize: 18,
-              ),
-            ),
-          ],
-        ),
-      ),
-      content: Padding(
-        padding: const EdgeInsets.only(top: 8.0),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              'Inserisci un nome utente e una password.',
-              style: TextStyle(
-                fontSize: 13,
-                color: colorScheme.onSurfaceVariant,
-              ),
-            ),
-            const SizedBox(height: 16),
-            TextField(
-              controller: _userCtrl,
-              enabled: !_isLoading,
-              decoration: InputDecoration(
-                labelText: 'Nome Utente',
-                prefixIcon: const Icon(Icons.person_outline),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                filled: true,
-                fillColor: colorScheme.surfaceContainerHighest.withValues(
-                  alpha: 0.5,
-                ),
-              ),
-            ),
-            const SizedBox(height: 12),
-            TextField(
-              controller: _passCtrl,
-              obscureText: true,
-              enabled: !_isLoading,
-              decoration: InputDecoration(
-                labelText: 'Password',
-                prefixIcon: const Icon(Icons.lock_outline),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                filled: true,
-                fillColor: colorScheme.surfaceContainerHighest.withValues(
-                  alpha: 0.5,
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-      actions: [
-        TextButton(
-          onPressed: _isLoading ? null : () => Navigator.pop(context),
-          child: const Text('Annulla'),
-        ),
-        FilledButton(
-          onPressed: _isLoading
-              ? null
-              : () async {
-                  final user = _userCtrl.text.trim();
-                  if (user.isEmpty) return;
-
-                  setState(() => _isLoading = true);
-
-                  if (!mounted) return;
-
-                  Navigator.pop(context);
-
-                  widget.onLogin(user);
-                },
-          child: _isLoading
-              ? const SizedBox(
-                  width: 20,
-                  height: 20,
-                  child: CircularProgressIndicator(
-                    strokeWidth: 2,
-                    color: Colors.white,
-                  ),
-                )
-              : const Text('Accedi'),
-        ),
-      ],
+      onTap: () {},
     );
   }
 }
