@@ -333,9 +333,9 @@ class _ShareCodeDialogState extends State<ShareCodeDialog> {
               child: Text(
                 isAdmin
                     ? 'Sei l\'amministratore di questa chat. '
-                      'Scegli quale codice condividere:'
+                          'Scegli quale codice condividere:'
                     : 'Puoi invitare altri utenti a visualizzare questa chat '
-                      'in sola lettura.',
+                          'in sola lettura.',
               ),
             ),
 
