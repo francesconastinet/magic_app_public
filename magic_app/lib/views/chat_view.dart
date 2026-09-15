@@ -60,10 +60,12 @@ class _ChatViewState extends State<ChatView> {
         widget.titoloFonteSelezionata != oldWidget.titoloFonteSelezionata;
 
     if (idsCambiati || titoloCambiato) {
-      _viewModel.aggiornaContesto(
-        widget.bookIds,
-        widget.titoloFonteSelezionata,
-      );
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _viewModel.aggiornaContesto(
+          widget.bookIds,
+          widget.titoloFonteSelezionata,
+        );
+      });
     }
   }
 
@@ -638,7 +640,6 @@ class InfoStatoDialog extends StatelessWidget {
   }
 }
 
-// --- LISTA MESSAGGI ---
 class ChatMessagesList extends StatelessWidget {
   final ScrollController scrollController;
   final List<MessaggioChat> messaggi;
@@ -663,13 +664,6 @@ class ChatMessagesList extends StatelessWidget {
         }
 
         final msg = messaggi[index];
-
-        if (msg.isSystem) {
-          return _buildSystemSeparator(
-            msg.testo,
-            Theme.of(context).colorScheme,
-          );
-        }
 
         return ChatMessageBubble(msg: msg);
       },
@@ -980,40 +974,6 @@ class ChatMessageBubble extends StatelessWidget {
   }
 }
 
-// --- SEPARATORE MESSAGGI ---
-Widget _buildSystemSeparator(String testo, ColorScheme colorScheme) {
-  return Padding(
-    padding: const EdgeInsets.symmetric(vertical: 16),
-    child: Row(
-      children: [
-        Expanded(child: Divider(color: colorScheme.outlineVariant)),
-
-        Container(
-          margin: const EdgeInsets.symmetric(horizontal: 8),
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-          constraints: const BoxConstraints(maxWidth: 280),
-          decoration: BoxDecoration(
-            color: colorScheme.surfaceContainerHighest,
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: Text(
-            testo,
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              fontSize: 11,
-              color: colorScheme.onSurfaceVariant,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-        ),
-
-        Expanded(child: Divider(color: colorScheme.outlineVariant)),
-      ],
-    ),
-  );
-}
-
-// --- PAINTER BUBBLE ---
 class ChatTailPainter extends CustomPainter {
   final Color bgColor;
   final bool isUtente;

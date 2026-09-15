@@ -58,24 +58,6 @@ class ChatViewModel extends ChangeNotifier {
 
   void _impostaModalitaSmart() {
     _chatService.resetContextSession();
-
-    _chatService.aggiungiMessaggio(
-      MessaggioChat(
-        testo: 'Modalità Smart',
-        isUtente: false,
-        timestamp: DateTime.now(),
-        isSystem: true,
-      ),
-    );
-
-    _chatService.aggiungiMessaggio(
-      MessaggioChat(
-        testo: 'Nessun manoscritto selezionato.\nChat in modalità smart.',
-        isUtente: false,
-        timestamp: DateTime.now(),
-      ),
-    );
-
     notifyListeners();
     onScrollToBottom?.call();
   }
@@ -87,43 +69,15 @@ class ChatViewModel extends ChangeNotifier {
     contextSessionInCorso = true;
     notifyListeners();
 
-    _chatService.aggiungiMessaggio(
-      MessaggioChat(
-        testo: nomeContesto,
-        isUtente: false,
-        timestamp: DateTime.now(),
-        isSystem: true,
-      ),
-    );
-
-    _chatService.aggiungiMessaggio(
-      MessaggioChat(
-        testo: 'Sto recuperando le fonti per "$nomeContesto"...',
-        isUtente: false,
-        timestamp: DateTime.now(),
-      ),
-    );
-
-    onScrollToBottom?.call();
-
     final successo = await _chatService.creaContextSession(ids);
 
     contextSessionInCorso = false;
+
+    if (!successo) {
+      onShowError?.call('Si è verificato un problema col recupero delle fonti');
+    }
+
     notifyListeners();
-
-    _chatService.aggiungiMessaggio(
-      MessaggioChat(
-        testo: successo
-            ? 'Fonti recuperate con successo! Ora le mie risposte '
-                  'saranno limitate a questa selezione.'
-            : 'Si è verificato un problema col recupero delle fonti, '
-                  'ma proverò comunque ad aiutarti.',
-        isUtente: false,
-        timestamp: DateTime.now(),
-      ),
-    );
-
-    onScrollToBottom?.call();
   }
 
   Future<void> inviaMessaggio(String testo) async {
@@ -143,14 +97,9 @@ class ChatViewModel extends ChangeNotifier {
       _chatService.aggiungiMessaggio(risposta);
       _chatService.aggiornaFonti(risposta.fonti);
     } catch (e) {
-      _chatService.aggiungiMessaggio(
-        MessaggioChat(
-          testo:
-              'Si è verificato un errore di comunicazione con il server. '
-              'Verifica la tua connessione e riprova.',
-          isUtente: false,
-          timestamp: DateTime.now(),
-        ),
+      onShowError?.call(
+        'Si è verificato un errore di comunicazione con '
+        'il server. Verifica la tua connessione e riprova.',
       );
     } finally {
       botStaScrivendo = false;

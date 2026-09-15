@@ -211,7 +211,7 @@ class ChatService extends ChangeNotifier {
     if (_role == 'guest') {
       debugPrint(
         '[CHAT] Utente Guest: accesso admin bloccato. '
-            'Condivisione limitata al codice guest.',
+        'Condivisione limitata al codice guest.',
       );
       return {'admin': null, 'guest': _activeRoomCode, 'role': 'guest'};
     }
@@ -276,7 +276,7 @@ class ChatService extends ChangeNotifier {
           codiceUpper == _guestRoomId) {
         debugPrint(
           '[CHAT] Il codice inserito appartiene già alla stanza attiva. '
-              'Ignorato.',
+          'Ignorato.',
         );
         return true;
       }
@@ -301,7 +301,7 @@ class ChatService extends ChangeNotifier {
         if (_role == 'admin' && fetchedRole == 'guest') {
           debugPrint(
             '[CHAT] Tentativo di downgrade ad Admin -> '
-                'Guest nella stessa sessione ignorato.',
+            'Guest nella stessa sessione ignorato.',
           );
           _guestRoomId ??= data['guest_room_id']?.toString();
           return true;
@@ -428,7 +428,7 @@ class ChatService extends ChangeNotifier {
       if (data['has_updates'] == true) {
         debugPrint(
           '[POLLING] Nuovi messaggi rilevati nella stanza $_activeRoomCode. '
-              'Scaricamento in corso...',
+          'Scaricamento in corso...',
         );
         await leggiStanza(_activeRoomCode!, isPolling: true);
       }
