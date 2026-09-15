@@ -8,8 +8,14 @@ class ChatHistoryItem {
   final String id;
   final String title;
   final DateTime date;
+  final bool isShared;
 
-  ChatHistoryItem({required this.id, required this.title, required this.date});
+  ChatHistoryItem({
+    required this.id,
+    required this.title,
+    required this.date,
+    this.isShared = false,
+  });
 }
 
 class MenuViewModel extends ChangeNotifier {
@@ -19,11 +25,13 @@ class MenuViewModel extends ChangeNotifier {
   // --- STATO ---
   String _searchQuery = '';
   static String? _globalMockUser;
+
   final List<ChatHistoryItem> _fullHistory = [
     ChatHistoryItem(
       id: '1',
       title: 'Divina Commedia e Virgilio',
       date: DateTime.now().subtract(const Duration(days: 1)),
+      isShared: true,
     ),
     ChatHistoryItem(
       id: '2',
@@ -34,6 +42,7 @@ class MenuViewModel extends ChangeNotifier {
       id: '3',
       title: 'Manoscritti medievali',
       date: DateTime.now().subtract(const Duration(days: 5)),
+      isShared: true,
     ),
     ChatHistoryItem(
       id: '4',
@@ -49,6 +58,7 @@ class MenuViewModel extends ChangeNotifier {
       id: '6',
       title: 'Struttura dell\'Inferno',
       date: DateTime.now().subtract(const Duration(days: 6)),
+      isShared: true,
     ),
     ChatHistoryItem(
       id: '7',

@@ -172,6 +172,15 @@ class _MenuViewState extends State<MenuView> {
                                   color: colorScheme.onSurfaceVariant,
                                 ),
                               ),
+                              trailing: chat.isShared
+                                  ? Icon(
+                                      Icons.people_alt,
+                                      size: 16,
+                                      color: colorScheme.primary.withValues(
+                                        alpha: 0.7,
+                                      ),
+                                    )
+                                  : null,
                               onTap: () => vm.loadChat(chat.id),
                             );
                           }, childCount: vm.filteredHistory.length),

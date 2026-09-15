@@ -278,6 +278,8 @@ class ChatHeaderBar extends StatelessWidget {
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
+                        const SizedBox(width: 20),
+
                         if (inCorso)
                           SizedBox(
                             width: 14,
