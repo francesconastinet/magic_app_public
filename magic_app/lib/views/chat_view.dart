@@ -116,6 +116,7 @@ class _ChatViewState extends State<ChatView> {
                   titoloFonte: widget.titoloFonteSelezionata,
                   inCorso: vm.contextSessionInCorso,
                   creata: vm.contextSessionCreata,
+                  isRoomActive: vm.isRoomActive,
                   onMostraFontiConsultate: () {
                     FocusManager.instance.primaryFocus?.unfocus();
                     Future.microtask(() {
@@ -205,6 +206,7 @@ class ChatHeaderBar extends StatelessWidget {
   final String? titoloFonte;
   final bool inCorso;
   final bool creata;
+  final bool isRoomActive;
   final VoidCallback onMostraFontiConsultate;
 
   const ChatHeaderBar({
@@ -212,6 +214,7 @@ class ChatHeaderBar extends StatelessWidget {
     this.titoloFonte,
     required this.inCorso,
     required this.creata,
+    required this.isRoomActive,
     required this.onMostraFontiConsultate,
   });
 
@@ -230,6 +233,7 @@ class ChatHeaderBar extends StatelessWidget {
           titoloFonte: titolo,
           inCorso: inCorso,
           creata: creata,
+          isRoomActive: isRoomActive,
         ),
       );
     });
@@ -310,6 +314,17 @@ class ChatHeaderBar extends StatelessWidget {
                             overflow: TextOverflow.ellipsis,
                           ),
                         ),
+
+                        if (isRoomActive) ...[
+                          const SizedBox(width: 6),
+                          Icon(
+                            Icons.people_alt,
+                            size: 14,
+                            color: colorScheme.onSecondaryContainer.withValues(
+                              alpha: 0.7,
+                            ),
+                          ),
+                        ],
 
                         const SizedBox(width: 4),
 
@@ -477,6 +492,7 @@ class InfoStatoDialog extends StatelessWidget {
   final String titoloFonte;
   final bool inCorso;
   final bool creata;
+  final bool isRoomActive;
 
   const InfoStatoDialog({
     super.key,
@@ -484,6 +500,7 @@ class InfoStatoDialog extends StatelessWidget {
     required this.titoloFonte,
     required this.inCorso,
     required this.creata,
+    required this.isRoomActive,
   });
 
   @override
@@ -538,9 +555,7 @@ class InfoStatoDialog extends StatelessWidget {
         child: Row(
           children: [
             Icon(Icons.info_outline, color: colorScheme.onPrimaryContainer),
-
             const SizedBox(width: 12),
-
             Text(
               'Stato della Chat',
               style: TextStyle(
@@ -566,9 +581,7 @@ class InfoStatoDialog extends StatelessWidget {
                 letterSpacing: 1.2,
               ),
             ),
-
             const SizedBox(height: 6),
-
             Text(
               isSmartMode ? 'Catalogo completo' : titoloFonte,
               style: const TextStyle(fontSize: 14),
@@ -588,16 +601,12 @@ class InfoStatoDialog extends StatelessWidget {
                 letterSpacing: 1.2,
               ),
             ),
-
             const SizedBox(height: 12),
-
             Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Icon(statoIcona, color: statoColore, size: 28),
-
                 const SizedBox(width: 12),
-
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -610,9 +619,7 @@ class InfoStatoDialog extends StatelessWidget {
                           fontSize: 14,
                         ),
                       ),
-
                       const SizedBox(height: 4),
-
                       Text(
                         statoDescrizione,
                         style: TextStyle(
@@ -625,6 +632,54 @@ class InfoStatoDialog extends StatelessWidget {
                 ),
               ],
             ),
+
+            if (isRoomActive) ...[
+              const Padding(
+                padding: EdgeInsets.symmetric(vertical: 16.0),
+                child: Divider(height: 1),
+              ),
+              Text(
+                'CONDIVISIONE:',
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  color: colorScheme.onSurfaceVariant,
+                  fontSize: 11,
+                  letterSpacing: 1.2,
+                ),
+              ),
+              const SizedBox(height: 12),
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Icon(Icons.people_alt, color: colorScheme.primary, size: 28),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Stanza Condivisa',
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            color: colorScheme.primary,
+                            fontSize: 14,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          'Questa chat è collegata a una stanza online. '
+                          'I messaggi sono sincronizzati in tempo reale.',
+                          style: TextStyle(
+                            fontSize: 13,
+                            color: colorScheme.onSurfaceVariant,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ],
 
             const SizedBox(height: 8),
           ],

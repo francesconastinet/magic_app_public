@@ -16,6 +16,7 @@ class ChatViewModel extends ChangeNotifier {
   List<FonteChat> get fontiTotali => _chatService.fontiTotali;
   bool get contextSessionCreata => _chatService.contextSessionId != null;
   bool get isGuest => _chatService.isGuest;
+  bool get isRoomActive => _chatService.isRoomActive;
 
   // --- EVENTI UI ---
   VoidCallback? onScrollToBottom;

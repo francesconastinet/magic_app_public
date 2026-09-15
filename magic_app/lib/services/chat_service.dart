@@ -75,6 +75,8 @@ class ChatService extends ChangeNotifier {
   String get sessionId => _sessionId;
   String? get contextSessionId => _contextSessionId;
   bool get isGuest => _role == 'guest';
+  // NUOVO: Ritorna true se la chat è attualmente collegata a una room
+  bool get isRoomActive => _activeRoomCode != null;
 
   // ==========================================
   // GESTIONE CONTESTO E DOMANDE
@@ -236,6 +238,8 @@ class ChatService extends ChangeNotifier {
         _role = 'guest';
         _activeRoomCode = guestCode;
         _guestRoomId = guestCode;
+
+        notifyListeners();
         return {'admin': null, 'guest': guestCode, 'role': 'guest'};
       }
 
@@ -253,6 +257,8 @@ class ChatService extends ChangeNotifier {
       debugPrint(
         '[CHAT] Room creata, admin: $_adminRoomId, guest: $_guestRoomId',
       );
+
+      notifyListeners();
 
       return {'admin': _adminRoomId, 'guest': _guestRoomId, 'role': _role};
     } on DioException catch (e) {
