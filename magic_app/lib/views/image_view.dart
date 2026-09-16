@@ -6,59 +6,24 @@ import '../data/models.dart';
 import '../services/storage_service.dart';
 
 // ==========================================
-// CONFIGURAZIONE LAYOUT
-// ==========================================
-
-class ImageDialogLayout {
-  final Size screenSize;
-  final bool isLandscape;
-  final bool isTablet;
-
-  ImageDialogLayout(BuildContext context)
-    : screenSize = MediaQuery.sizeOf(context),
-      isLandscape = MediaQuery.orientationOf(context) == Orientation.landscape,
-      isTablet = MediaQuery.sizeOf(context).shortestSide >= 600;
-
-  double get _sS => screenSize.shortestSide;
-
-  // --- DIMENSIONI SCHERMATA ---
-  double get adaptiveMaxWidth => isTablet
-      ? screenSize.width * 0.8
-      : (isLandscape ? screenSize.width * 0.7 : screenSize.width * 0.9);
-  double get insetPadding => _sS * 0.04;
-  double get borderRadius => _sS * 0.03;
-  double get errorIconSize => _sS * 0.12;
-
-  // --- HEADER ---
-  double get headerPadding => _sS * 0.02;
-  double get titleFontSize => _sS * (isTablet ? 0.03 : 0.04);
-  double get closeIconSize => _sS * (isTablet ? 0.04 : 0.06);
-
-  // --- INDICATORI SCORRIMENTO ---
-  double get dotSize => _sS * 0.02;
-  double get dotMargin => _sS * 0.01;
-  double get dotsTopPadding => _sS * 0.02;
-}
-
-// ==========================================
 // SCHERMATA
 // ==========================================
 
-class ImageWidget extends StatefulWidget {
+class ImageView extends StatefulWidget {
   final List<MediaItem> immagini;
   final int initialIndex;
 
-  const ImageWidget({
+  const ImageView({
     super.key,
     required this.immagini,
     required this.initialIndex,
   });
 
   @override
-  State<ImageWidget> createState() => _ImageWidgetState();
+  State<ImageView> createState() => _ImageViewState();
 }
 
-class _ImageWidgetState extends State<ImageWidget> {
+class _ImageViewState extends State<ImageView> {
   late PageController _pageController;
   late int _currentIndex;
   String? _basePath;
@@ -74,17 +39,6 @@ class _ImageWidgetState extends State<ImageWidget> {
     _inizializzaPercorso();
   }
 
-  Future<void> _inizializzaPercorso() async {
-    try {
-      final storageService = context.read<StorageService>();
-      _basePath = await storageService.percorsoPacchetto(AppConfig.packageId);
-    } catch (e) {
-      debugPrint('Errore caricamento percorso base immagini: $e');
-    } finally {
-      if (mounted) setState(() => _isLoadingPath = false);
-    }
-  }
-
   @override
   void dispose() {
     _pageController.dispose();
@@ -96,7 +50,7 @@ class _ImageWidgetState extends State<ImageWidget> {
   Widget build(BuildContext context) {
     final currentImage = widget.immagini[_currentIndex];
     final totalCount = widget.immagini.length;
-    final layout = ImageDialogLayout(context);
+    final layout = ImageLayout(context);
 
     return Dialog(
       backgroundColor: Colors.transparent,
@@ -154,6 +108,53 @@ class _ImageWidgetState extends State<ImageWidget> {
       ),
     );
   }
+
+  // --- LOGICA ---
+  Future<void> _inizializzaPercorso() async {
+    try {
+      final storageService = context.read<StorageService>();
+      _basePath = await storageService.percorsoPacchetto(AppConfig.packageId);
+    } catch (e) {
+      debugPrint('Errore caricamento percorso base immagini: $e');
+    } finally {
+      if (mounted) setState(() => _isLoadingPath = false);
+    }
+  }
+}
+
+// ==========================================
+// CONFIGURAZIONE LAYOUT
+// ==========================================
+
+class ImageLayout {
+  final Size screenSize;
+  final bool isLandscape;
+  final bool isTablet;
+
+  ImageLayout(BuildContext context)
+    : screenSize = MediaQuery.sizeOf(context),
+      isLandscape = MediaQuery.orientationOf(context) == Orientation.landscape,
+      isTablet = MediaQuery.sizeOf(context).shortestSide >= 600;
+
+  double get _sS => screenSize.shortestSide;
+
+  // --- DIMENSIONI SCHERMATA ---
+  double get adaptiveMaxWidth => isTablet
+      ? screenSize.width * 0.8
+      : (isLandscape ? screenSize.width * 0.7 : screenSize.width * 0.9);
+  double get insetPadding => _sS * 0.04;
+  double get borderRadius => _sS * 0.03;
+  double get errorIconSize => _sS * 0.12;
+
+  // --- HEADER ---
+  double get headerPadding => _sS * 0.02;
+  double get titleFontSize => _sS * (isTablet ? 0.03 : 0.04);
+  double get closeIconSize => _sS * (isTablet ? 0.04 : 0.06);
+
+  // --- INDICATORI SCORRIMENTO ---
+  double get dotSize => _sS * 0.02;
+  double get dotMargin => _sS * 0.01;
+  double get dotsTopPadding => _sS * 0.02;
 }
 
 // ==========================================
@@ -164,7 +165,7 @@ class _ImageWidgetState extends State<ImageWidget> {
 class ZoomableImageItem extends StatefulWidget {
   final String imagePath;
   final String? basePath;
-  final ImageDialogLayout layout;
+  final ImageLayout layout;
   final ValueChanged<bool> onZoomChanged;
 
   const ZoomableImageItem({
@@ -179,14 +180,27 @@ class ZoomableImageItem extends StatefulWidget {
   State<ZoomableImageItem> createState() => _ZoomableImageItemState();
 }
 
-class _ZoomableImageItemState extends State<ZoomableImageItem> {
+class _ZoomableImageItemState extends State<ZoomableImageItem>
+    with SingleTickerProviderStateMixin {
   final TransformationController _transformationController =
       TransformationController();
+
+  late AnimationController _animationController;
+  Animation<Matrix4>? _animation;
+  TapDownDetails? _doubleTapDetails;
 
   @override
   void initState() {
     super.initState();
     _transformationController.addListener(_onTransformationChanged);
+
+    _animationController =
+        AnimationController(
+          vsync: this,
+          duration: const Duration(milliseconds: 250),
+        )..addListener(() {
+          _transformationController.value = _animation!.value;
+        });
   }
 
   void _onTransformationChanged() {
@@ -198,7 +212,31 @@ class _ZoomableImageItemState extends State<ZoomableImageItem> {
   void dispose() {
     _transformationController.removeListener(_onTransformationChanged);
     _transformationController.dispose();
+    _animationController.dispose();
     super.dispose();
+  }
+
+  void _handleDoubleTap() {
+    final position = _doubleTapDetails?.localPosition;
+    if (position == null) return;
+
+    final currentMatrix = _transformationController.value;
+    final currentScale = currentMatrix.getMaxScaleOnAxis();
+    final targetScale = currentScale > 1.01 ? 1.0 : 2.5;
+    final endMatrix = Matrix4.identity();
+
+    if (targetScale > 1.0) {
+      final dx = -position.dx * (targetScale - 1);
+      final dy = -position.dy * (targetScale - 1);
+      endMatrix.translate(dx, dy);
+      endMatrix.scale(targetScale);
+    }
+
+    _animation = Matrix4Tween(begin: currentMatrix, end: endMatrix).animate(
+      CurvedAnimation(parent: _animationController, curve: Curves.easeInOut),
+    );
+
+    _animationController.forward(from: 0.0);
   }
 
   @override
@@ -207,7 +245,11 @@ class _ZoomableImageItemState extends State<ZoomableImageItem> {
       transformationController: _transformationController,
       minScale: 1.0,
       maxScale: 4.0,
-      child: _buildImage(),
+      child: GestureDetector(
+        onDoubleTapDown: (details) => _doubleTapDetails = details,
+        onDoubleTap: _handleDoubleTap,
+        child: _buildImage(),
+      ),
     );
   }
 
@@ -248,7 +290,7 @@ class _ZoomableImageItemState extends State<ZoomableImageItem> {
 
 // --- HEADER ---
 class ImageDialogHeader extends StatelessWidget {
-  final ImageDialogLayout layout;
+  final ImageLayout layout;
   final MediaItem currentImage;
 
   const ImageDialogHeader({
@@ -300,7 +342,7 @@ class ImageDialogHeader extends StatelessWidget {
 
 // --- INDICATORI SCORRIMENTO ---
 class ImageDotsIndicator extends StatelessWidget {
-  final ImageDialogLayout layout;
+  final ImageLayout layout;
   final int currentIndex;
   final int totalCount;
 
