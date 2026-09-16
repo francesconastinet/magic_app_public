@@ -161,8 +161,8 @@ class PackageService {
     if (!_authService.isLoggato) {
       onStato?.call('Autenticazione in corso...');
       final loginRiuscito = await _authService.login(
-        'tenant_magic ',
-        'tenant_magic ',
+        'tenant_magic',
+        'tenant_magic',
       );
       if (!loginRiuscito) {
         debugPrint('[PKG] Login fallito');
@@ -206,8 +206,8 @@ class PackageService {
     if (!_authService.isLoggato) {
       onStato?.call('Autenticazione in corso...');
       final loginRiuscito = await _authService.login(
-        'tenant_magic ',
-        'tenant_magic ',
+        'tenant_magic',
+        'tenant_magic',
       );
       if (!loginRiuscito) {
         debugPrint(
