@@ -80,8 +80,6 @@ class ChatService extends ChangeNotifier {
   String get sessionId => _sessionId;
   bool get isGuest => _role == 'guest';
   bool get isRoomActive => _activeRoomCode != null;
-
-  // Getter esposti per la UI
   List<String> get activeBookIds => _activeBookIds;
   bool get isContextLocked => _isContextLocked;
 
@@ -100,7 +98,6 @@ class ChatService extends ChangeNotifier {
     notifyListeners();
   }
 
-  // --- RECUPERA STATO CONTESTO ---
   Future<void> recuperaStatoContesto() async {
     try {
       debugPrint('[CHAT] GET /chat/context-sessions/$_sessionId');
@@ -122,7 +119,6 @@ class ChatService extends ChangeNotifier {
     }
   }
 
-  // --- MODIFICA STATO CONTESTO ---
   Future<bool> _patchContextSession(Map<String, dynamic> body) async {
     try {
       debugPrint('[CHAT] PATCH /chat/context-sessions/$_sessionId: $body');
@@ -142,6 +138,15 @@ class ChatService extends ChangeNotifier {
       notifyListeners();
       return true;
     } on DioException catch (e) {
+      final responseData = e.response?.data;
+
+      if (responseData is Map && responseData['detail'] != null) {
+        final detail = responseData['detail'];
+
+        if (detail is Map && detail['message'] != null) {
+          throw Exception(detail['message']);
+        }
+      }
       debugPrint(
         '[CHAT] Errore PATCH context session: ${e.response?.data ?? e.message}',
       );
@@ -152,9 +157,6 @@ class ChatService extends ChangeNotifier {
     }
   }
 
-  // --- AZIONI SUL CONTESTO ---
-
-  // Sostituisce integralmente le fonti
   Future<bool> creaContextSession(List<String> bookIds) async {
     return await _patchContextSession({
       'action': 'replace',
@@ -162,12 +164,10 @@ class ChatService extends ChangeNotifier {
     });
   }
 
-  // Aggiunge nuove fonti a quelle esistenti
   Future<bool> aggiungiFontiContesto(List<String> bookIds) async {
     return await _patchContextSession({'action': 'add', 'book_ids': bookIds});
   }
 
-  // Rimuove specifiche fonti
   Future<bool> rimuoviFontiContesto(List<String> bookIds) async {
     return await _patchContextSession({
       'action': 'remove',
@@ -175,7 +175,6 @@ class ChatService extends ChangeNotifier {
     });
   }
 
-  // Blocca o sblocca esplicitamente il contesto
   Future<bool> impostaBloccoContesto(bool isLocked) async {
     return await _patchContextSession({
       'action': 'toggle_lock',
@@ -183,7 +182,6 @@ class ChatService extends ChangeNotifier {
     });
   }
 
-  // Resetta il contesto svuotando i book_ids
   Future<void> resetContextSession() async {
     fontiTotali.clear();
     await _patchContextSession({'action': 'replace', 'book_ids': []});
@@ -195,7 +193,6 @@ class ChatService extends ChangeNotifier {
     notifyListeners();
   }
 
-  // Invia messaggio al server
   Future<MessaggioChat> inviaMessaggio(String domanda) async {
     final body = {
       'question': domanda,
@@ -248,7 +245,6 @@ class ChatService extends ChangeNotifier {
     }
   }
 
-  // Recupera dettagli libro tramite identifier
   Future<Map<String, dynamic>?> dettagliLibro(String identifier) async {
     try {
       final response = await _dio.get(
@@ -270,7 +266,6 @@ class ChatService extends ChangeNotifier {
   // GESTIONE ROOM
   // ==========================================
 
-  // --- RECUPERA ROOM SESSIONE ---
   Future<Map<String, String?>?> recuperaCodiceStanza() async {
     if (_role == 'guest') {
       debugPrint(
@@ -282,7 +277,6 @@ class ChatService extends ChangeNotifier {
 
     try {
       debugPrint('[CHAT] POST /rooms per sessione: $_sessionId');
-
       final response = await _dio.post(
         '${AppConfig.chatBaseUrl}/rooms',
         data: {'session_id': _sessionId},
@@ -300,7 +294,6 @@ class ChatService extends ChangeNotifier {
         _role = 'guest';
         _activeRoomCode = guestCode;
         _guestRoomId = guestCode;
-
         notifyListeners();
         return {'admin': null, 'guest': guestCode, 'role': 'guest'};
       }
@@ -321,7 +314,6 @@ class ChatService extends ChangeNotifier {
       );
 
       await recuperaStatoContesto();
-
       return {'admin': _adminRoomId, 'guest': _guestRoomId, 'role': _role};
     } on DioException catch (e) {
       debugPrint(
@@ -334,7 +326,6 @@ class ChatService extends ChangeNotifier {
     }
   }
 
-  // --- LEGGE ROOM SESSIONE ---
   Future<bool> leggiStanza(String codice, {bool isPolling = false}) async {
     final codiceUpper = codice.trim().toUpperCase();
 
@@ -351,15 +342,14 @@ class ChatService extends ChangeNotifier {
     }
 
     try {
-      debugPrint('[CHAT] GET /rooms/$codiceUpper');
+      if (!isPolling) debugPrint('[CHAT] GET /rooms/$codiceUpper');
+
       final response = await _dio.get(
         '${AppConfig.chatBaseUrl}/rooms/$codiceUpper',
       );
-
       final data = response.data is String
           ? jsonDecode(response.data)
           : response.data;
-
       final fetchedSessionId = data['session_id']?.toString();
       final fetchedRole = data['role']?.toString() ?? 'guest';
 
@@ -368,24 +358,16 @@ class ChatService extends ChangeNotifier {
           fetchedSessionId == _sessionId) {
         if (_role == 'admin' && fetchedRole == 'guest') {
           debugPrint(
-            '[CHAT] Tentativo di downgrade ad Admin -> '
-            'Guest nella stessa sessione ignorato.',
+            '[CHAT] Tentativo di downgrade ad Admin -> Guest ignorato.',
           );
           _guestRoomId ??= data['guest_room_id']?.toString();
           return true;
         }
-
-        if (_role == fetchedRole) {
-          debugPrint(
-            '[CHAT] Stanza già attiva con il medesimo ruolo. Ignorato.',
-          );
-          return true;
-        }
+        if (_role == fetchedRole) return true;
       }
 
       _sessionId = fetchedSessionId ?? _sessionId;
       _activeRoomCode = codiceUpper;
-
       _role = fetchedRole;
 
       final adminCode = data['admin_room_id']?.toString();
@@ -404,62 +386,69 @@ class ChatService extends ChangeNotifier {
 
       if (payload != null && payload is Map) {
         final history = payload['conversation_history'] as List? ?? [];
-        messaggi.clear();
+
+        List<MessaggioChat> unmatchedLocal = List.from(messaggi);
+        List<MessaggioChat> nuoviMessaggi = [];
+
+        MessaggioChat trovaOCrea(String testo, bool isUtente) {
+          final index = unmatchedLocal.indexWhere(
+            (m) => m.isUtente == isUtente && m.testo == testo,
+          );
+          if (index != -1) {
+            return unmatchedLocal.removeAt(index);
+          } else {
+            return MessaggioChat(
+              testo: testo,
+              isUtente: isUtente,
+              timestamp: DateTime.now(),
+            );
+          }
+        }
 
         for (var item in history) {
           if (item is Map<String, dynamic>) {
             if (item.containsKey('user') && item.containsKey('assistant')) {
-              messaggi.add(
-                MessaggioChat(
-                  testo: item['user'].toString(),
-                  isUtente: true,
-                  timestamp: DateTime.now(),
-                ),
-              );
-              messaggi.add(
-                MessaggioChat(
-                  testo: item['assistant'].toString(),
-                  isUtente: false,
-                  timestamp: DateTime.now(),
-                ),
+              nuoviMessaggi.add(trovaOCrea(item['user'].toString(), true));
+              nuoviMessaggi.add(
+                trovaOCrea(item['assistant'].toString(), false),
               );
             } else if (item.containsKey('question') &&
                 item.containsKey('answer')) {
-              messaggi.add(
-                MessaggioChat(
-                  testo: item['question'].toString(),
-                  isUtente: true,
-                  timestamp: DateTime.now(),
-                ),
-              );
-              messaggi.add(
-                MessaggioChat(
-                  testo: item['answer'].toString(),
-                  isUtente: false,
-                  timestamp: DateTime.now(),
-                ),
-              );
+              nuoviMessaggi.add(trovaOCrea(item['question'].toString(), true));
+              nuoviMessaggi.add(trovaOCrea(item['answer'].toString(), false));
             } else if (item.containsKey('role') &&
                 item.containsKey('content')) {
               final isUtente = item['role'] == 'user';
-              messaggi.add(
-                MessaggioChat(
-                  testo: item['content'].toString(),
-                  isUtente: isUtente,
-                  timestamp: DateTime.now(),
-                ),
+              nuoviMessaggi.add(
+                trovaOCrea(item['content'].toString(), isUtente),
               );
             }
           }
         }
 
-        fontiTotali.clear();
+        nuoviMessaggi.addAll(unmatchedLocal);
+        nuoviMessaggi.sort((a, b) => a.timestamp.compareTo(b.timestamp));
+        messaggi = nuoviMessaggi;
+
+        List<FonteChat> unmatchedFonti = List.from(fontiTotali);
+        List<FonteChat> nuoveFonti = [];
         final sources = payload['sources'] as List? ?? [];
+
         for (var s in sources) {
           if (s is Map<String, dynamic>) {
-            fontiTotali.add(FonteChat.fromJson(s));
+            final f = FonteChat.fromJson(s);
+            final index = unmatchedFonti.indexWhere(
+              (u) => u.identifier == f.identifier,
+            );
+            if (index != -1) {
+              nuoveFonti.add(unmatchedFonti.removeAt(index));
+            } else {
+              nuoveFonti.add(f);
+            }
           }
         }
+        nuoveFonti.addAll(unmatchedFonti);
+        fontiTotali = nuoveFonti;
       }
 
       await recuperaStatoContesto();
@@ -477,7 +466,6 @@ class ChatService extends ChangeNotifier {
     }
   }
 
-  // --- POLLING AGGIORNAMENTI ---
   Future<void> controllaAggiornamenti() async {
     if (_activeRoomCode == null) return;
 
@@ -503,7 +491,7 @@ class ChatService extends ChangeNotifier {
         await leggiStanza(_activeRoomCode!, isPolling: true);
       }
     } catch (e) {
-      debugPrint('[POLLING] Errore silenzioso: $e');
+      debugPrint('[POLLING] Timeout aggiornamento: $e');
     }
   }
 }
