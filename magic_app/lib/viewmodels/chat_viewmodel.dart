@@ -22,6 +22,7 @@ class ChatViewModel extends ChangeNotifier {
   bool get isGuest => _chatService.isGuest;
   bool get isRoomActive => _chatService.isRoomActive;
   List<String> get activeBookIds => _chatService.activeBookIds;
+
   String? get titoloContesto {
     final ids = _chatService.activeBookIds;
     if (ids.isEmpty) return null;
@@ -79,8 +80,16 @@ class ChatViewModel extends ChangeNotifier {
     List<String>? nuoviIds,
     String? nuovoTitolo,
   ) async {
-    if (nuoviIds != null && nuoviIds.isNotEmpty) {
-      await _inizializzaContextSession(nuoviIds);
+    final setNuovi = (nuoviIds ?? []).toSet();
+    final setAttuali = _chatService.activeBookIds.toSet();
+
+    if (setNuovi.length == setAttuali.length &&
+        setNuovi.containsAll(setAttuali)) {
+      return;
+    }
+
+    if (setNuovi.isNotEmpty) {
+      await _inizializzaContextSession(nuoviIds!);
     } else {
       await _impostaModalitaSmart();
     }
