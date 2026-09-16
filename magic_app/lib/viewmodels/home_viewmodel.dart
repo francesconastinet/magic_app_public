@@ -99,7 +99,7 @@ class HomeViewModel extends ChangeNotifier {
 
       if (risultato.successo && risultato.scaricato) {
         await _repository.caricaDatiLocali();
-        onShowMessage?.call('Catalogo aggiornato con successo');
+        onShowMessage?.call('Catalogo aggiornato');
       } else if (!risultato.successo) {
         onShowMessage?.call(
           'Impossibile aggiornare il catalogo, riprova più tardi',

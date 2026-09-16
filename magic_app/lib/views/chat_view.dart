@@ -110,58 +110,74 @@ class _ChatViewState extends State<ChatView> {
             onTap: () {
               FocusManager.instance.primaryFocus?.unfocus();
             },
-            child: Column(
-              children: [
-                ChatHeaderBar(
-                  titoloFonte: widget.titoloFonteSelezionata,
-                  inCorso: vm.contextSessionInCorso,
-                  creata: vm.contextSessionCreata,
-                  isRoomActive: vm.isRoomActive,
-                  isContextLocked: vm.isContextLocked,
-                  onMostraFontiConsultate: () {
-                    FocusManager.instance.primaryFocus?.unfocus();
-                    Future.microtask(() {
-                      if (!context.mounted) return;
-                      showDialog(
-                        context: context,
-                        builder: (ctx) =>
-                            FontiConsultateDialog(fontiTotali: vm.fontiTotali),
-                      );
-                    });
-                  },
-                ),
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                final isLandscape =
+                    MediaQuery.orientationOf(context) == Orientation.landscape;
+                final isTablet = MediaQuery.sizeOf(context).shortestSide >= 600;
+                final compactMode = isLandscape && !isTablet;
+                final isUltraCompact = constraints.maxHeight < 250;
 
-                Expanded(
-                  child: SafeArea(
-                    top: false,
-                    bottom: false,
-                    child: Stack(
-                      children: [
-                        if (vm.messaggi.isEmpty && !vm.botStaScrivendo)
-                          _buildWelcomeOverlay(colorScheme),
+                return Column(
+                  children: [
+                    if (!isUltraCompact)
+                      ChatHeaderBar(
+                        titoloFonte: widget.titoloFonteSelezionata,
+                        inCorso: vm.contextSessionInCorso,
+                        creata: vm.contextSessionCreata,
+                        isRoomActive: vm.isRoomActive,
+                        onMostraFontiConsultate: () {
+                          FocusManager.instance.primaryFocus?.unfocus();
+                          Future.microtask(() {
+                            if (!context.mounted) return;
+                            showDialog(
+                              context: context,
+                              builder: (ctx) => FontiConsultateDialog(
+                                fontiTotali: vm.fontiTotali,
+                              ),
+                            );
+                          });
+                        },
+                      ),
 
-                        ChatMessagesList(
-                          scrollController: _scrollController,
-                          messaggi: vm.messaggi,
-                          botStaScrivendo: vm.botStaScrivendo,
+                    Expanded(
+                      child: SafeArea(
+                        top: false,
+                        bottom: false,
+                        child: Stack(
+                          children: [
+                            if (vm.messaggi.isEmpty && !vm.botStaScrivendo)
+                              _buildWelcomeOverlay(
+                                colorScheme,
+                                isUltraCompact || compactMode,
+                              ),
+
+                            ChatMessagesList(
+                              scrollController: _scrollController,
+                              messaggi: vm.messaggi,
+                              botStaScrivendo: vm.botStaScrivendo,
+                            ),
+
+                            if (!isUltraCompact)
+                              ChatFloatingButtons(
+                                bookIds: widget.bookIds,
+                                onFonteSelezionata: widget.onFonteSelezionata,
+                              ),
+                          ],
                         ),
-
-                        ChatFloatingButtons(
-                          bookIds: widget.bookIds,
-                          onFonteSelezionata: widget.onFonteSelezionata,
-                        ),
-                      ],
+                      ),
                     ),
-                  ),
-                ),
 
-                ChatInputArea(
-                  controller: _controller,
-                  isWriting: vm.botStaScrivendo,
-                  isGuest: vm.isGuest,
-                  onSend: _inviaMessaggio,
-                ),
-              ],
+                    ChatInputArea(
+                      controller: _controller,
+                      isWriting: vm.botStaScrivendo,
+                      isGuest: vm.isGuest,
+                      compactMode: compactMode || isUltraCompact,
+                      onSend: _inviaMessaggio,
+                    ),
+                  ],
+                );
+              },
             ),
           );
         },
@@ -169,25 +185,25 @@ class _ChatViewState extends State<ChatView> {
     );
   }
 
-  Widget _buildWelcomeOverlay(ColorScheme colorScheme) {
+  Widget _buildWelcomeOverlay(ColorScheme colorScheme, bool compactMode) {
     return Center(
       child: Padding(
-        padding: const EdgeInsets.all(56.0),
+        padding: EdgeInsets.all(compactMode ? 16.0 : 56.0),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             Icon(
               Icons.forum_outlined,
-              size: 48,
+              size: compactMode ? 32 : 48,
               color: colorScheme.onSurfaceVariant.withValues(alpha: 0.4),
             ),
-            const SizedBox(height: 16),
+            SizedBox(height: compactMode ? 8 : 16),
             Text(
               'Ciao! Sono il tuo bibliotecario virtuale, come posso aiutarti?',
               textAlign: TextAlign.center,
               style: TextStyle(
                 color: colorScheme.onSurfaceVariant.withValues(alpha: 0.7),
-                fontSize: 14,
+                fontSize: compactMode ? 12 : 14,
                 fontStyle: FontStyle.italic,
               ),
             ),
@@ -208,7 +224,6 @@ class ChatHeaderBar extends StatelessWidget {
   final bool inCorso;
   final bool creata;
   final bool isRoomActive;
-  final bool isContextLocked;
   final VoidCallback onMostraFontiConsultate;
 
   const ChatHeaderBar({
@@ -217,7 +232,6 @@ class ChatHeaderBar extends StatelessWidget {
     required this.inCorso,
     required this.creata,
     required this.isRoomActive,
-    required this.isContextLocked,
     required this.onMostraFontiConsultate,
   });
 
@@ -237,7 +251,6 @@ class ChatHeaderBar extends StatelessWidget {
           inCorso: inCorso,
           creata: creata,
           isRoomActive: isRoomActive,
-          isContextLocked: isContextLocked,
         ),
       );
     });
@@ -282,6 +295,8 @@ class ChatHeaderBar extends StatelessWidget {
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
+                        const SizedBox(width: 20),
+
                         if (inCorso)
                           SizedBox(
                             width: 14,
@@ -294,24 +309,15 @@ class ChatHeaderBar extends StatelessWidget {
                         else
                           Icon(
                             creata
-                                ? Icons.check_circle
+                                ? Icons.lock
                                 : (isSmartMode
                                       ? Icons.auto_awesome
                                       : Icons.error_outline),
-                            size: 16,
+                            size: 14,
                             color: isSmartMode
                                 ? Colors.orange
                                 : (creata ? Colors.green : colorScheme.error),
                           ),
-
-                        if (creata && isContextLocked && !inCorso) ...[
-                          const SizedBox(width: 4),
-                          Icon(
-                            Icons.lock,
-                            size: 12,
-                            color: colorScheme.onSecondaryContainer,
-                          ),
-                        ],
 
                         const SizedBox(width: 6),
 
@@ -407,7 +413,6 @@ class FontiConsultateDialog extends StatelessWidget {
                     color: colorScheme.onPrimaryContainer,
                   ),
                 ),
-
                 IconButton(
                   icon: const Icon(Icons.close),
                   onPressed: () => Navigator.pop(context),
@@ -416,7 +421,6 @@ class FontiConsultateDialog extends StatelessWidget {
                 ),
               ],
             ),
-
             Text(
               'Usati: ${fontiTotali.length}',
               style: TextStyle(
@@ -466,7 +470,6 @@ class FontiConsultateDialog extends StatelessWidget {
                               fontSize: 14,
                             ),
                           ),
-
                           if (fonte.author.isNotEmpty) ...[
                             const SizedBox(height: 4),
                             Text(
@@ -477,7 +480,6 @@ class FontiConsultateDialog extends StatelessWidget {
                               ),
                             ),
                           ],
-
                           if (fonte.date.isNotEmpty) ...[
                             const SizedBox(height: 2),
                             Text(
@@ -506,7 +508,6 @@ class InfoStatoDialog extends StatelessWidget {
   final bool inCorso;
   final bool creata;
   final bool isRoomActive;
-  final bool isContextLocked;
 
   const InfoStatoDialog({
     super.key,
@@ -515,7 +516,6 @@ class InfoStatoDialog extends StatelessWidget {
     required this.inCorso,
     required this.creata,
     required this.isRoomActive,
-    required this.isContextLocked,
   });
 
   @override
@@ -530,31 +530,30 @@ class InfoStatoDialog extends StatelessWidget {
     if (inCorso) {
       statoTitolo = 'Caricamento in corso...';
       statoDescrizione =
-          'Sto sincronizzando le impostazioni del contesto. '
-          'Potrebbe volerci qualche istante.';
+          'Sto recuperando le fonti. Potrebbe volerci qualche istante.';
       statoIcona = Icons.sync;
       statoColore = colorScheme.primary;
     } else if (isSmartMode) {
       statoTitolo = 'Modalità Smart Attiva';
       statoDescrizione =
-          'L\'intelligenza artificiale sceglierà automaticamente le fonti '
+          'L\'assistente virtuale sceglierà automaticamente le fonti '
           'dall\'intero catalogo per rispondere.';
       statoIcona = Icons.auto_awesome;
       statoColore = Colors.orange;
     } else if (creata) {
-      statoTitolo = isContextLocked ? 'Fonti Bloccate' : 'Fonti Selezionate';
+      statoTitolo = 'Fonti Bloccate';
       statoDescrizione =
-          'La chat utilizzerà ESCLUSIVAMENTE i manoscritti selezionati '
+          'La chat utilizzerà esclusivamente i manoscritti selezionati '
           'per fornire le risposte. '
-          'Per sbloccare la ricerca sull\'intero catalogo, '
-          'torna alla Modalità Smart deselezionando le fonti.';
-      statoIcona = isContextLocked ? Icons.lock : Icons.check_circle;
+          'Per sbloccare la ricerca sull\'intero catalogo, torna alla '
+          'Modalità Smart deselezionando le fonti.';
+      statoIcona = Icons.lock;
       statoColore = Colors.green;
     } else {
       statoTitolo = 'Errore di Caricamento';
       statoDescrizione =
           'Si è verificato un problema. '
-          'L\'assistente proverà comunque a rispondere.';
+          'L\'assistente virtuale proverà comunque a rispondere.';
       statoIcona = Icons.error_outline;
       statoColore = colorScheme.error;
     }
@@ -810,6 +809,7 @@ class ChatInputArea extends StatelessWidget {
   final TextEditingController controller;
   final bool isWriting;
   final bool isGuest;
+  final bool compactMode; // NUOVO PARAMETRO
   final VoidCallback onSend;
 
   const ChatInputArea({
@@ -817,6 +817,7 @@ class ChatInputArea extends StatelessWidget {
     required this.controller,
     required this.isWriting,
     required this.isGuest,
+    required this.compactMode,
     required this.onSend,
   });
 
@@ -827,19 +828,27 @@ class ChatInputArea extends StatelessWidget {
     if (isGuest) {
       return Container(
         color: colorScheme.surfaceContainerHighest,
-        padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 16),
+        padding: EdgeInsets.symmetric(
+          vertical: compactMode ? 8 : 16,
+          horizontal: 16,
+        ),
         child: SafeArea(
           top: false,
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(Icons.visibility, color: colorScheme.onSurfaceVariant),
+              Icon(
+                Icons.visibility,
+                color: colorScheme.onSurfaceVariant,
+                size: compactMode ? 20 : 24,
+              ),
               const SizedBox(width: 8),
               Text(
                 'Solo lettura (Guest)',
                 style: TextStyle(
                   color: colorScheme.onSurfaceVariant,
                   fontWeight: FontWeight.bold,
+                  fontSize: compactMode ? 13 : 14,
                 ),
               ),
             ],
@@ -852,13 +861,15 @@ class ChatInputArea extends StatelessWidget {
       decoration: BoxDecoration(color: colorScheme.surface),
       child: SafeArea(
         top: false,
-        minimum: const EdgeInsets.all(12),
+        minimum: EdgeInsets.all(compactMode ? 4 : 12),
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.end,
           children: [
             Expanded(
               child: TextField(
                 controller: controller,
+                maxLines: compactMode ? 1 : null,
+                minLines: 1,
                 decoration: InputDecoration(
                   hintText: 'Fai una domanda...',
                   border: OutlineInputBorder(
@@ -867,23 +878,27 @@ class ChatInputArea extends StatelessWidget {
                   ),
                   filled: true,
                   fillColor: colorScheme.surfaceContainerHighest,
-                  contentPadding: const EdgeInsets.symmetric(
+                  contentPadding: EdgeInsets.symmetric(
                     horizontal: 16,
-                    vertical: 10,
+                    vertical: compactMode ? 8 : 10,
                   ),
                 ),
                 onSubmitted: (_) => onSend(),
                 enabled: !isWriting,
               ),
             ),
-            const SizedBox(width: 8),
+            SizedBox(width: compactMode ? 4 : 8),
             FloatingActionButton.small(
               heroTag: 'chat_send',
               elevation: 0,
               onPressed: isWriting ? null : onSend,
               backgroundColor: colorScheme.primary,
               tooltip: 'Invia',
-              child: Icon(Icons.send, color: colorScheme.onPrimary),
+              child: Icon(
+                Icons.send,
+                color: colorScheme.onPrimary,
+                size: compactMode ? 20 : 24,
+              ),
             ),
           ],
         ),
