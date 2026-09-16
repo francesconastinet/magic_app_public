@@ -120,11 +120,12 @@ class _ChatViewState extends State<ChatView> {
                     MediaQuery.orientationOf(context) == Orientation.landscape;
                 final isTablet = MediaQuery.sizeOf(context).shortestSide >= 600;
                 final compactMode = isLandscape && !isTablet;
-                final isUltraCompact = constraints.maxHeight < 250;
+                final isKeyboardOpen = View.of(context).viewInsets.bottom > 0;
+                final isKeyboardOpenInCompactMode = constraints.maxHeight < 250;
 
                 return Column(
                   children: [
-                    if (!isUltraCompact)
+                    if (!isKeyboardOpenInCompactMode)
                       ChatHeaderBar(
                         titoloFonte: vm.titoloContesto,
                         inCorso: vm.contextSessionInCorso,
@@ -150,10 +151,12 @@ class _ChatViewState extends State<ChatView> {
                         bottom: false,
                         child: Stack(
                           children: [
-                            if (vm.messaggi.isEmpty && !vm.botStaScrivendo)
+                            if (vm.messaggi.isEmpty &&
+                                !vm.botStaScrivendo &&
+                                !isKeyboardOpenInCompactMode)
                               _buildWelcomeOverlay(
                                 colorScheme,
-                                isUltraCompact || compactMode,
+                                isKeyboardOpenInCompactMode || compactMode,
                               ),
 
                             ChatMessagesList(
@@ -162,7 +165,7 @@ class _ChatViewState extends State<ChatView> {
                               botStaScrivendo: vm.botStaScrivendo,
                             ),
 
-                            if (!isUltraCompact)
+                            if (!isKeyboardOpen)
                               ChatFloatingButtons(
                                 bookIds: vm.activeBookIds,
                                 onFonteSelezionata: widget.onFonteSelezionata,
@@ -176,7 +179,7 @@ class _ChatViewState extends State<ChatView> {
                       controller: _controller,
                       isWriting: vm.botStaScrivendo,
                       isGuest: vm.isGuest,
-                      compactMode: compactMode || isUltraCompact,
+                      compactMode: compactMode || isKeyboardOpenInCompactMode,
                       onSend: _inviaMessaggio,
                     ),
                   ],
@@ -813,7 +816,7 @@ class ChatInputArea extends StatelessWidget {
   final TextEditingController controller;
   final bool isWriting;
   final bool isGuest;
-  final bool compactMode; // NUOVO PARAMETRO
+  final bool compactMode;
   final VoidCallback onSend;
 
   const ChatInputArea({
@@ -872,8 +875,9 @@ class ChatInputArea extends StatelessWidget {
             Expanded(
               child: TextField(
                 controller: controller,
-                maxLines: compactMode ? 1 : null,
+                maxLines: compactMode ? 1 : 4,
                 minLines: 1,
+                textInputAction: TextInputAction.newline,
                 decoration: InputDecoration(
                   hintText: 'Fai una domanda...',
                   border: OutlineInputBorder(
@@ -884,24 +888,27 @@ class ChatInputArea extends StatelessWidget {
                   fillColor: colorScheme.surfaceContainerHighest,
                   contentPadding: EdgeInsets.symmetric(
                     horizontal: 16,
-                    vertical: compactMode ? 8 : 10,
+                    vertical: compactMode ? 8 : 12,
                   ),
                 ),
-                onSubmitted: (_) => onSend(),
                 enabled: !isWriting,
               ),
             ),
             SizedBox(width: compactMode ? 4 : 8),
-            FloatingActionButton.small(
-              heroTag: 'chat_send',
-              elevation: 0,
-              onPressed: isWriting ? null : onSend,
-              backgroundColor: colorScheme.primary,
-              tooltip: 'Invia',
-              child: Icon(
-                Icons.send,
-                color: colorScheme.onPrimary,
-                size: compactMode ? 20 : 24,
+
+            Padding(
+              padding: const EdgeInsets.only(bottom: 2.0),
+              child: FloatingActionButton.small(
+                heroTag: 'chat_send',
+                elevation: 0,
+                onPressed: isWriting ? null : onSend,
+                backgroundColor: colorScheme.primary,
+                tooltip: 'Invia',
+                child: Icon(
+                  Icons.send,
+                  color: colorScheme.onPrimary,
+                  size: compactMode ? 20 : 24,
+                ),
               ),
             ),
           ],
