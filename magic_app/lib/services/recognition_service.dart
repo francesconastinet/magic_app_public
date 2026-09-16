@@ -1,8 +1,8 @@
 import 'dart:io';
 import 'package:flutter/services.dart';
 import 'package:tflite_flutter/tflite_flutter.dart';
-import 'package:image/image.dart' as img;
 import 'package:path_provider/path_provider.dart';
+import 'package:image/image.dart' as img;
 
 class RisultatoRiconoscimento {
   final String nomeOpera;
