@@ -65,13 +65,6 @@ class _ARViewState extends State<ARView> with TickerProviderStateMixin {
       );
     };
 
-    _viewModel.onShowError = (msg) {
-      ScaffoldMessenger.of(context).hideCurrentSnackBar();
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(msg), backgroundColor: Colors.red));
-    };
-
     _viewModel.onMostraOverlayAnimation = () {
       _scanController.stop();
       _fadeController.forward();

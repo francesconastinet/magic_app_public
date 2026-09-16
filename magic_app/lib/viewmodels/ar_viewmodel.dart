@@ -24,7 +24,6 @@ class ARViewModel extends ChangeNotifier {
 
   // --- EVENTI UI ---
   void Function(String)? onShowWarning;
-  void Function(String)? onShowError;
   void Function()? onMostraOverlayAnimation;
   void Function()? onNascondiOverlayAnimation;
 
@@ -126,9 +125,6 @@ class ARViewModel extends ChangeNotifier {
       }
     } catch (e) {
       debugPrint('Errore Riconoscimento ML: $e');
-      if (!overlayVisibile) {
-        onShowError?.call("Errore della fotocamera. Riprovo...");
-      }
     } finally {
       elaborazione = false;
       notifyListeners();
