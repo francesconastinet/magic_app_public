@@ -7,6 +7,7 @@ import '../core/app_state.dart';
 import '../data/catalogue_repository.dart';
 import '../data/models.dart';
 import '../services/media_service.dart';
+import '../services/chat_service.dart';
 import '../viewmodels/ar_viewmodel.dart';
 import 'audio_view.dart';
 import 'image_view.dart';
@@ -156,6 +157,7 @@ class _ARViewState extends State<ARView> with TickerProviderStateMixin {
     }
 
     final layout = ARLayout(context);
+    final isGuest = context.read<ChatService>().isGuest;
 
     return Stack(
       fit: StackFit.expand,
@@ -186,6 +188,7 @@ class _ARViewState extends State<ARView> with TickerProviderStateMixin {
             overlayVisibile: vm.overlayVisibile,
             fadeAnimation: _fadeAnimation,
             layout: layout,
+            isGuest: isGuest,
           ),
           ARCloseButton(
             overlayVisibile: vm.overlayVisibile,
@@ -802,6 +805,7 @@ class ARChatButton extends StatelessWidget {
   final bool overlayVisibile;
   final Animation<double> fadeAnimation;
   final ARLayout layout;
+  final bool isGuest;
 
   const ARChatButton({
     super.key,
@@ -809,10 +813,13 @@ class ARChatButton extends StatelessWidget {
     required this.overlayVisibile,
     required this.fadeAnimation,
     required this.layout,
+    required this.isGuest,
   });
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+
     return Positioned(
       bottom: layout.chatBottom,
       right: layout.chatRight,
@@ -825,15 +832,32 @@ class ARChatButton extends StatelessWidget {
             height: layout.chatSize,
             child: FloatingActionButton(
               heroTag: 'btn_chat',
-              backgroundColor: Colors.blueAccent,
-              foregroundColor: Colors.white,
-              elevation: 4,
+              backgroundColor: isGuest
+                  ? colorScheme.surfaceContainerHighest
+                  : Colors.blueAccent,
+              foregroundColor: isGuest
+                  ? colorScheme.onSurfaceVariant
+                  : Colors.white,
+              elevation: isGuest ? 0 : 4,
               shape: const CircleBorder(),
-              tooltip: 'Chiedi alla Chat',
-              onPressed: () {
-                context.read<AppState>().selezionaOpera(opera);
-                context.go('/');
-              },
+              tooltip: isGuest
+                  ? 'Chat bloccata (Solo Admin)'
+                  : 'Chiedi all\'Assistente',
+              onPressed: isGuest
+                  ? () {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text(
+                            'Solo l\'amministratore può modificare '
+                            'il contesto della chat.',
+                          ),
+                        ),
+                      );
+                    }
+                  : () {
+                      context.read<AppState>().selezionaOpera(opera);
+                      context.go('/');
+                    },
               child: Icon(Icons.contact_support, size: layout.chatIconSize),
             ),
           ),

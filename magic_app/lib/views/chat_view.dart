@@ -165,10 +165,17 @@ class _ChatViewState extends State<ChatView> {
                               botStaScrivendo: vm.botStaScrivendo,
                             ),
 
-                            if (!isKeyboardOpen)
+                            if (!isKeyboardOpenInCompactMode && !isKeyboardOpen)
                               ChatFloatingButtons(
                                 bookIds: vm.activeBookIds,
-                                onFonteSelezionata: widget.onFonteSelezionata,
+                                isGuest: vm.isGuest,
+                                onFonteSelezionata: (titolo, ids) {
+                                  vm.aggiornaContesto(ids, titolo);
+
+                                  if (widget.onFonteSelezionata != null) {
+                                    widget.onFonteSelezionata!(titolo, ids);
+                                  }
+                                },
                               ),
                           ],
                         ),
@@ -749,9 +756,15 @@ class ChatMessagesList extends StatelessWidget {
 // --- PULSANTI (Fonti e AR) ---
 class ChatFloatingButtons extends StatelessWidget {
   final List<String>? bookIds;
+  final bool isGuest;
   final void Function(String? titolo, List<String>? ids)? onFonteSelezionata;
 
-  const ChatFloatingButtons({super.key, this.bookIds, this.onFonteSelezionata});
+  const ChatFloatingButtons({
+    super.key,
+    this.bookIds,
+    required this.isGuest,
+    this.onFonteSelezionata,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -766,31 +779,6 @@ class ChatFloatingButtons extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         children: [
           FloatingActionButton.small(
-            heroTag: 'fab_fonti',
-            backgroundColor: colorScheme.secondaryContainer,
-            foregroundColor: colorScheme.onSecondaryContainer,
-            elevation: 2,
-            tooltip: 'Gestisci Fonti',
-            onPressed: () {
-              FocusManager.instance.primaryFocus?.unfocus();
-              Future.microtask(() {
-                if (!context.mounted) return;
-                showModalBottomSheet(
-                  context: context,
-                  isScrollControlled: true,
-                  builder: (ctx) => CatalogueView(
-                    idsFonteIniziale: bookIds,
-                    onFonteSelezionata: onFonteSelezionata ?? (t, ids) {},
-                  ),
-                );
-              });
-            },
-            child: const Icon(Icons.library_books, size: 25),
-          ),
-
-          const SizedBox(height: 12),
-
-          FloatingActionButton.small(
             heroTag: 'fab_ar',
             backgroundColor: colorScheme.secondaryContainer,
             foregroundColor: colorScheme.onSecondaryContainer,
@@ -804,6 +792,46 @@ class ChatFloatingButtons extends StatelessWidget {
               });
             },
             child: const Icon(Icons.camera_alt, size: 25),
+          ),
+
+          const SizedBox(height: 12),
+
+          FloatingActionButton.small(
+            heroTag: 'fab_fonti',
+            backgroundColor: isGuest
+                ? colorScheme.surfaceContainerHighest
+                : colorScheme.secondaryContainer,
+            foregroundColor: isGuest
+                ? colorScheme.onSurfaceVariant
+                : colorScheme.onSecondaryContainer,
+            elevation: isGuest ? 0 : 2,
+            tooltip: isGuest ? 'Fonti bloccate (Solo Admin)' : 'Catalogo',
+            onPressed: isGuest
+                ? () {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text(
+                          'Solo l\'amministratore può modificare '
+                          'le fonti della stanza.',
+                        ),
+                      ),
+                    );
+                  }
+                : () {
+                    FocusManager.instance.primaryFocus?.unfocus();
+                    Future.microtask(() {
+                      if (!context.mounted) return;
+                      showModalBottomSheet(
+                        context: context,
+                        isScrollControlled: true,
+                        builder: (ctx) => CatalogueView(
+                          idsFonteIniziale: bookIds,
+                          onFonteSelezionata: onFonteSelezionata ?? (t, ids) {},
+                        ),
+                      );
+                    });
+                  },
+            child: const Icon(Icons.library_books, size: 25),
           ),
         ],
       ),
