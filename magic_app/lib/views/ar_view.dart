@@ -7,12 +7,12 @@ import '../core/app_state.dart';
 import '../data/catalogue_repository.dart';
 import '../data/models.dart';
 import '../services/media_service.dart';
-import 'audio_widget.dart';
-import 'image_widget.dart';
-import 'pdf_widget.dart';
-import 'text_widget.dart';
-import 'video_widget.dart';
 import '../viewmodels/ar_viewmodel.dart';
+import 'audio_view.dart';
+import 'image_view.dart';
+import 'pdf_view.dart';
+import 'text_view.dart';
+import 'video_view.dart';
 
 // ==========================================
 // SCHERMATA
@@ -130,7 +130,7 @@ class _ARViewState extends State<ARView> with TickerProviderStateMixin {
               if (vm.audioInEsecuzione != null)
                 Material(
                   type: MaterialType.transparency,
-                  child: AudioWidget(
+                  child: AudioView(
                     titolo: vm.audioInEsecuzione!.titolo,
                     audioPath: vm.audioInEsecuzione!.url,
                     isMinimized: vm.audioMinimizzato,
@@ -770,7 +770,7 @@ class MediaSelectionBottomSheet extends StatelessWidget {
       case MediaType.video:
         showDialog(
           context: context,
-          builder: (_) => VideoWidget(titolo: item.titolo, videoPath: item.url),
+          builder: (_) => VideoView(titolo: item.titolo, videoPath: item.url),
         );
         break;
 
@@ -778,21 +778,21 @@ class MediaSelectionBottomSheet extends StatelessWidget {
         showDialog(
           context: context,
           useSafeArea: false,
-          builder: (_) => PdfWidget(titolo: item.titolo, pdfPath: item.url),
+          builder: (_) => PdfView(titolo: item.titolo, pdfPath: item.url),
         );
         break;
 
       case MediaType.testo:
         showDialog(
           context: context,
-          builder: (_) => TextWidget(titolo: item.titolo, textPath: item.url),
+          builder: (_) => TextView(titolo: item.titolo, textPath: item.url),
         );
         break;
 
       case MediaType.immagine:
         showDialog(
           context: context,
-          builder: (_) => ImageWidget(immagini: mediaList, initialIndex: index),
+          builder: (_) => ImageView(immagini: mediaList, initialIndex: index),
         );
         break;
 

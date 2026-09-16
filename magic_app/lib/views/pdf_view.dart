@@ -8,56 +8,20 @@ import '../core/app_config.dart';
 import '../services/storage_service.dart';
 
 // ==========================================
-// CONFIGURAZIONE LAYOUT
-// ==========================================
-
-class PdfLayout {
-  final Size screenSize;
-  final bool isLandscape;
-  final bool isTablet;
-
-  PdfLayout(BuildContext context)
-    : screenSize = MediaQuery.sizeOf(context),
-      isLandscape = MediaQuery.orientationOf(context) == Orientation.landscape,
-      isTablet = MediaQuery.sizeOf(context).shortestSide >= 600;
-
-  double get _sS => screenSize.shortestSide;
-  double get _lS => screenSize.longestSide;
-
-  // --- DIMENSIONI SCHERMATA ---
-  double get maxPdfWidth {
-    if (isTablet) {
-      return (screenSize.width * 0.75).clamp(_lS * 0.5, _lS * 0.76);
-    } else if (isLandscape) {
-      return (screenSize.width * 0.55).clamp(_lS * 0.4, _lS * 0.65);
-    }
-    return double.infinity;
-  }
-
-  // --- MISURE TESTI E SPAZIATURE ---
-  double get padding => _sS * 0.04;
-  double get spacing => _sS * 0.04;
-  double get titleFontSize => _sS * (isTablet ? 0.03 : 0.045);
-  double get counterFontSize => _sS * (isTablet ? 0.03 : 0.035);
-  double get iconSize => _sS * (isTablet ? 0.045 : 0.06);
-  double get errorFontSize => _sS * 0.04;
-}
-
-// ==========================================
 // SCHERMATA
 // ==========================================
 
-class PdfWidget extends StatefulWidget {
+class PdfView extends StatefulWidget {
   final String titolo;
   final String pdfPath;
 
-  const PdfWidget({super.key, required this.titolo, required this.pdfPath});
+  const PdfView({super.key, required this.titolo, required this.pdfPath});
 
   @override
-  State<PdfWidget> createState() => _PdfWidgetState();
+  State<PdfView> createState() => _PdfViewState();
 }
 
-class _PdfWidgetState extends State<PdfWidget> {
+class _PdfViewState extends State<PdfView> {
   int? _totalPages = 0;
   int? _currentPage = 0;
   bool _isReady = false;
@@ -181,6 +145,42 @@ class _PdfWidgetState extends State<PdfWidget> {
       if (mounted) setState(() => _hasError = true);
     }
   }
+}
+
+// ==========================================
+// CONFIGURAZIONE LAYOUT
+// ==========================================
+
+class PdfLayout {
+  final Size screenSize;
+  final bool isLandscape;
+  final bool isTablet;
+
+  PdfLayout(BuildContext context)
+    : screenSize = MediaQuery.sizeOf(context),
+      isLandscape = MediaQuery.orientationOf(context) == Orientation.landscape,
+      isTablet = MediaQuery.sizeOf(context).shortestSide >= 600;
+
+  double get _sS => screenSize.shortestSide;
+  double get _lS => screenSize.longestSide;
+
+  // --- DIMENSIONI SCHERMATA ---
+  double get maxPdfWidth {
+    if (isTablet) {
+      return (screenSize.width * 0.75).clamp(_lS * 0.5, _lS * 0.76);
+    } else if (isLandscape) {
+      return (screenSize.width * 0.55).clamp(_lS * 0.4, _lS * 0.65);
+    }
+    return double.infinity;
+  }
+
+  // --- MISURE TESTI E SPAZIATURE ---
+  double get padding => _sS * 0.04;
+  double get spacing => _sS * 0.04;
+  double get titleFontSize => _sS * (isTablet ? 0.03 : 0.045);
+  double get counterFontSize => _sS * (isTablet ? 0.03 : 0.035);
+  double get iconSize => _sS * (isTablet ? 0.045 : 0.06);
+  double get errorFontSize => _sS * 0.04;
 }
 
 // ==========================================

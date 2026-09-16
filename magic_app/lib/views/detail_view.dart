@@ -5,11 +5,11 @@ import '../core/app_state.dart';
 import '../data/models.dart';
 import '../services/media_service.dart';
 import '../viewmodels/detail_viewmodel.dart';
-import 'audio_widget.dart';
-import 'image_widget.dart';
-import 'pdf_widget.dart';
-import 'text_widget.dart';
-import 'video_widget.dart';
+import 'audio_view.dart';
+import 'image_view.dart';
+import 'pdf_view.dart';
+import 'text_view.dart';
+import 'video_view.dart';
 
 // ==========================================
 // SCHERMATA
@@ -41,7 +41,7 @@ class DetailView extends StatelessWidget {
 
                 if (vm.audioInEsecuzione != null)
                   SafeArea(
-                    child: AudioWidget(
+                    child: AudioView(
                       titolo: vm.audioInEsecuzione!.titolo,
                       audioPath: vm.audioInEsecuzione!.url,
                       isMinimized: vm.audioMinimizzato,
@@ -362,7 +362,7 @@ class _MediaListItem extends StatelessWidget {
             showDialog(
               context: context,
               builder: (_) =>
-                  VideoWidget(titolo: media.titolo, videoPath: media.url),
+                  VideoView(titolo: media.titolo, videoPath: media.url),
             );
             break;
 
@@ -370,8 +370,7 @@ class _MediaListItem extends StatelessWidget {
             showDialog(
               context: context,
               useSafeArea: false,
-              builder: (_) =>
-                  PdfWidget(titolo: media.titolo, pdfPath: media.url),
+              builder: (_) => PdfView(titolo: media.titolo, pdfPath: media.url),
             );
             break;
 
@@ -379,7 +378,7 @@ class _MediaListItem extends StatelessWidget {
             showDialog(
               context: context,
               builder: (_) =>
-                  TextWidget(titolo: media.titolo, textPath: media.url),
+                  TextView(titolo: media.titolo, textPath: media.url),
             );
             break;
 
@@ -390,7 +389,7 @@ class _MediaListItem extends StatelessWidget {
             final imgIndex = immaginiList.indexOf(media);
             showDialog(
               context: context,
-              builder: (_) => ImageWidget(
+              builder: (_) => ImageView(
                 immagini: immaginiList,
                 initialIndex: imgIndex >= 0 ? imgIndex : 0,
               ),

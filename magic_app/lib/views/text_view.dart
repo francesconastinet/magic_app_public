@@ -5,65 +5,26 @@ import '../services/storage_service.dart';
 import '../core/app_config.dart';
 
 // ==========================================
-// CONFIGURAZIONE LAYOUT
-// ==========================================
-
-class TextLayout {
-  final Size screenSize;
-  final bool isTablet;
-
-  TextLayout(BuildContext context)
-    : screenSize = MediaQuery.sizeOf(context),
-      isTablet = MediaQuery.sizeOf(context).shortestSide >= 600;
-
-  double get _sS => screenSize.shortestSide;
-
-  // --- DIMENSIONI SCHERMATA ---
-  double get borderRadius => _sS * (isTablet ? 0.02 : 0.04);
-  double get headerFontSize => _sS * (isTablet ? 0.03 : 0.045);
-  double get closeIconSize => _sS * (isTablet ? 0.04 : 0.06);
-  double get contentFontSize => _sS * (isTablet ? 0.026 : 0.04);
-  double get loaderHeight => _sS * 0.25;
-}
-
-// ==========================================
 // SCHERMATA
 // ==========================================
 
-class TextWidget extends StatefulWidget {
+class TextView extends StatefulWidget {
   final String titolo;
   final String textPath;
 
-  const TextWidget({super.key, required this.titolo, required this.textPath});
+  const TextView({super.key, required this.titolo, required this.textPath});
 
   @override
-  State<TextWidget> createState() => _TextWidgetState();
+  State<TextView> createState() => _TextViewState();
 }
 
-class _TextWidgetState extends State<TextWidget> {
+class _TextViewState extends State<TextView> {
   late Future<String?> _futureText;
 
   @override
   void initState() {
     super.initState();
     _futureText = _inizializzaTesto();
-  }
-
-  Future<String?> _inizializzaTesto() async {
-    try {
-      if (widget.textPath.startsWith('assets/')) {
-        return await rootBundle.loadString(widget.textPath);
-      } else {
-        final storageService = context.read<StorageService>();
-        return await storageService.leggiFile(
-          AppConfig.packageId,
-          widget.textPath,
-        );
-      }
-    } catch (e) {
-      debugPrint('Errore lettura file testo: $e');
-      return null;
-    }
   }
 
   // --- RENDERING ---
@@ -88,10 +49,50 @@ class _TextWidgetState extends State<TextWidget> {
       ),
     );
   }
+
+  // --- LOGICA ---
+  Future<String?> _inizializzaTesto() async {
+    try {
+      if (widget.textPath.startsWith('assets/')) {
+        return await rootBundle.loadString(widget.textPath);
+      } else {
+        final storageService = context.read<StorageService>();
+        return await storageService.leggiFile(
+          AppConfig.packageId,
+          widget.textPath,
+        );
+      }
+    } catch (e) {
+      debugPrint('Errore lettura file testo: $e');
+      return null;
+    }
+  }
 }
 
 // ==========================================
-// WIDGET ESTRATTI
+// CONFIGURAZIONE LAYOUT
+// ==========================================
+
+class TextLayout {
+  final Size screenSize;
+  final bool isTablet;
+
+  TextLayout(BuildContext context)
+    : screenSize = MediaQuery.sizeOf(context),
+      isTablet = MediaQuery.sizeOf(context).shortestSide >= 600;
+
+  double get _sS => screenSize.shortestSide;
+
+  // --- DIMENSIONI SCHERMATA ---
+  double get borderRadius => _sS * (isTablet ? 0.02 : 0.04);
+  double get headerFontSize => _sS * (isTablet ? 0.03 : 0.045);
+  double get closeIconSize => _sS * (isTablet ? 0.04 : 0.06);
+  double get contentFontSize => _sS * (isTablet ? 0.026 : 0.04);
+  double get loaderHeight => _sS * 0.25;
+}
+
+// ==========================================
+// WIDGET
 // ==========================================
 
 // --- HEADER ---
