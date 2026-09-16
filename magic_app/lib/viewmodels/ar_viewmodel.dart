@@ -74,6 +74,7 @@ class ARViewModel extends ChangeNotifier {
                 titolo: 'Errore',
                 autore: '',
                 anno: '',
+                status: '',
                 multimedia: [],
               ),
       );

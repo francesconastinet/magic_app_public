@@ -181,6 +181,7 @@ class BookModel {
   final String titolo;
   final String autore;
   final String anno;
+  final String status;
   final List<MediaItem> multimedia;
 
   BookModel({
@@ -188,6 +189,7 @@ class BookModel {
     required this.titolo,
     required this.autore,
     required this.anno,
+    required this.status,
     required this.multimedia,
   });
 
@@ -197,6 +199,7 @@ class BookModel {
       titolo: json['titolo']?.toString() ?? '',
       autore: json['autore']?.toString() ?? '',
       anno: json['anno']?.toString() ?? '',
+      status: json['status']?.toString() ?? '',
       multimedia: (json['multimedia'] as List? ?? [])
           .map((m) => MediaItem.fromJson(m))
           .toList(),
