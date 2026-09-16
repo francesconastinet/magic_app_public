@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import 'catalogue_view.dart';
 import '../services/chat_service.dart';
+import '../data/catalogue_repository.dart';
 import '../viewmodels/chat_viewmodel.dart';
 
 // ==========================================
@@ -35,7 +36,10 @@ class _ChatViewState extends State<ChatView> {
   void initState() {
     super.initState();
 
-    _viewModel = ChatViewModel(chatService: context.read<ChatService>());
+    _viewModel = ChatViewModel(
+      chatService: context.read<ChatService>(),
+      catalogueRepo: context.read<CatalogueRepository>(),
+    );
 
     _viewModel.onScrollToBottom = _scrollaInFondo;
     _viewModel.onShowError = (msg) {
@@ -122,7 +126,7 @@ class _ChatViewState extends State<ChatView> {
                   children: [
                     if (!isUltraCompact)
                       ChatHeaderBar(
-                        titoloFonte: widget.titoloFonteSelezionata,
+                        titoloFonte: vm.titoloContesto,
                         inCorso: vm.contextSessionInCorso,
                         creata: vm.contextSessionCreata,
                         isRoomActive: vm.isRoomActive,
@@ -160,7 +164,7 @@ class _ChatViewState extends State<ChatView> {
 
                             if (!isUltraCompact)
                               ChatFloatingButtons(
-                                bookIds: widget.bookIds,
+                                bookIds: vm.activeBookIds,
                                 onFonteSelezionata: widget.onFonteSelezionata,
                               ),
                           ],

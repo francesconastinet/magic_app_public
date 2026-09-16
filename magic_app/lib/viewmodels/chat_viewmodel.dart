@@ -1,10 +1,12 @@
 import 'dart:async';
 import 'package:flutter/foundation.dart';
 import '../services/chat_service.dart';
+import '../data/catalogue_repository.dart';
 
 class ChatViewModel extends ChangeNotifier {
   // --- DIPENDENZE ---
   final ChatService _chatService;
+  final CatalogueRepository _catalogueRepo;
 
   // --- STATO ---
   bool botStaScrivendo = false;
@@ -19,12 +21,34 @@ class ChatViewModel extends ChangeNotifier {
   bool get isContextLocked => _chatService.isContextLocked;
   bool get isGuest => _chatService.isGuest;
   bool get isRoomActive => _chatService.isRoomActive;
+  List<String> get activeBookIds => _chatService.activeBookIds;
+  String? get titoloContesto {
+    final ids = _chatService.activeBookIds;
+    if (ids.isEmpty) return null;
+
+    if (ids.length == 1) {
+      try {
+        return _catalogueRepo.libri.firstWhere((b) => b.id == ids.first).titolo;
+      } catch (_) {
+        return 'Manoscritto Selezionato';
+      }
+    }
+
+    for (var coll in _catalogueRepo.collezioni) {
+      if (coll.bookIds.length == ids.length &&
+          coll.bookIds.every((id) => ids.contains(id))) {
+        return coll.name;
+      }
+    }
+
+    return 'Manoscritti vari';
+  }
 
   // --- EVENTI UI ---
   VoidCallback? onScrollToBottom;
   void Function(String)? onShowError;
 
-  ChatViewModel({required this._chatService}) {
+  ChatViewModel({required this._chatService, required this._catalogueRepo}) {
     _chatService.addListener(_onServiceUpdate);
 
     _pollingTimer = Timer.periodic(const Duration(seconds: 5), (_) {
@@ -47,7 +71,7 @@ class ChatViewModel extends ChangeNotifier {
 
   void inizializza(List<String>? ids, String? titolo) {
     if (ids != null && ids.isNotEmpty) {
-      _inizializzaContextSession(ids, titolo ?? 'Manoscritto');
+      _inizializzaContextSession(ids);
     }
   }
 
@@ -56,7 +80,7 @@ class ChatViewModel extends ChangeNotifier {
     String? nuovoTitolo,
   ) async {
     if (nuoviIds != null && nuoviIds.isNotEmpty) {
-      await _inizializzaContextSession(nuoviIds, nuovoTitolo ?? 'Manoscritto');
+      await _inizializzaContextSession(nuoviIds);
     } else {
       await _impostaModalitaSmart();
     }
@@ -73,10 +97,7 @@ class ChatViewModel extends ChangeNotifier {
     onScrollToBottom?.call();
   }
 
-  Future<void> _inizializzaContextSession(
-    List<String> ids,
-    String nomeContesto,
-  ) async {
+  Future<void> _inizializzaContextSession(List<String> ids) async {
     contextSessionInCorso = true;
     notifyListeners();
 
@@ -90,6 +111,7 @@ class ChatViewModel extends ChangeNotifier {
 
     if (!successo) {
       onShowError?.call('Si è verificato un problema col recupero delle fonti');
+      await _chatService.resetContextSession();
     }
 
     notifyListeners();
