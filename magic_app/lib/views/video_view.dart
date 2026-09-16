@@ -1,10 +1,135 @@
-import 'dart:async';
-import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:video_player/video_player.dart';
 import 'package:provider/provider.dart';
-import '../core/app_config.dart';
 import '../services/storage_service.dart';
+import '../viewmodels/video_viewmodel.dart';
+
+// ==========================================
+// SCHERMATA
+// ==========================================
+
+class VideoView extends StatefulWidget {
+  final String titolo;
+  final String videoPath;
+
+  const VideoView({super.key, required this.titolo, required this.videoPath});
+
+  @override
+  State<VideoView> createState() => _VideoViewState();
+}
+
+class _VideoViewState extends State<VideoView> {
+  late VideoViewModel _viewModel;
+
+  @override
+  void initState() {
+    super.initState();
+    _viewModel = VideoViewModel(storageService: context.read<StorageService>());
+    _viewModel.inizializzaVideo(widget.videoPath);
+  }
+
+  @override
+  void dispose() {
+    _viewModel.dispose();
+    super.dispose();
+  }
+
+  // --- RENDERING ---
+  @override
+  Widget build(BuildContext context) {
+    final layout = VideoLayout(context);
+
+    return ChangeNotifierProvider.value(
+      value: _viewModel,
+      child: Consumer<VideoViewModel>(
+        builder: (context, vm, child) {
+          return Dialog(
+            backgroundColor: Colors.transparent,
+            insetPadding: EdgeInsets.all(layout.dialogInset),
+            child: ConstrainedBox(
+              constraints: BoxConstraints(maxWidth: layout.adaptiveMaxWidth),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  VideoDialogHeader(
+                    titolo: widget.titolo,
+                    layout: layout,
+                    onClose: () => Navigator.pop(context),
+                  ),
+                  Flexible(
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: Colors.black,
+                        borderRadius: BorderRadius.vertical(
+                          bottom: Radius.circular(layout.borderRadius),
+                        ),
+                      ),
+                      child: Center(
+                        heightFactor: 1.0,
+                        child: _buildVideoContent(layout, vm),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildVideoContent(VideoLayout layout, VideoViewModel vm) {
+    double safeRatio = 16 / 9;
+
+    if (vm.controller != null && vm.controller!.value.isInitialized) {
+      final size = vm.controller!.value.size;
+      if (size.width > 0 && size.height > 0) {
+        safeRatio = size.width / size.height;
+      }
+    }
+
+    return ClipRRect(
+      borderRadius: BorderRadius.vertical(
+        bottom: Radius.circular(layout.borderRadius),
+      ),
+      child: AspectRatio(
+        aspectRatio: safeRatio,
+        child: _buildVideoState(layout, vm),
+      ),
+    );
+  }
+
+  Widget _buildVideoState(VideoLayout layout, VideoViewModel vm) {
+    if (vm.hasError) return VideoErrorState(layout: layout);
+    if (!vm.isInitialized || vm.controller == null) {
+      return VideoLoadingState(layout: layout);
+    }
+
+    return GestureDetector(
+      onTap: vm.toggleControlli,
+      child: Stack(
+        alignment: Alignment.bottomCenter,
+        children: [
+          VideoPlayer(vm.controller!),
+          VideoControlOverlay(
+            controller: vm.controller!,
+            layout: layout,
+            mostraControlli: vm.mostraControlli,
+            onJump: (secondi) {
+              vm.salta(secondi);
+              vm.avviaTimerNascondiControlli();
+            },
+            onTogglePlay: vm.togglePlay,
+            onDragStart: vm.fermaTimerControlli,
+            onDragEnd: vm.avviaTimerNascondiControlli,
+          ),
+        ],
+      ),
+    );
+  }
+}
 
 // ==========================================
 // CONFIGURAZIONE LAYOUT
@@ -49,201 +174,6 @@ class VideoLayout {
   double get controlRadius => _sS * 0.075;
   double get smallIconSize => _sS * (isTablet ? 0.06 : 0.09);
   double get largeIconSize => _sS * (isTablet ? 0.09 : 0.14);
-}
-
-// ==========================================
-// SCHERMATA
-// ==========================================
-
-class VideoWidget extends StatefulWidget {
-  final String titolo;
-  final String videoPath;
-
-  const VideoWidget({super.key, required this.titolo, required this.videoPath});
-
-  @override
-  State<VideoWidget> createState() => _VideoWidgetState();
-}
-
-class _VideoWidgetState extends State<VideoWidget> {
-  VideoPlayerController? _controller;
-  bool _isInitialized = false;
-  bool _hasError = false;
-  bool _mostraControlli = true;
-  Timer? _timerNascondiControlli;
-
-  @override
-  void initState() {
-    super.initState();
-    _inizializzaVideo();
-  }
-
-  @override
-  void dispose() {
-    _timerNascondiControlli?.cancel();
-    _controller?.dispose();
-    super.dispose();
-  }
-
-  // --- RENDERING ---
-  @override
-  Widget build(BuildContext context) {
-    final layout = VideoLayout(context);
-
-    return Dialog(
-      backgroundColor: Colors.transparent,
-      insetPadding: EdgeInsets.all(layout.dialogInset),
-      child: ConstrainedBox(
-        constraints: BoxConstraints(maxWidth: layout.adaptiveMaxWidth),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            VideoDialogHeader(
-              titolo: widget.titolo,
-              layout: layout,
-              onClose: () => Navigator.pop(context),
-            ),
-
-            Flexible(
-              child: Container(
-                decoration: BoxDecoration(
-                  color: Colors.black,
-                  borderRadius: BorderRadius.vertical(
-                    bottom: Radius.circular(layout.borderRadius),
-                  ),
-                ),
-                child: Center(
-                  heightFactor: 1.0,
-                  child: _buildVideoContent(layout),
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildVideoContent(VideoLayout layout) {
-    double safeRatio = 16 / 9;
-
-    if (_controller != null && _controller!.value.isInitialized) {
-      final size = _controller!.value.size;
-      if (size.width > 0 && size.height > 0) {
-        safeRatio = size.width / size.height;
-      }
-    }
-
-    return ClipRRect(
-      borderRadius: BorderRadius.vertical(
-        bottom: Radius.circular(layout.borderRadius),
-      ),
-      child: AspectRatio(
-        aspectRatio: safeRatio,
-        child: _buildVideoState(layout),
-      ),
-    );
-  }
-
-  Widget _buildVideoState(VideoLayout layout) {
-    if (_hasError) return VideoErrorState(layout: layout);
-    if (!_isInitialized || _controller == null) {
-      return VideoLoadingState(layout: layout);
-    }
-
-    return GestureDetector(
-      onTap: _toggleControlli,
-      child: Stack(
-        alignment: Alignment.bottomCenter,
-        children: [
-          VideoPlayer(_controller!),
-
-          VideoControlOverlay(
-            controller: _controller!,
-            layout: layout,
-            mostraControlli: _mostraControlli,
-            onJump: (secondi) {
-              _salta(secondi);
-              _avviaTimerNascondiControlli();
-            },
-            onTogglePlay: () {
-              setState(() {
-                if (_controller!.value.isPlaying) {
-                  _controller!.pause();
-                  _timerNascondiControlli?.cancel();
-                } else {
-                  _controller!.play();
-                  _avviaTimerNascondiControlli();
-                }
-              });
-            },
-            onDragStart: () => _timerNascondiControlli?.cancel(),
-            onDragEnd: () => _avviaTimerNascondiControlli(),
-          ),
-        ],
-      ),
-    );
-  }
-
-  // --- LOGICA ---
-  Future<void> _inizializzaVideo() async {
-    try {
-      if (widget.videoPath.startsWith('assets/')) {
-        _controller = VideoPlayerController.asset(widget.videoPath);
-      } else {
-        final storageService = context.read<StorageService>();
-        final basePath = await storageService.percorsoPacchetto(
-          AppConfig.packageId,
-        );
-        final percorsoAssoluto = '$basePath/${widget.videoPath}';
-
-        _controller = VideoPlayerController.file(File(percorsoAssoluto));
-      }
-
-      await _controller!.initialize();
-
-      if (mounted) {
-        setState(() => _isInitialized = true);
-        _controller!.play();
-        _avviaTimerNascondiControlli();
-      }
-    } catch (e) {
-      debugPrint('Errore caricamento video: $e');
-      if (mounted) setState(() => _hasError = true);
-    }
-  }
-
-  Future<void> _salta(int secondi) async {
-    if (_controller == null || !_controller!.value.isInitialized) return;
-    final posizioneCorrente = await _controller!.position;
-    if (posizioneCorrente != null) {
-      final nuovaPosizione = posizioneCorrente + Duration(seconds: secondi);
-      await _controller!.seekTo(nuovaPosizione);
-    }
-  }
-
-  void _toggleControlli() {
-    setState(() {
-      _mostraControlli = !_mostraControlli;
-    });
-
-    if (_mostraControlli) {
-      _avviaTimerNascondiControlli();
-    } else {
-      _timerNascondiControlli?.cancel();
-    }
-  }
-
-  void _avviaTimerNascondiControlli() {
-    _timerNascondiControlli?.cancel();
-    if (_controller != null && !_controller!.value.isPlaying) return;
-    _timerNascondiControlli = Timer(const Duration(seconds: 2), () {
-      if (mounted) {
-        setState(() => _mostraControlli = false);
-      }
-    });
-  }
 }
 
 // ==========================================
