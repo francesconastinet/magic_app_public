@@ -201,7 +201,7 @@ class FontiHeaderSection extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                'Manoscritti',
+                'Catalogo',
                 style: TextStyle(
                   fontSize: 18,
                   fontWeight: FontWeight.bold,

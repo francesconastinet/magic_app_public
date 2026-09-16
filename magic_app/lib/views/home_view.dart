@@ -71,7 +71,7 @@ class _HomeViewState extends State<HomeView> {
                   builder: (BuildContext ctx) {
                     return IconButton(
                       icon: const Icon(Icons.menu),
-                      tooltip: 'Menu Principale',
+                      tooltip: 'Menu',
                       onPressed: () {
                         Scaffold.of(ctx).openEndDrawer();
                       },
