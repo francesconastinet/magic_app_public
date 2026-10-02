@@ -23,6 +23,17 @@ class RecognitionService {
 
   bool get pronto => _pronto;
 
+  // Pulisce una riga del labels.txt rimuovendo l'indice numerico iniziale
+  // e sostituendo underscore con spazi
+  // es. "0 Divina_commedia" -> "Divina commedia"
+  // es. "Divina_commedia" (senza indice) -> "Divina commedia"
+  String _pulisciLabel(String riga) {
+    // Rimuove un eventuale prefisso numerico seguito da spazio (es. "0 ", "12 ")
+    final senzaIndice = riga.replaceFirst(RegExp(r'^\d+\s+'), '');
+    // Sostituisce underscore con spazi per un confronto piu' naturale
+    return senzaIndice.replaceAll('_', ' ').trim();
+  }
+
   // Carica modello dagli asset (modalita' statica)
   Future<void> inizializza() async {
     final labelsData = await rootBundle.loadString('assets/labels.txt');
@@ -30,6 +41,7 @@ class RecognitionService {
         .split('\n')
         .map((l) => l.trim())
         .where((l) => l.isNotEmpty)
+        .map((l) => _pulisciLabel(l))
         .toList();
 
     _interprete = await Interpreter.fromAsset('assets/model_unquant.tflite');
@@ -53,6 +65,7 @@ class RecognitionService {
         .split('\n')
         .map((l) => l.trim())
         .where((l) => l.isNotEmpty)
+        .map((l) => _pulisciLabel(l))
         .toList();
 
     // Carica modello dal disco
@@ -60,7 +73,7 @@ class RecognitionService {
     if (!await modelFile.exists()) {
       throw Exception('model_unquant.tflite non trovato in $base');
     }
-    _interprete = await Interpreter.fromFile(modelFile);
+    _interprete = Interpreter.fromFile(modelFile);
     _pronto = true;
   }
 

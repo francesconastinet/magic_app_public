@@ -9,7 +9,7 @@ import '../core/app_config.dart';
 class CatalogueRepository extends ChangeNotifier {
   final StorageService _storage;
 
-  List<BookModel> _libri = [
+  final List<BookModel> _libri = [
     BookModel(
       id: 'c36c420b-8096-4989-b4f0-0d9a5212fff4',
       titolo: 'Divina Commedia',
@@ -91,7 +91,7 @@ class CatalogueRepository extends ChangeNotifier {
     ),
     BookModel(
       id: "affc62ac-111c-402f-b608-f2440fea2a66",
-      titolo: "Orlando Furioso",
+      titolo: "Future directions",
       autore: "Ludovico Ariosto",
       anno: "1516",
       status: "validating",
@@ -130,7 +130,7 @@ class CatalogueRepository extends ChangeNotifier {
       multimedia: [],
     ),
   ];
-  List<CollectionV2Model> _collezioni = [
+  final List<CollectionV2Model> _collezioni = [
     CollectionV2Model(
       id: 'coll_01',
       name: 'Percorso Medievale',

@@ -27,10 +27,9 @@ class PackageService {
   // la STESSA istanza di AuthService in tutta l'app, invece di rifare
   // login ogni volta che serve un download.
   PackageService({
-    required StorageService storage,
+    required this._storage,
     required AuthService authService,
-  }) : _storage = storage,
-       _authService = authService;
+  }) : _authService = authService;
 
   // Carica e decodifica il ZIP dagli asset
   Future<Archive> _caricaArchivio() async {
