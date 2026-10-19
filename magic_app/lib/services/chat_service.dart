@@ -199,6 +199,10 @@ class ChatService extends ChangeNotifier {
       'session_id': _sessionId,
       'select_code': _selectCode,
       'top_k': 10,
+      // NUOVO — il servizio RAG vuole il tenant_id nel body della /query.
+      // Se non e' impostato (--dart-define=TENANT_ID=...) non viene inviato,
+      // cosi' il comportamento resta quello di prima.
+      if (AppConfig.tenantId.isNotEmpty) 'tenant_id': AppConfig.tenantId,
     };
 
     debugPrint('[CHAT] POST /query: $body');

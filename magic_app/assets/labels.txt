@@ -1,2 +1,8 @@
-0 Future_directions
-1 Divina_commedia
+0 davenia
+1 mae
+2 misura
+3 none
+4 rabbia
+5 stelle
+6 visconte
+7 wonder

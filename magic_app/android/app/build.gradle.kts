@@ -30,6 +30,15 @@ android {
         versionName = flutter.versionName
     }
 
+    // NUOVO — flutter_pixelmatching e flutter_pdfview (pdfium) includono
+    // entrambi libc++_shared.so: si tiene una sola copia per evitare
+    // l'errore "2 files found with path lib/.../libc++_shared.so"
+    packaging {
+        jniLibs {
+            pickFirsts += "**/libc++_shared.so"
+        }
+    }
+
     signingConfigs {
         create("release") {
             keyAlias = keyProperties["keyAlias"] as String? ?: ""

@@ -56,6 +56,9 @@ class AuthService extends ChangeNotifier {
       return null;
     }
 
+    // NUOVO — serve solo per loggare l'avanzamento del download (un messaggio ogni MB)
+    var ultimoLogByte = 0;
+
     try {
       final response = await _dio.post(
         '${AppConfig.apiBaseUrl}/api/common/export/package/',
@@ -63,13 +66,31 @@ class AuthService extends ChangeNotifier {
           headers: {'Authorization': 'Bearer $_accessToken'},
           // Risposta come bytes binari
           responseType: ResponseType.bytes,
+          // NUOVO — il pacchetto con il modello e' piu' pesante e il server puo' metterci
+          // piu' di 60 secondi (il valore di default sopra): per il solo download aspetto fino a 5 minuti
+          receiveTimeout: const Duration(minutes: 5),
         ),
+        // NUOVO — log dell'avanzamento, per capire se il download parte e dove si ferma
+        onReceiveProgress: (ricevuti, totale) {
+          if (ricevuti - ultimoLogByte >= 1024 * 1024) {
+            ultimoLogByte = ricevuti;
+            debugPrint(
+              '[AUTH] Download pacchetto: ${(ricevuti / 1048576).toStringAsFixed(1)} MB ricevuti'
+              '${totale > 0 ? ' su ${(totale / 1048576).toStringAsFixed(1)} MB' : ''}',
+            );
+          }
+        },
       );
 
       debugPrint('[AUTH] Pacchetto scaricato: ${response.data.length} bytes');
       return List<int>.from(response.data as List);
     } on DioException catch (e) {
       debugPrint('[AUTH] Errore download pacchetto: ${e.message}');
+      // NUOVO — e.message e' spesso null: stampo anche tipo, errore e codice HTTP
+      debugPrint(
+        '[AUTH] Dettaglio errore download: tipo=${e.type}, errore=${e.error}, '
+        'status=${e.response?.statusCode}',
+      );
       return null;
     }
   }

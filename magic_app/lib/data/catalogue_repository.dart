@@ -1,5 +1,8 @@
 // TODO: svuotare liste libri/collezioni e decommentare caricamento dati
 
+// MODIFICATO — l'import serve solo al caricamento dei JSON, che per ora e' commentato
+// (vedi TODO in cima): ignoro il warning "unused import" invece di toglierlo
+// ignore: unused_import
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import '../data/models.dart';
@@ -7,6 +10,9 @@ import '../services/storage_service.dart';
 import '../core/app_config.dart';
 
 class CatalogueRepository extends ChangeNotifier {
+  // MODIFICATO — usato solo dal caricamento dei JSON, che per ora e' commentato
+  // (vedi TODO in cima): ignoro il warning "unused field" invece di toglierlo
+  // ignore: unused_field
   final StorageService _storage;
 
   final List<BookModel> _libri = [
@@ -129,7 +135,78 @@ class CatalogueRepository extends ChangeNotifier {
       status: "validating",
       multimedia: [],
     ),
+    // NUOVO — libri TEMPORANEI per il test del modello di Rosario (non sono nel database)
+    BookModel(
+      id: 'test_davenia',
+      titolo: "Cose che nessuno sa",
+      autore: "Alessandro D'Avenia",
+      anno: '',
+      status: 'validating',
+      multimedia: [],
+    ),
+    BookModel(
+      id: 'test_mae',
+      titolo: "'O Maé",
+      autore: "Luigi Garlando",
+      anno: '',
+      status: 'validating',
+      multimedia: [],
+    ),
+    BookModel(
+      id: 'test_misura',
+      titolo: "La misura del mondo",
+      autore: "Daniel Kehlmann",
+      anno: '',
+      status: 'validating',
+      multimedia: [],
+    ),
+    BookModel(
+      id: 'test_rabbia',
+      titolo: "La rabbia e l'orgoglio",
+      autore: "Oriana Fallaci",
+      anno: '',
+      status: 'validating',
+      multimedia: [],
+    ),
+    BookModel(
+      id: 'test_stelle',
+      titolo: "Ma le stelle quante sono",
+      autore: "Giulia Carcasi",
+      anno: '',
+      status: 'validating',
+      multimedia: [],
+    ),
+    BookModel(
+      id: 'test_visconte',
+      titolo: "Il visconte dimezzato",
+      autore: "Italo Calvino",
+      anno: '',
+      status: 'validating',
+      multimedia: [],
+    ),
+    BookModel(
+      id: 'test_wonder',
+      titolo: "Wonder",
+      autore: "R.J. Palacio",
+      anno: '',
+      status: 'validating',
+      multimedia: [],
+    ),
   ];
+
+  // NUOVO — TEMPORANEO: collega le label del modello di Rosario (nomi delle cartelle
+  // del dataset) ai libri temporanei qui sopra. Da togliere quando le cartelle del
+  // dataset useranno gli id veri dei libri.
+  static const Map<String, String> _labelAId = {
+    'davenia': 'test_davenia',
+    'mae': 'test_mae',
+    'misura': 'test_misura',
+    'rabbia': 'test_rabbia',
+    'stelle': 'test_stelle',
+    'visconte': 'test_visconte',
+    'wonder': 'test_wonder',
+  };
+
   final List<CollectionV2Model> _collezioni = [
     CollectionV2Model(
       id: 'coll_01',
@@ -152,6 +229,9 @@ class CatalogueRepository extends ChangeNotifier {
   // Legge i JSON e li salva nella RAM
   Future<void> caricaDatiLocali() async {
     try {
+      // MODIFICATO — usata solo nelle righe commentate sotto: ignoro il warning
+      // "unused local variable" invece di toglierla
+      // ignore: unused_local_variable
       final packageId = AppConfig.packageId;
 
       // 1. Carica Libri (mantenendo il filtro difensivo di prima)
@@ -190,12 +270,33 @@ class CatalogueRepository extends ChangeNotifier {
   }
 
   BookModel? trovaPerNome(String nomeOpera) {
+    // NUOVO — prima cerco la label esatta del modello (es. "davenia") tra i libri temporanei
+    final idDaLabel = _labelAId[nomeOpera.toLowerCase().trim()];
+    if (idDaLabel != null) {
+      for (final o in _libri) {
+        if (o.id == idDaLabel) return o;
+      }
+    }
+
     try {
+      // MODIFICATO — confronto senza maiuscole/minuscole e in entrambi i versi,
+      // perche' le label del modello sono minuscole (es. "sepolcri", "divina")
+      // mentre i titoli sono "Dei sepolcri", "Divina Commedia"
+      // (riga originale:
+      //   return _libri.firstWhere(
+      //     (o) => nomeOpera.contains(o.titolo.split(' ').first),
+      //   );)
+      final nome = nomeOpera.toLowerCase().trim();
       return _libri.firstWhere(
-        (o) => nomeOpera.contains(o.titolo.split(' ').first),
+        (o) =>
+            nome.contains(o.titolo.split(' ').first.toLowerCase()) ||
+            o.titolo.toLowerCase().contains(nome),
       );
     } catch (_) {
-      return _libri.isNotEmpty ? _libri.first : null;
+      // MODIFICATO — se non trova nessun libro restituisce null (prima restituiva
+      // sempre il primo libro, aprendo un'opera sbagliata)
+      // (riga originale: return _libri.isNotEmpty ? _libri.first : null;)
+      return null;
     }
   }
 }

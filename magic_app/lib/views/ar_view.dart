@@ -309,7 +309,11 @@ class ARLayout {
   // --- MENU DEBUG ---
   double get debugTop => safePadding.top + (_lS * 0.16);
   double get debugLeft => _sS * 0.02;
-  double get debugWidth => isLandscape ? _lS * 0.25 : screenSize.width * 0.45;
+  // MODIFICATO — il menu debug ora sta in basso a sinistra e piu' stretto, cosi' non copre
+  // il mirino e la scritta "Punta sulla copertina" / "Analisi in corso..."
+  // (riga originale: double get debugWidth => isLandscape ? _lS * 0.25 : screenSize.width * 0.45;)
+  double get debugBottom => safePadding.bottom + (_sS * 0.02); // NUOVO
+  double get debugWidth => isLandscape ? _lS * 0.22 : screenSize.width * 0.38;
 }
 
 // ==========================================
@@ -973,7 +977,8 @@ class ARDebugMenu extends StatelessWidget {
     ];
 
     return Positioned(
-      top: layout.debugTop,
+      // MODIFICATO — posizionato dal basso invece che dall'alto (riga originale: top: layout.debugTop,)
+      bottom: layout.debugBottom,
       left: layout.debugLeft,
       width: layout.debugWidth,
       child: Card(

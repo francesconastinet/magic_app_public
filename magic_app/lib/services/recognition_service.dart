@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'package:flutter/foundation.dart' show debugPrint; // NUOVO — serve per il log dei primi 3 risultati
 import 'package:flutter/services.dart';
 import 'package:tflite_flutter/tflite_flutter.dart';
 import 'package:path_provider/path_provider.dart';
@@ -10,7 +11,14 @@ class RisultatoRiconoscimento {
 
   RisultatoRiconoscimento({required this.nomeOpera, required this.confidenza});
 
-  bool get isAffidabile => confidenza >= 0.7;
+  // NUOVO — true se il modello ha scelto la classe "None" (foto non riconducibile
+  // a nessun libro del catalogo). La label viene da labels.txt (dopo _pulisciLabel)
+  bool get isNone =>
+      nomeOpera.toLowerCase() == 'none' || nomeOpera.toLowerCase() == 'altro';
+
+  // MODIFICATO — se la classe vincente e' None il risultato non e' mai affidabile
+  // (riga originale: bool get isAffidabile => confidenza >= 0.7;)
+  bool get isAffidabile => !isNone && confidenza >= 0.7;
 
   @override
   String toString() => '$nomeOpera (${(confidenza * 100).toStringAsFixed(1)}%)';
@@ -49,11 +57,19 @@ class RecognitionService {
   }
 
   // Carica modello dal pacchetto scaricato (modalita' dinamica)
-  Future<void> inizializzaDaFile(String packageId, String collectionId) async {
+  // MODIFICATO — il backend mette model_unquant.tflite e labels.txt nella cartella
+  // "modello" alla radice dello zip, quindi il percorso e'
+  // magic_packages/<packageId>/modello/ e non piu' collections/<collectionId>/
+  // (firma originale: Future<void> inizializzaDaFile(String packageId, String collectionId) async {)
+  Future<void> inizializzaDaFile(
+    String packageId, {
+    String cartellaModello = 'modello',
+  }) async {
     final docs = await getApplicationDocumentsDirectory();
-    final base =
-        '${docs.path}/magic_packages/$packageId'
-        '/collections/$collectionId';
+    // (percorso originale:
+    //   '${docs.path}/magic_packages/$packageId'
+    //   '/collections/$collectionId')
+    final base = '${docs.path}/magic_packages/$packageId/$cartellaModello';
 
     // Carica labels dal disco
     final labelsFile = File('$base/labels.txt');
@@ -89,6 +105,21 @@ class RecognitionService {
     _interprete!.run(inputImage, output);
 
     final scores = output[0] as List<double>;
+
+    // NUOVO — log dei primi 3 risultati con la confidenza, utile per i test: si vede
+    // se il libro giusto e' secondo o terzo e quanto e' distante dal primo
+    final indiciOrdinati = List<int>.generate(scores.length, (i) => i)
+      ..sort((a, b) => scores[b].compareTo(scores[a]));
+    final top3 = indiciOrdinati
+        .take(3)
+        .map(
+          (i) =>
+              '${i < _labels.length ? _labels[i] : i} '
+              '${(scores[i] * 100).toStringAsFixed(1)}%',
+        )
+        .join(' | ');
+    debugPrint('[ML] Top 3: $top3');
+
     int bestIndex = 0;
     double bestScore = 0;
     for (int i = 0; i < scores.length; i++) {
@@ -107,8 +138,21 @@ class RecognitionService {
   }
 
   List _preparaImmagine(List<int> bytes) {
-    final immagine = img.decodeImage(Uint8List.fromList(bytes))!;
-    final ridimensionata = img.copyResize(immagine, width: 224, height: 224);
+    // MODIFICATO — applica l'orientamento EXIF (le foto di takePicture possono
+    // essere ruotate nei metadati) per avere l'immagine dritta come nel training
+    // (riga originale: final immagine = img.decodeImage(Uint8List.fromList(bytes))!;)
+    final immagine = img.bakeOrientation(
+      img.decodeImage(Uint8List.fromList(bytes))!,
+    );
+    // MODIFICATO — interpolazione lineare (come il resize del training in Keras)
+    // invece di nearest (default di copyResize)
+    // (riga originale: final ridimensionata = img.copyResize(immagine, width: 224, height: 224);)
+    final ridimensionata = img.copyResize(
+      immagine,
+      width: 224,
+      height: 224,
+      interpolation: img.Interpolation.linear,
+    );
     return List.generate(
       1,
       (_) => List.generate(
@@ -118,7 +162,10 @@ class RecognitionService {
           (x) => List.generate(3, (c) {
             final pixel = ridimensionata.getPixel(x, y);
             final valori = [pixel.r, pixel.g, pixel.b];
-            return valori[c] / 255.0;
+            // MODIFICATO — il training usa Rescaling(1/127.5, offset=-1), quindi
+            // input in [-1, 1] e non in [0, 1]
+            // (riga originale: return valori[c] / 255.0;)
+            return valori[c] / 127.5 - 1.0;
           }),
         ),
       ),
