@@ -85,7 +85,8 @@ class _HomeViewState extends State<HomeView> {
                 fit: BoxFit.contain,
               ),
             ),
-            endDrawer: const MenuView(),
+            // onNuovaChat: il menu avvisa la Home, che svuota le fonti scelte
+            endDrawer: MenuView(onNuovaChat: vm.nuovaChat),
             body: ChatView(
               titoloFonteSelezionata: vm.titoloFonteSelezionata,
               bookIds: vm.idsFonteSelezionata,

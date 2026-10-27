@@ -54,6 +54,13 @@ class HomeViewModel extends ChangeNotifier {
     notifyListeners();
   }
 
+  // "Nuova chat": svuota le fonti scelte e l'ultima opera scansionata
+  // (prima l'AppState, altrimenti _onAppStateChanged la riselezionerebbe).
+  void nuovaChat() {
+    _appState.azzeraOperaSelezionata();
+    selezionaFonte(null, null);
+  }
+
   void _onAppStateChanged() {
     final operaSelezionata = _appState.operaSelezionata;
 

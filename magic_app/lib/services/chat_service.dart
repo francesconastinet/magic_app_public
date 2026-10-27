@@ -77,11 +77,89 @@ class ChatService extends ChangeNotifier {
   List<String> _activeBookIds = [];
   bool _isContextLocked = false;
 
+  // secondo tentativo automatico quando la connessione cade (es. la
+  // VPN si disconnette per qualche secondo). Si riprova solo se la richiesta
+  // non e' arrivata al server (errore di connessione o timeout di connessione),
+  // quindi non c'e' rischio di mandare due volte la stessa domanda: il
+  // request_id della /query e' lo stesso anche nel secondo tentativo.
+  static const int _tentativiExtra = 1;
+  static const Duration _attesaTentativo = Duration(seconds: 3);
+
+  ChatService() {
+    _dio.interceptors.add(
+      InterceptorsWrapper(
+        onError: (DioException e, ErrorInterceptorHandler handler) async {
+          final fatti = (e.requestOptions.extra['tentativi_extra'] as int?) ?? 0;
+          final isErroreConnessione =
+              e.type == DioExceptionType.connectionError ||
+              e.type == DioExceptionType.connectionTimeout;
+
+          if (isErroreConnessione && fatti < _tentativiExtra) {
+            debugPrint(
+              '[CHAT] Connessione assente (${e.requestOptions.method} '
+              '${e.requestOptions.uri.path}): nuovo tentativo tra '
+              '${_attesaTentativo.inSeconds} secondi',
+            );
+            await Future.delayed(_attesaTentativo);
+
+            try {
+              e.requestOptions.extra['tentativi_extra'] = fatti + 1;
+              final response = await _dio.fetch(e.requestOptions);
+              return handler.resolve(response);
+            } on DioException catch (e2) {
+              return handler.next(e2);
+            }
+          }
+
+          return handler.next(e);
+        },
+      ),
+    );
+  }
+
   String get sessionId => _sessionId;
   bool get isGuest => _role == 'guest';
   bool get isRoomActive => _activeRoomCode != null;
   List<String> get activeBookIds => _activeBookIds;
   bool get isContextLocked => _isContextLocked;
+
+  // ==========================================
+  // SCOPE ED ERRORI (nuove API del servizio chat)
+  // ==========================================
+
+  // il tenant_id e' obbligatorio in tutte le chiamate. Nei GET e nelle
+  // PATCH va in query string; in /query e in POST /rooms va nel body.
+  Map<String, dynamic> get _scope => {'tenant_id': AppConfig.tenantId};
+
+  //  codice admin da mandare come room_code. Esiste solo se la stanza
+  // e' stata creata e l'utente non e' guest (il guest e' in sola lettura).
+  String? get _roomCodeAdmin =>
+      (!isGuest && _adminRoomId != null && _adminRoomId!.isNotEmpty)
+      ? _adminRoomId
+      : null;
+
+  // messaggi per gli errori HTTP documentati dal servizio chat.
+  // Ritorna null per gli altri codici, cosi' resta il messaggio di prima.
+  String? _messaggioDaStatus(int? status) {
+    switch (status) {
+      case 403:
+        return 'Non hai i permessi per scrivere in questa stanza. '
+            'Se sei ospite, duplica la stanza per continuare.';
+      case 409:
+        return 'La conversazione appartiene a un altro ambito. '
+            'Avvia una nuova chat.';
+      case 410:
+        return 'Il contesto delle fonti e\' scaduto. Riseleziona le fonti.';
+      case 413:
+        return 'Hai selezionato troppe fonti.';
+      case 422:
+        return 'Richiesta non valida. Controlla la configurazione del tenant.';
+      case 503:
+        return 'Il server sta salvando il contesto. Riprova tra qualche istante.';
+      default:
+        return null;
+    }
+  }
 
   // ==========================================
   // GESTIONE CONTESTO E DOMANDE
@@ -103,6 +181,7 @@ class ChatService extends ChangeNotifier {
       debugPrint('[CHAT] GET /chat/context-sessions/$_sessionId');
       final response = await _dio.get(
         '${AppConfig.chatBaseUrl}/chat/context-sessions/$_sessionId',
+        queryParameters: _scope,
       );
 
       final data = response.data is String
@@ -111,6 +190,10 @@ class ChatService extends ChangeNotifier {
 
       _activeBookIds = List<String>.from(data['active_book_ids'] ?? []);
       _isContextLocked = data['is_locked'] ?? false;
+      debugPrint(
+        '[CHAT] Contesto sul server (GET): libri attivi=$_activeBookIds, '
+        'bloccato=$_isContextLocked',
+      );
       notifyListeners();
     } on DioException catch (e) {
       debugPrint(
@@ -121,11 +204,21 @@ class ChatService extends ChangeNotifier {
 
   Future<bool> _patchContextSession(Map<String, dynamic> body) async {
     try {
-      debugPrint('[CHAT] PATCH /chat/context-sessions/$_sessionId: $body');
+      //  — per i contesti collegati a una stanza serve il room_code admin
+      // nel body (se la stanza non esiste ancora, o siamo guest, non si manda).
+      final bodyConStanza = {
+        ...body,
+        if (_roomCodeAdmin != null) 'room_code': _roomCodeAdmin,
+      };
+
+      debugPrint(
+        '[CHAT] PATCH /chat/context-sessions/$_sessionId: $bodyConStanza',
+      );
 
       final response = await _dio.patch(
         '${AppConfig.chatBaseUrl}/chat/context-sessions/$_sessionId',
-        data: body,
+        data: bodyConStanza,
+        queryParameters: _scope,
       );
 
       final data = response.data is String
@@ -134,6 +227,11 @@ class ChatService extends ChangeNotifier {
 
       _activeBookIds = List<String>.from(data['active_book_ids'] ?? []);
       _isContextLocked = data['is_locked'] ?? false;
+
+      debugPrint(
+        '[CHAT] Contesto dopo PATCH: libri attivi=$_activeBookIds, '
+        'bloccato=$_isContextLocked',
+      );
 
       notifyListeners();
       return true;
@@ -185,7 +283,40 @@ class ChatService extends ChangeNotifier {
   Future<void> resetContextSession() async {
     fontiTotali.clear();
     await _patchContextSession({'action': 'replace', 'book_ids': []});
+
+    // senza libri il lucchetto non deve restare attivo: con il contesto
+    // bloccato e vuoto il server risponde 400 "Seleziona almeno un libro nel
+    // contesto manuale" a ogni domanda. Si sblocca per tornare alle fonti libere.
+    if (_isContextLocked) {
+      await _patchContextSession({'action': 'toggle_lock', 'is_locked': false});
+    }
+
     debugPrint('[CHAT] Context session resettata — modalità fonti libere');
+  }
+
+  // "Nuova chat": riparte da zero con una sessione nuova (nuovo session_id),
+  // senza messaggi, fonti, contesto e stanza. La sessione di prima resta sul
+  // server (le sessioni di contesto scadono da sole) e non viene toccata.
+  void nuovaChat() {
+    final sessionePrecedente = _sessionId;
+
+    _sessionId = const Uuid().v4();
+    messaggi = [];
+    fontiTotali = [];
+    _activeBookIds = [];
+    _isContextLocked = false;
+    _activeRoomCode = null;
+    _adminRoomId = null;
+    _guestRoomId = null;
+    _role = 'admin';
+    _lastRevision = null;
+    _lastUpdatedAt = null;
+
+    debugPrint(
+      '[CHAT] Nuova chat: sessione $sessionePrecedente chiusa, '
+      'nuova sessione $_sessionId',
+    );
+    notifyListeners();
   }
 
   void aggiungiMessaggio(MessaggioChat msg) {
@@ -193,19 +324,51 @@ class ChatService extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<MessaggioChat> inviaMessaggio(String domanda) async {
-    final body = {
-      'question': domanda,
-      'session_id': _sessionId,
-      'select_code': _selectCode,
-      'top_k': 10,
-      // NUOVO — il servizio RAG vuole il tenant_id nel body della /query.
-      // Se non e' impostato (--dart-define=TENANT_ID=...) non viene inviato,
-      // cosi' il comportamento resta quello di prima.
-      if (AppConfig.tenantId.isNotEmpty) 'tenant_id': AppConfig.tenantId,
-    };
+  // collection_id facoltativo: si passa solo se si vuole limitare la domanda
+  // a una collezione. Se e' null (o vuoto) non viene mandato e il chatbot
+  // risponde su tutto, senza obbligo di selezionare una collezione.
+  Future<MessaggioChat> inviaMessaggio(
+    String domanda, {
+    String? collectionId,
+  }) async {
+    // la stanza si usa solo quando e' gia' attiva, cioe' creata dalla
+    // scansione del libro per la condivisione. In chat libera / modalita'
+    // smart non si crea nessuna stanza e non si manda il room_code.
+    if (isRoomActive) {
+      //  — si scrive in una stanza solo con il codice
+      // admin, quindi la stanza va creata prima della prima domanda.
+      await _assicuraStanza();
+    }
 
-    debugPrint('[CHAT] POST /query: $body');
+    final collezione = collectionId?.trim();
+    final haCollezione = collezione != null && collezione.isNotEmpty;
+
+    final Map<String, dynamic> body = isRoomActive
+        ? {
+            'question': domanda,
+            'session_id': _sessionId,
+            'select_code': _selectCode,
+            'top_k': 10,
+            //  — il servizio RAG vuole sempre il tenant_id nel body della
+            // /query (di default e' il tenant Magic, vedi AppConfig.tenantId).
+            'tenant_id': AppConfig.tenantId,
+            //  — codice admin della stanza (se esiste) e ID univoco del turno.
+            if (_roomCodeAdmin != null) 'room_code': _roomCodeAdmin,
+            'request_id': const Uuid().v4(),
+            if (haCollezione) 'collection_id': collezione,
+          }
+        : {
+            // chat libera / modalita' smart: solo i campi obbligatori
+            // (tenant_id, question, session_id) e collection_id se presente.
+            'tenant_id': AppConfig.tenantId,
+            'question': domanda,
+            'session_id': _sessionId,
+            if (haCollezione) 'collection_id': collezione,
+          };
+
+    debugPrint(
+      '[CHAT] POST /query (${isRoomActive ? 'stanza' : 'chat libera'}): $body',
+    );
 
     try {
       final response = await _dio.post(
@@ -242,7 +405,26 @@ class ChatService extends ChangeNotifier {
       );
     } on DioException catch (e) {
       debugPrint('[CHAT] Errore di rete invio messaggio: ${e.message ?? e}');
-      throw Exception('Errore di connessione col server.');
+      final status = e.response?.statusCode;
+      if (status != null) {
+        debugPrint('[CHAT] Risposta $status: ${e.response?.data}');
+      }
+
+      // per il 400 e il 422 si mostra il testo vero mandato dal server (es.
+      // "Seleziona una collezione prima di interrogare la stanza") al posto
+      // del messaggio generico. Se il detail non e' una stringa (es. l'elenco
+      // degli errori di validazione) resta il messaggio di prima.
+      final datiErrore = e.response?.data;
+      final dettaglioServer = (datiErrore is Map) ? datiErrore['detail'] : null;
+      if ((status == 400 || status == 422) &&
+          dettaglioServer is String &&
+          dettaglioServer.trim().isNotEmpty) {
+        throw Exception(dettaglioServer.trim());
+      }
+
+      throw Exception(
+        _messaggioDaStatus(status) ?? 'Errore di connessione col server.',
+      );
     } catch (e, stack) {
       debugPrint('[CHAT] Errore parsing dati invio messaggio: $e\n$stack');
       throw Exception('Errore imprevisto nella lettura della risposta.');
@@ -252,7 +434,8 @@ class ChatService extends ChangeNotifier {
   Future<Map<String, dynamic>?> dettagliLibro(String identifier) async {
     try {
       final response = await _dio.get(
-        '${AppConfig.chatBaseUrl}/book/$identifier',
+        '${AppConfig.chatBaseUrl}/book/${Uri.encodeComponent(identifier)}',
+        queryParameters: _scope,
       );
       return response.data is String
           ? jsonDecode(response.data)
@@ -270,6 +453,46 @@ class ChatService extends ChangeNotifier {
   // GESTIONE ROOM
   // ==========================================
 
+  //  — crea la stanza prima della prima domanda (se non c'e' ancora e non
+  // siamo guest) e conserva i codici. Non attiva la stanza (_activeRoomCode)
+  // e non cambia la UI: serve solo ad avere il room_code admin per la /query.
+  // Se la creazione fallisce si prosegue senza stanza, come una chat normale.
+  Future<void> _assicuraStanza() async {
+    if (isGuest || _adminRoomId != null) return;
+
+    try {
+      debugPrint('[CHAT] POST /rooms (prima della query) per sessione: $_sessionId');
+      final response = await _dio.post(
+        '${AppConfig.chatBaseUrl}/rooms',
+        data: {'session_id': _sessionId, 'tenant_id': AppConfig.tenantId},
+      );
+
+      final data = response.data is String
+          ? jsonDecode(response.data)
+          : response.data;
+
+      if ((data['role']?.toString() ?? 'admin') == 'guest') return;
+
+      final adminCode = data['admin_room_id']?.toString();
+      final guestCode = data['guest_room_id']?.toString();
+
+      if (adminCode != null && adminCode.isNotEmpty) _adminRoomId = adminCode;
+      if (guestCode != null && guestCode.isNotEmpty) _guestRoomId = guestCode;
+
+      debugPrint(
+        '[CHAT] Room creata prima della query, admin: $_adminRoomId, '
+        'guest: $_guestRoomId',
+      );
+    } on DioException catch (e) {
+      debugPrint(
+        '[CHAT] Errore creazione room prima della query: '
+        '${e.response?.statusCode} ${e.response?.data}',
+      );
+    } catch (e, stack) {
+      debugPrint('[CHAT] Errore imprevisto creazione room: $e\n$stack');
+    }
+  }
+
   Future<Map<String, String?>?> recuperaCodiceStanza() async {
     if (_role == 'guest') {
       debugPrint(
@@ -283,7 +506,13 @@ class ChatService extends ChangeNotifier {
       debugPrint('[CHAT] POST /rooms per sessione: $_sessionId');
       final response = await _dio.post(
         '${AppConfig.chatBaseUrl}/rooms',
-        data: {'session_id': _sessionId},
+        data: {
+          'session_id': _sessionId,
+          //  tenant_id obbligatorio nel body; se la stanza esiste gia'
+          // serve il codice admin, altrimenti il server risponde 403.
+          'tenant_id': AppConfig.tenantId,
+          if (_roomCodeAdmin != null) 'room_code': _roomCodeAdmin,
+        },
       );
 
       final data = response.data is String
@@ -321,7 +550,8 @@ class ChatService extends ChangeNotifier {
       return {'admin': _adminRoomId, 'guest': _guestRoomId, 'role': _role};
     } on DioException catch (e) {
       debugPrint(
-        '[CHAT] Errore di rete genera codice: ${e.response?.statusCode}',
+        '[CHAT] Errore di rete genera codice: ${e.response?.statusCode} '
+        '${e.response?.data}',
       );
       return null;
     } catch (e, stack) {
@@ -350,6 +580,7 @@ class ChatService extends ChangeNotifier {
 
       final response = await _dio.get(
         '${AppConfig.chatBaseUrl}/rooms/$codiceUpper',
+        queryParameters: _scope,
       );
       final data = response.data is String
           ? jsonDecode(response.data)
@@ -389,7 +620,11 @@ class ChatService extends ChangeNotifier {
       final payload = data['payload'];
 
       if (payload != null && payload is Map) {
-        final history = payload['conversation_history'] as List? ?? [];
+        var history = payload['conversation_history'] as List? ?? [];
+        //  nelle nuove API payload.messages e' la stessa conversazione
+        // di conversation_history: si usa solo se questa è vuota (mai
+        // entrambe, altrimenti i messaggi sarebbero duplicati).
+        if (history.isEmpty) history = payload['messages'] as List? ?? [];
 
         List<MessaggioChat> unmatchedLocal = List.from(messaggi);
         List<MessaggioChat> nuoviMessaggi = [];
@@ -470,19 +705,77 @@ class ChatService extends ChangeNotifier {
     }
   }
 
+  //  il guest e' in sola lettura: per continuare a scrivere deve
+  // duplicare la stanza (POST /rooms/{codice}/fork). La copia ha una nuova
+  // sessione e nuovi codici admin/guest, e da quel momento si lavora su quella.
+  Future<Map<String, String?>?> duplicaStanza() async {
+    final codice = _activeRoomCode;
+    if (codice == null) return null;
+
+    try {
+      debugPrint('[CHAT] POST /rooms/$codice/fork');
+      final response = await _dio.post(
+        '${AppConfig.chatBaseUrl}/rooms/$codice/fork',
+        queryParameters: _scope,
+      );
+
+      final data = response.data is String
+          ? jsonDecode(response.data)
+          : response.data;
+
+      final nuovaSessione = data['session_id']?.toString();
+      final adminCode = data['admin_room_id']?.toString();
+      final guestCode = data['guest_room_id']?.toString();
+
+      if (nuovaSessione != null && nuovaSessione.isNotEmpty) {
+        _sessionId = nuovaSessione;
+      }
+      _role = data['role']?.toString() ?? 'admin';
+      _adminRoomId = (adminCode != null && adminCode.isNotEmpty)
+          ? adminCode
+          : null;
+      _guestRoomId = (guestCode != null && guestCode.isNotEmpty)
+          ? guestCode
+          : null;
+      _activeRoomCode = _adminRoomId ?? _guestRoomId;
+      _lastRevision = data['revision'] as int?;
+      _lastUpdatedAt = data['updated_at']?.toString();
+
+      debugPrint(
+        '[CHAT] Room duplicata, admin: $_adminRoomId, guest: $_guestRoomId',
+      );
+
+      await recuperaStatoContesto();
+      notifyListeners();
+      return {'admin': _adminRoomId, 'guest': _guestRoomId, 'role': _role};
+    } on DioException catch (e) {
+      debugPrint(
+        '[CHAT] Errore duplicazione room: ${e.response?.statusCode} '
+        '${e.response?.data}',
+      );
+      return null;
+    } catch (e, stack) {
+      debugPrint('[CHAT] Errore imprevisto duplicazione room: $e\n$stack');
+      return null;
+    }
+  }
+
   Future<void> controllaAggiornamenti() async {
     if (_activeRoomCode == null) return;
 
     try {
-      String url = '${AppConfig.chatBaseUrl}/rooms/$_activeRoomCode/status';
+      final url = '${AppConfig.chatBaseUrl}/rooms/$_activeRoomCode/status';
 
+      // tenant_id + revisione (o data di aggiornamento) in query
+      // string; Dio si occupa dell'encoding del timestamp.
+      final params = <String, dynamic>{..._scope};
       if (_lastRevision != null) {
-        url += '?last_known_revision=$_lastRevision';
+        params['last_known_revision'] = _lastRevision;
       } else if (_lastUpdatedAt != null) {
-        url += '?last_known_updated_at=$_lastUpdatedAt';
+        params['last_known_updated_at'] = _lastUpdatedAt;
       }
 
-      final response = await _dio.get(url);
+      final response = await _dio.get(url, queryParameters: params);
       final data = response.data is String
           ? jsonDecode(response.data)
           : response.data;

@@ -99,7 +99,13 @@ class ChatViewModel extends ChangeNotifier {
     contextSessionInCorso = true;
     notifyListeners();
 
-    await _chatService.resetContextSession();
+    // NUOVO — se la richiesta lancia un'eccezione la rotella non deve restare
+    // accesa per sempre: si logga l'errore e si prosegue.
+    try {
+      await _chatService.resetContextSession();
+    } catch (e) {
+      debugPrint('[CHAT] Errore reset contesto (modalità smart): $e');
+    }
 
     contextSessionInCorso = false;
     notifyListeners();
@@ -110,17 +116,30 @@ class ChatViewModel extends ChangeNotifier {
     contextSessionInCorso = true;
     notifyListeners();
 
-    bool successo = await _chatService.creaContextSession(ids);
+    // NUOVO — il service lancia un'eccezione quando il server risponde con un
+    // messaggio di errore (es. "Nessun id valido trovato"): prima non veniva
+    // catturata e la rotella restava accesa. Ora conta come tentativo fallito.
+    bool successo = false;
+    try {
+      successo = await _chatService.creaContextSession(ids);
 
-    if (successo) {
-      successo = await _chatService.impostaBloccoContesto(true);
+      if (successo) {
+        successo = await _chatService.impostaBloccoContesto(true);
+      }
+    } catch (e) {
+      debugPrint('[CHAT] Errore creazione contesto: $e');
+      successo = false;
     }
 
     contextSessionInCorso = false;
 
     if (!successo) {
       onShowError?.call('Si è verificato un problema col recupero delle fonti');
-      await _chatService.resetContextSession();
+      try {
+        await _chatService.resetContextSession();
+      } catch (e) {
+        debugPrint('[CHAT] Errore reset contesto dopo fallimento: $e');
+      }
     }
 
     notifyListeners();
@@ -144,11 +163,18 @@ class ChatViewModel extends ChangeNotifier {
       _chatService.aggiungiMessaggio(risposta);
       _chatService.aggiornaFonti(risposta.fonti);
     } catch (e) {
+      // il service ora lancia messaggi specifici per 403/409/410/413/
+      // 422/503 (non iniziano con "Errore"): in quel caso li mostriamo, per
+      // gli altri errori resta il messaggio di prima.
+      final dettaglio = e.toString().replaceFirst('Exception: ', '');
+      final isSpecifico = !dettaglio.startsWith('Errore');
+
       _chatService.aggiungiMessaggio(
         MessaggioChat(
-          testo:
-              'Si è verificato un errore. '
-              'Verifica la tua connessione e riprova.',
+          testo: isSpecifico
+              ? dettaglio
+              : 'Si è verificato un errore. '
+                    'Verifica la tua connessione e riprova.',
           isUtente: false,
           timestamp: DateTime.now(),
         ),

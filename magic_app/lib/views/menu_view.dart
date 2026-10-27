@@ -11,7 +11,11 @@ import '../viewmodels/menu_viewmodel.dart';
 // ==========================================
 
 class MenuView extends StatefulWidget {
-  const MenuView({super.key});
+  // "Nuova Chat": avvisa la Home, che svuota le fonti scelte e l'ultima
+  // opera scansionata (la chat vera e propria la azzera il viewmodel).
+  final VoidCallback? onNuovaChat;
+
+  const MenuView({super.key, this.onNuovaChat});
 
   @override
   State<MenuView> createState() => _MenuViewState();
@@ -41,6 +45,8 @@ class _MenuViewState extends State<MenuView> {
         Navigator.pop(context);
       }
     };
+
+    _viewModel.onNuovaChat = () => widget.onNuovaChat?.call();
   }
 
   @override

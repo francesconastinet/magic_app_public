@@ -75,6 +75,7 @@ class MenuViewModel extends ChangeNotifier {
   // --- EVENTI UI ---
   void Function(String)? onShowMessage;
   void Function()? onCloseMenu;
+  void Function()? onNuovaChat;
 
   // --- GETTER ---
   String? get mockLoggedUser => _globalMockUser;
@@ -117,7 +118,15 @@ class MenuViewModel extends ChangeNotifier {
     notifyListeners();
   }
 
-  void createNewChat() {}
+  // "Nuova Chat": azzera la chat (sessione, messaggi, fonti, stanza), avvisa la
+  // Home perche' svuoti le fonti scelte, mostra il messaggio e chiude il menu.
+  // Il messaggio va mostrato prima di chiudere il menu, che e' il suo contesto.
+  void createNewChat() {
+    _chatService.nuovaChat();
+    onNuovaChat?.call();
+    onShowMessage?.call('Nuova chat avviata');
+    onCloseMenu?.call();
+  }
 
   void loadChat(String id) {}
 }

@@ -23,6 +23,13 @@ class AppState extends ChangeNotifier {
     notifyListeners();
   }
 
+  // usato da "Nuova chat": azzera l'ultima opera scansionata, cosi' la Home
+  // non la riseleziona da sola al prossimo cambio di stato.
+  void azzeraOperaSelezionata() {
+    _operaSelezionata = null;
+    notifyListeners();
+  }
+
   void setSyncing(bool value) {
     _isSyncing = value;
     notifyListeners();
