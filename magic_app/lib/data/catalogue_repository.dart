@@ -305,7 +305,50 @@ class CatalogueRepository extends ChangeNotifier {
   //   ),)
   final List<CollectionV2Model> _collezioni = [];
 
-  CatalogueRepository({required this._storage});
+  // (riga originale: CatalogueRepository({required this._storage});)
+  CatalogueRepository({required this._storage}) {
+    _applicaMultimediaDemo();
+  }
+
+  // TEMPORANEO (demo): i libri senza contenuti multimediali prendono quelli
+  // della Divina Commedia, cosi' scansionando qualsiasi copertina (es.
+  // "wonder" -> Novelle vol. 2) le bubbles a destra si vedono e funzionano.
+  // I contenuti parlano della Divina Commedia: poi si sostituiscono con quelli
+  // veri di ogni libro. Per toglierlo basta non chiamare questo metodo.
+  static const String _idLibroDemo = 'c36c420b-8096-4989-b4f0-0d9a5212fff4';
+
+  void _applicaMultimediaDemo() {
+    List<MediaItem>? demo;
+    for (final o in _libri) {
+      if (o.id == _idLibroDemo) {
+        demo = o.multimedia;
+        break;
+      }
+    }
+    if (demo == null || demo.isEmpty) return;
+
+    var aggiornati = 0;
+    for (var i = 0; i < _libri.length; i++) {
+      final libro = _libri[i];
+      if (libro.multimedia.isNotEmpty) continue;
+      _libri[i] = BookModel(
+        id: libro.id,
+        titolo: libro.titolo,
+        autore: libro.autore,
+        anno: libro.anno,
+        status: libro.status,
+        multimedia: demo,
+        collectionId: libro.collectionId,
+      );
+      aggiornati++;
+    }
+    if (aggiornati > 0) {
+      debugPrint(
+        '[CATALOGUE REPO] Multimedia demo (Divina Commedia) assegnati a '
+        '$aggiornati libri',
+      );
+    }
+  }
 
   List<BookModel> get libri => _libri;
   List<CollectionV2Model> get collezioni => _collezioni;
@@ -482,6 +525,8 @@ class CatalogueRepository extends ChangeNotifier {
       }
 
       _collezioniCaricate.add(collectionId);
+      // anche i libri arrivati dal server prendono i multimedia demo
+      _applicaMultimediaDemo();
       debugPrint(
         '[CATALOGUE REPO] Libri collezione $collectionId: '
         '${lista.length} ricevuti, $aggiunti aggiunti, $aggiornati aggiornati',

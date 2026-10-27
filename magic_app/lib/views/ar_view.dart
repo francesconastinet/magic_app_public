@@ -1,3 +1,6 @@
+// serviva solo per kDebugMode del menu debug, che ora e' commentato:
+// ignoro il warning "unused import" invece di toglierlo
+// ignore: unused_import
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -171,11 +174,14 @@ class _ARViewState extends State<ARView> with TickerProviderStateMixin {
             isScanning: vm.elaborazione,
           ),
 
-        if (kDebugMode)
-          ARDebugMenu(
-            layout: layout,
-            onSimulate: (book) => vm.simulaRiconoscimento(book),
-          ),
+        // menu debug (Divina Commedia, Promessi Sposi, Future directions)
+        // commentato: aprendo la fotocamera non deve comparire. Per
+        // riattivarlo basta togliere i commenti qui sotto.
+        // if (kDebugMode)
+        //   ARDebugMenu(
+        //     layout: layout,
+        //     onSimulate: (book) => vm.simulaRiconoscimento(book),
+        //   ),
 
         if (vm.overlayVisibile && vm.operaRiconosciuta != null) ...[
           AROperaInfoPanel(
