@@ -183,6 +183,10 @@ class BookModel {
   final String anno;
   final String status;
   final List<MediaItem> multimedia;
+  // id della collezione a cui appartiene il libro (campo collection_id).
+  // Serve per mostrare i libri della collezione scelta nel catalogo, con
+  // l'id che arriva da GET /api/collections/public/magic/. Vuoto se manca.
+  final String collectionId;
 
   BookModel({
     required this.id,
@@ -191,6 +195,7 @@ class BookModel {
     required this.anno,
     required this.status,
     required this.multimedia,
+    this.collectionId = '',
   });
 
   factory BookModel.fromJson(Map<String, dynamic> json) {
@@ -203,23 +208,36 @@ class BookModel {
       multimedia: (json['multimedia'] as List? ?? [])
           .map((m) => MediaItem.fromJson(m))
           .toList(),
+      collectionId:
+          json['collection_id']?.toString() ??
+          json['collectionId']?.toString() ??
+          '',
     );
   }
 }
 
 // Collezione dalla struttura collections.json della nuova struttura
 // Campi reali: collection_id, nome, libri (lista di oggetti {id, titolo})
+// Ora arriva anche da GET /api/collections/public/magic/ con i campi
+// id, tenant, name, description, subject, visibility (senza lista libri:
+// i libri si collegano tramite il collection_id del libro).
 class CollectionV2Model {
   final String id;
   final String name;
   final String description;
   final List<String> bookIds;
+  final String tenant;
+  final String subject;
+  final String visibility;
 
   CollectionV2Model({
     required this.id,
     required this.name,
     required this.description,
-    required this.bookIds,
+    this.bookIds = const [],
+    this.tenant = '',
+    this.subject = '',
+    this.visibility = '',
   });
 
   factory CollectionV2Model.fromJson(Map<String, dynamic> json) {
@@ -251,6 +269,9 @@ class CollectionV2Model {
       name: name,
       description: description,
       bookIds: bookIds,
+      tenant: json['tenant']?.toString() ?? '',
+      subject: json['subject']?.toString() ?? '',
+      visibility: json['visibility']?.toString() ?? '',
     );
   }
 }

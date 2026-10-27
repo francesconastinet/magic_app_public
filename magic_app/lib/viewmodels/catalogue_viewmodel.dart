@@ -34,21 +34,30 @@ class CatalogueViewModel extends ChangeNotifier {
 
   // --- GETTER ---
   bool get isSyncing => _appState.isSyncing;
+  // true mentre si scaricano i libri della collezione selezionata
+  bool get isLoadingLibriCollezione => _repository.isLoadingLibri;
   List<CollectionV2Model> get collezioni => _repository.collezioni;
   List<BookModel> get tuttiILibri => _repository.libri;
   String get searchQuery => _searchQuery;
+
+  // i libri di una collezione sono quelli che hanno collection_id uguale
+  // all'id della collezione (GET /api/collections/public/magic/). Prima si
+  // usava la lista bookIds scritta dentro la collezione (percorso medievale).
+  List<String> idsLibriCollezione(String collectionId) {
+    if (collectionId.isEmpty) return [];
+    return tuttiILibri
+        .where((o) => o.collectionId == collectionId)
+        .map((o) => o.id)
+        .toList();
+  }
 
   List<BookModel> get opereFiltrate {
     var filtrate = tuttiILibri.toList();
 
     if (selectedCollectionId != null) {
-      final activeColl = collezioni.firstWhere(
-        (c) => c.id == selectedCollectionId,
-        orElse: () =>
-            CollectionV2Model(id: '', name: '', description: '', bookIds: []),
-      );
+      // filtro per collezione tramite il collection_id del libro
       filtrate = filtrate
-          .where((o) => activeColl.bookIds.contains(o.id))
+          .where((o) => o.collectionId == selectedCollectionId)
           .toList();
     }
 
@@ -89,6 +98,12 @@ class CatalogueViewModel extends ChangeNotifier {
   void setCollection(String? id) {
     selectedCollectionId = id;
     notifyListeners();
+
+    // quando si sceglie una collezione si scaricano i suoi libri da
+    // GET /api/documents/search/v2/{tenant_id}/ con il collection_id
+    if (id != null) {
+      _repository.caricaLibriCollezione(id);
+    }
   }
 
   void toggleBook(String id, bool isSelected) {
@@ -106,22 +121,57 @@ class CatalogueViewModel extends ChangeNotifier {
   }
 
   void toggleCollectionSelection(CollectionV2Model collezione) {
+    final idsCollezione = idsLibriCollezione(collezione.id);
+
     bool allSelected =
-        collezione.bookIds.isNotEmpty &&
-        collezione.bookIds.every((id) => selectedBookIds.contains(id));
+        idsCollezione.isNotEmpty &&
+        idsCollezione.every((id) => selectedBookIds.contains(id));
 
     if (allSelected) {
-      selectedBookIds.removeAll(collezione.bookIds);
+      selectedBookIds.removeAll(idsCollezione);
     } else {
-      selectedBookIds.addAll(collezione.bookIds);
+      selectedBookIds.addAll(idsCollezione);
     }
     notifyListeners();
+  }
+
+  // collection_id da mandare nella /query del chatbot. Si manda solo se
+  // tutti i libri selezionati appartengono alla stessa collezione; se non c'e'
+  // selezione o i libri sono di collezioni diverse resta null e il chatbot
+  // risponde su tutto (collection_id facoltativo).
+  String? _collectionIdDellaSelezione() {
+    if (selectedBookIds.isEmpty) return null;
+
+    String? idComune;
+    for (final id in selectedBookIds) {
+      String? idCollezioneLibro;
+      for (final o in tuttiILibri) {
+        if (o.id == id) {
+          idCollezioneLibro = o.collectionId;
+          break;
+        }
+      }
+
+      if (idCollezioneLibro == null || idCollezioneLibro.isEmpty) return null;
+      if (idComune == null) {
+        idComune = idCollezioneLibro;
+      } else if (idComune != idCollezioneLibro) {
+        return null;
+      }
+    }
+    return idComune;
   }
 
   void applicaSelezione(
     void Function(String? titolo, List<String>? ids) callback,
     VoidCallback onDone,
   ) {
+    // la collezione della selezione viene salvata nello stato dell'app,
+    // cosi' la chat la puo' mandare come collection_id nella /query
+    final collectionIdChat = _collectionIdDellaSelezione();
+    _appState.impostaCollezioneChat(collectionIdChat);
+    debugPrint('[CATALOGO] collection_id per la chat: $collectionIdChat');
+
     if (selectedBookIds.isEmpty) {
       callback(null, null);
     } else if (selectedBookIds.length == 1) {
@@ -131,8 +181,9 @@ class CatalogueViewModel extends ChangeNotifier {
     } else {
       String? nomeCollezioneCorrispondente;
       for (var coll in collezioni) {
-        if (coll.bookIds.length == selectedBookIds.length &&
-            coll.bookIds.every((id) => selectedBookIds.contains(id))) {
+        final idsCollezione = idsLibriCollezione(coll.id);
+        if (idsCollezione.length == selectedBookIds.length &&
+            idsCollezione.every((id) => selectedBookIds.contains(id))) {
           nomeCollezioneCorrispondente = coll.name;
           break;
         }

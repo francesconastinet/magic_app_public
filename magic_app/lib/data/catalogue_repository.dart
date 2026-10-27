@@ -2,8 +2,11 @@
 
 // l'import serve solo al caricamento dei JSON, che per ora è commentato
 // (vedi TODO in cima): ignoro il warning "unused import" invece di toglierlo
+// (ora jsonDecode si usa anche per le risposte delle API collezioni e
+// documenti, quando arrivano come stringa)
 // ignore: unused_import
 import 'dart:convert';
+import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import '../data/models.dart';
 import '../services/storage_service.dart';
@@ -14,6 +17,21 @@ class CatalogueRepository extends ChangeNotifier {
   // (vedi TODO in cima): ignoro il warning "unused field" invece di toglierlo
   // ignore: unused_field
   final StorageService _storage;
+
+  // client per le API pubbliche del backend (collezioni e documenti)
+  final Dio _dio = Dio(
+    BaseOptions(
+      connectTimeout: const Duration(seconds: 20),
+      receiveTimeout: const Duration(seconds: 30),
+    ),
+  );
+
+  // stato del caricamento delle collezioni e dei libri delle collezioni
+  bool _isLoadingCollezioni = false;
+  bool _isLoadingLibri = false;
+  // collezioni di cui i libri sono gia' stati scaricati (per non rifare
+  // la chiamata ogni volta che si tocca lo stesso chip)
+  final Set<String> _collezioniCaricate = {};
 
   final List<BookModel> _libri = [
     BookModel(
@@ -269,26 +287,30 @@ class CatalogueRepository extends ChangeNotifier {
     'wonder': '0e6ea323-a308-4968-be01-fa57976fbde3', // Novelle vol. 2
   };
 
-  final List<CollectionV2Model> _collezioni = [
-    CollectionV2Model(
-      id: 'coll_01',
-      name: 'Percorso Medievale',
-      description:
-          'Una selezione di manoscritti risalenti al periodo medievale.',
-      bookIds: [
-        'affc62ac-111c-402f-b608-f2440fea2a66',
-        //  — id di Aminta aggiornato a quello del database
-        // (riga originale: '81a735b6-e4b1-45e6-b28c-15a7068dc9ec',)
-        '2a9beabc-cf7a-4994-99d5-86af26cc9732',
-        'c36c420b-8096-4989-b4f0-0d9a5212fff4',
-      ],
-    ),
-  ];
+  // le collezioni ora arrivano da GET /api/collections/public/magic/
+  // (vedi caricaCollezioni). Il percorso medievale scritto a mano e' stato tolto.
+  // (righe originali:
+  //   CollectionV2Model(
+  //     id: 'coll_01',
+  //     name: 'Percorso Medievale',
+  //     description:
+  //         'Una selezione di manoscritti risalenti al periodo medievale.',
+  //     bookIds: [
+  //       'affc62ac-111c-402f-b608-f2440fea2a66',
+  //       //  — id di Aminta aggiornato a quello del database
+  //       // (riga originale: '81a735b6-e4b1-45e6-b28c-15a7068dc9ec',)
+  //       '2a9beabc-cf7a-4994-99d5-86af26cc9732',
+  //       'c36c420b-8096-4989-b4f0-0d9a5212fff4',
+  //     ],
+  //   ),)
+  final List<CollectionV2Model> _collezioni = [];
 
   CatalogueRepository({required this._storage});
 
   List<BookModel> get libri => _libri;
   List<CollectionV2Model> get collezioni => _collezioni;
+  bool get isLoadingCollezioni => _isLoadingCollezioni;
+  bool get isLoadingLibri => _isLoadingLibri;
 
   // Legge i JSON e li salva nella RAM
   Future<void> caricaDatiLocali() async {
@@ -320,7 +342,10 @@ class CatalogueRepository extends ChangeNotifier {
       final idLibriValidi = _libri.map((b) => b.id).toSet();
 
       // Scorre le collezioni e rimuvove gli ID invalidi
+      // (le collezioni della GET pubblica non hanno la lista libri: se e'
+      // vuota si salta, la lista di default non e' modificabile)
       for (var collezione in _collezioni) {
+        if (collezione.bookIds.isEmpty) continue;
         collezione.bookIds.retainWhere((id) => idLibriValidi.contains(id));
       }
 
@@ -331,6 +356,211 @@ class CatalogueRepository extends ChangeNotifier {
     } catch (e) {
       debugPrint('[CATALOGUE REPO] Errore caricamento JSON: $e');
     }
+
+    // collezioni pubbliche dal backend (Classici italiani, Test 01, ...)
+    await caricaCollezioni();
+  }
+
+  // ==========================================
+  // COLLEZIONI E LIBRI DAL BACKEND
+  // ==========================================
+
+  // scarica le collezioni pubbliche da GET /api/collections/public/magic/.
+  // Ogni collezione ha id, tenant, name, description, subject, visibility.
+  // Se la chiamata fallisce la lista resta com'era.
+  Future<void> caricaCollezioni() async {
+    if (_isLoadingCollezioni) return;
+    _isLoadingCollezioni = true;
+    notifyListeners();
+
+    final url = '${AppConfig.apiBaseUrl}/api/collections/public/magic/';
+
+    try {
+      debugPrint('[CATALOGUE REPO] GET $url');
+      final response = await _dio.get(url);
+      final data = response.data is String
+          ? jsonDecode(response.data)
+          : response.data;
+
+      final lista = _estraiLista(data);
+      final nuove = lista
+          .whereType<Map>()
+          .map((c) => CollectionV2Model.fromJson(Map<String, dynamic>.from(c)))
+          .where((c) => c.id.isNotEmpty && c.name.trim().isNotEmpty)
+          .toList();
+
+      _collezioni
+        ..clear()
+        ..addAll(nuove);
+
+      debugPrint(
+        '[CATALOGUE REPO] Collezioni caricate: '
+        '${_collezioni.map((c) => c.name).toList()}',
+      );
+    } on DioException catch (e) {
+      debugPrint(
+        '[CATALOGUE REPO] Errore GET collezioni: '
+        '${e.response?.statusCode} ${e.response?.data ?? e.message}',
+      );
+    } catch (e, stack) {
+      debugPrint('[CATALOGUE REPO] Errore parsing collezioni: $e\n$stack');
+    } finally {
+      _isLoadingCollezioni = false;
+      notifyListeners();
+    }
+
+    // si scaricano subito i libri di tutte le collezioni, cosi' ogni libro
+    // ha il suo collection_id anche se si entra in chat dalla scansione
+    // senza aprire il catalogo (serve per la fonte bloccata)
+    for (final c in List<CollectionV2Model>.from(_collezioni)) {
+      await caricaLibriCollezione(c.id);
+    }
+  }
+
+  // scarica i libri di una collezione da
+  // GET /api/documents/search/v2/{tenant_id}/ con il collection_id della
+  // collezione selezionata. Ai libri scaricati viene messo quel collection_id,
+  // cosi' il catalogo li mostra sotto la collezione giusta.
+  Future<void> caricaLibriCollezione(
+    String collectionId, {
+    bool forza = false,
+  }) async {
+    if (collectionId.isEmpty) return;
+    if (!forza && _collezioniCaricate.contains(collectionId)) return;
+    if (_isLoadingLibri) return;
+
+    _isLoadingLibri = true;
+    notifyListeners();
+
+    final url =
+        '${AppConfig.apiBaseUrl}/api/documents/search/v2/${AppConfig.tenantId}/';
+
+    try {
+      debugPrint('[CATALOGUE REPO] GET $url collection_id=$collectionId');
+      final response = await _dio.get(
+        url,
+        queryParameters: {'collection_id': collectionId},
+      );
+      final data = response.data is String
+          ? jsonDecode(response.data)
+          : response.data;
+
+      final lista = _estraiLista(data);
+      var aggiunti = 0;
+      var aggiornati = 0;
+
+      for (final item in lista.whereType<Map>()) {
+        final libro = _libroDaDocumento(
+          Map<String, dynamic>.from(item),
+          collectionId,
+        );
+        if (libro == null) continue;
+
+        final index = _libri.indexWhere((o) => o.id == libro.id);
+        if (index != -1) {
+          // libro gia' presente (es. quelli scritti a mano con i contenuti
+          // multimediali): si tengono i suoi dati e si aggiunge il collection_id
+          final esistente = _libri[index];
+          _libri[index] = BookModel(
+            id: esistente.id,
+            titolo: esistente.titolo.isNotEmpty
+                ? esistente.titolo
+                : libro.titolo,
+            autore: esistente.autore.isNotEmpty
+                ? esistente.autore
+                : libro.autore,
+            anno: esistente.anno.isNotEmpty ? esistente.anno : libro.anno,
+            status: esistente.status,
+            multimedia: esistente.multimedia,
+            collectionId: libro.collectionId,
+          );
+          aggiornati++;
+        } else {
+          _libri.add(libro);
+          aggiunti++;
+        }
+      }
+
+      _collezioniCaricate.add(collectionId);
+      debugPrint(
+        '[CATALOGUE REPO] Libri collezione $collectionId: '
+        '${lista.length} ricevuti, $aggiunti aggiunti, $aggiornati aggiornati',
+      );
+    } on DioException catch (e) {
+      debugPrint(
+        '[CATALOGUE REPO] Errore GET libri collezione: '
+        '${e.response?.statusCode} ${e.response?.data ?? e.message}',
+      );
+    } catch (e, stack) {
+      debugPrint('[CATALOGUE REPO] Errore parsing libri collezione: $e\n$stack');
+    } finally {
+      _isLoadingLibri = false;
+      notifyListeners();
+    }
+  }
+
+  // la risposta puo' essere direttamente una lista oppure un oggetto con la
+  // lista dentro (results, items, documents, data, hits)
+  List _estraiLista(dynamic data) {
+    if (data is List) return data;
+    if (data is Map) {
+      for (final chiave in ['results', 'items', 'documents', 'data', 'hits']) {
+        final valore = data[chiave];
+        if (valore is List) return valore;
+      }
+    }
+    return [];
+  }
+
+  // converte un documento della search v2 in BookModel. Legge i nomi di
+  // campo piu' probabili (id/document_id, title/titolo, author/autore,
+  // year/date/anno). Ritorna null se manca l'id o il titolo.
+  BookModel? _libroDaDocumento(Map<String, dynamic> json, String collectionId) {
+    String testo(List<String> chiavi) {
+      for (final k in chiavi) {
+        final v = json[k];
+        if (v == null) continue;
+        if (v is List) {
+          final unito = v.map((e) => e.toString()).join(', ').trim();
+          if (unito.isNotEmpty) return unito;
+          continue;
+        }
+        final s = v.toString().trim();
+        if (s.isNotEmpty) return s;
+      }
+      return '';
+    }
+
+    final id = testo(['id', 'document_id', 'work_id', 'book_id']);
+    final titolo = testo(['title', 'titolo', 'name']);
+    if (id.isEmpty || titolo.isEmpty) return null;
+
+    // il collection_id del libro e' sempre l'id della collezione chiesta
+    // (UUID preso da GET /api/collections/public/magic/). Il campo
+    // collection_id del documento non si usa: puo' essere una lista o un
+    // valore non UUID, e la chat rispondeva 422 "collection_id deve essere
+    // un UUID valido".
+    // (righe precedenti:
+    //   final idCollezione = testo(['collection_id', 'collectionId']);
+    //   collectionId: idCollezione.isNotEmpty ? idCollezione : collectionId,)
+    final idCollezioneDocumento = testo(['collection_id', 'collectionId']);
+    if (idCollezioneDocumento.isNotEmpty &&
+        idCollezioneDocumento != collectionId) {
+      debugPrint(
+        '[CATALOGUE REPO] Libro $id: collection_id del documento '
+        '"$idCollezioneDocumento" ignorato, si usa $collectionId',
+      );
+    }
+
+    return BookModel(
+      id: id,
+      titolo: titolo,
+      autore: testo(['author', 'autore', 'authors']),
+      anno: testo(['year', 'anno', 'date']),
+      status: testo(['status']),
+      multimedia: [],
+      collectionId: collectionId,
+    );
   }
 
   BookModel? trovaPerNome(String nomeOpera) {

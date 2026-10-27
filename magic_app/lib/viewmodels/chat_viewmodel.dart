@@ -35,14 +35,53 @@ class ChatViewModel extends ChangeNotifier {
       }
     }
 
+    // i libri di una collezione ora sono quelli con collection_id uguale
+    // all'id della collezione (non piu' la lista bookIds della collezione)
+    // (righe originali:
+    //   if (coll.bookIds.length == ids.length &&
+    //       coll.bookIds.every((id) => ids.contains(id))) {
+    //     return coll.name;
+    //   })
     for (var coll in _catalogueRepo.collezioni) {
-      if (coll.bookIds.length == ids.length &&
-          coll.bookIds.every((id) => ids.contains(id))) {
+      final idsCollezione = _catalogueRepo.libri
+          .where((b) => b.collectionId == coll.id)
+          .map((b) => b.id)
+          .toList();
+      if (idsCollezione.length == ids.length &&
+          idsCollezione.every((id) => ids.contains(id))) {
         return coll.name;
       }
     }
 
     return 'Manoscritti vari';
+  }
+
+  // collection_id da mandare nella /query: si prende dai libri del contesto
+  // attivo. Se tutti appartengono alla stessa collezione si manda quell'id,
+  // altrimenti (nessun libro, libri di collezioni diverse o senza collezione)
+  // resta null e il chatbot risponde su tutto (collection_id facoltativo).
+  String? get _collectionIdContesto {
+    final ids = _chatService.activeBookIds;
+    if (ids.isEmpty) return null;
+
+    String? idComune;
+    for (final id in ids) {
+      String? idCollezioneLibro;
+      for (final b in _catalogueRepo.libri) {
+        if (b.id == id) {
+          idCollezioneLibro = b.collectionId;
+          break;
+        }
+      }
+
+      if (idCollezioneLibro == null || idCollezioneLibro.isEmpty) return null;
+      if (idComune == null) {
+        idComune = idCollezioneLibro;
+      } else if (idComune != idCollezioneLibro) {
+        return null;
+      }
+    }
+    return idComune;
   }
 
   // --- EVENTI UI ---
@@ -107,6 +146,9 @@ class ChatViewModel extends ChangeNotifier {
       debugPrint('[CHAT] Errore reset contesto (modalità smart): $e');
     }
 
+    // fonti libere: nessuna collezione da mandare
+    _chatService.impostaCollezioneContesto(null);
+
     contextSessionInCorso = false;
     notifyListeners();
     onScrollToBottom?.call();
@@ -132,6 +174,12 @@ class ChatViewModel extends ChangeNotifier {
     }
 
     contextSessionInCorso = false;
+
+    // collezione dei libri appena messi in fonte bloccata (null se sono di
+    // collezioni diverse o se la creazione del contesto e' fallita)
+    _chatService.impostaCollezioneContesto(
+      successo ? _collectionIdContesto : null,
+    );
 
     if (!successo) {
       onShowError?.call('Si è verificato un problema col recupero delle fonti');
@@ -159,7 +207,20 @@ class ChatViewModel extends ChangeNotifier {
     onScrollToBottom?.call();
 
     try {
-      final risposta = await _chatService.inviaMessaggio(testo);
+      // collection_id della collezione dei libri in fonte bloccata (se c'e').
+      // Si ricalcola a ogni domanda, perche' i libri della collezione possono
+      // essere arrivati dal server dopo che il contesto e' stato creato.
+      final collectionId = _collectionIdContesto;
+      _chatService.impostaCollezioneContesto(collectionId);
+      debugPrint(
+        '[CHAT] collection_id della domanda: $collectionId '
+        '(fonte bloccata: $isContextLocked, libri: $activeBookIds)',
+      );
+
+      final risposta = await _chatService.inviaMessaggio(
+        testo,
+        collectionId: collectionId,
+      );
       _chatService.aggiungiMessaggio(risposta);
       _chatService.aggiornaFonti(risposta.fonti);
     } catch (e) {

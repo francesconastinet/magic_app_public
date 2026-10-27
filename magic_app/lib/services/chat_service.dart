@@ -70,6 +70,23 @@ class ChatService extends ChangeNotifier {
   String? _adminRoomId;
   String? _guestRoomId;
 
+  // --- COLLEZIONE DELLA CONVERSAZIONE ---
+  // la stanza e' legata a una collezione: se nella /query arriva un
+  // collection_id diverso il server risponde 409 "Collezione diversa dalla
+  // stanza". Si tiene quindi la collezione usata nella conversazione (ultima
+  // domanda andata a buon fine) e quella della stanza, per mandarle sempre
+  // uguali in POST /rooms e nelle domande fatte nella stanza.
+  String? _collectionIdConversazione;
+  String? _collectionIdStanza;
+  // collezione dei libri del contesto scelto (fonte bloccata). La imposta
+  // il ChatViewModel quando cambia il contesto o prima di ogni domanda.
+  String? _collectionIdContesto;
+
+  // il servizio chat accetta solo collection_id in formato UUID
+  static final RegExp _uuidRegex = RegExp(
+    r'^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$',
+  );
+
   List<MessaggioChat> messaggi = [];
   List<FonteChat> fontiTotali = [];
 
@@ -137,6 +154,46 @@ class ChatService extends ChangeNotifier {
       (!isGuest && _adminRoomId != null && _adminRoomId!.isNotEmpty)
       ? _adminRoomId
       : null;
+
+  // legge il collection_id dalla risposta delle API stanze (campo
+  // collection_id in cima o dentro payload). Ritorna null se non c'e'.
+  String? _collezioneDaRisposta(dynamic data) {
+    if (data is! Map) return null;
+    String? pulisci(dynamic v) {
+      final s = v?.toString().trim();
+      return (s != null && s.isNotEmpty && s != 'null') ? s : null;
+    }
+
+    final diretto = pulisci(data['collection_id']);
+    if (diretto != null) return diretto;
+    final payload = data['payload'];
+    if (payload is Map) return pulisci(payload['collection_id']);
+    return null;
+  }
+
+  // ritorna il valore pulito se e' un UUID valido, altrimenti null (e lo
+  // scrive nel log, cosi' si vede da dove arriva il valore sbagliato)
+  String? _uuidValido(String? valore) {
+    final v = valore?.trim();
+    if (v == null || v.isEmpty) return null;
+    if (_uuidRegex.hasMatch(v)) return v;
+    debugPrint('[CHAT] collection_id non valido, non viene mandato: "$v"');
+    return null;
+  }
+
+  // collection_id da mandare al server: solo con fonte bloccata (contesto
+  // bloccato con almeno un libro) e solo se e' un UUID valido
+  String? get _collezioneFonteBloccata {
+    if (!_isContextLocked || _activeBookIds.isEmpty) return null;
+    return _uuidValido(_collectionIdContesto);
+  }
+
+  // il ChatViewModel imposta qui la collezione dei libri in fonte bloccata
+  // (null se i libri sono di collezioni diverse o si e' in fonti libere)
+  void impostaCollezioneContesto(String? collectionId) {
+    _collectionIdContesto = collectionId;
+    debugPrint('[CHAT] Collezione del contesto: $_collectionIdContesto');
+  }
 
   // messaggi per gli errori HTTP documentati dal servizio chat.
   // Ritorna null per gli altri codici, cosi' resta il messaggio di prima.
@@ -311,6 +368,9 @@ class ChatService extends ChangeNotifier {
     _role = 'admin';
     _lastRevision = null;
     _lastUpdatedAt = null;
+    _collectionIdConversazione = null;
+    _collectionIdStanza = null;
+    _collectionIdContesto = null;
 
     debugPrint(
       '[CHAT] Nuova chat: sessione $sessionePrecedente chiusa, '
@@ -340,8 +400,29 @@ class ChatService extends ChangeNotifier {
       await _assicuraStanza();
     }
 
-    final collezione = collectionId?.trim();
-    final haCollezione = collezione != null && collezione.isNotEmpty;
+    // il collection_id si prende sempre dalla collezione dei libri in fonte
+    // bloccata (contesto scelto). Se arriva un valore nuovo lo si salva come
+    // collezione del contesto, cosi' la usa anche POST /rooms.
+    if (collectionId != null) _collectionIdContesto = collectionId;
+
+    // si manda solo con fonte bloccata e solo se e' un UUID valido: in chat
+    // libera non si manda, e un valore non valido darebbe 422
+    // "collection_id deve essere un UUID valido".
+    // (righe precedenti: nella stanza si usava la collezione della stanza
+    //   final collezione = isRoomActive
+    //       ? (_collectionIdStanza ?? _collectionIdConversazione ?? richiesta)
+    //       : richiesta;)
+    final collezione = _collezioneFonteBloccata;
+    final haCollezione = collezione != null;
+
+    if (_collectionIdStanza != null &&
+        collezione != null &&
+        collezione != _collectionIdStanza) {
+      debugPrint(
+        '[CHAT] Collezione della fonte bloccata ($collezione) diversa da '
+        'quella della stanza ($_collectionIdStanza)',
+      );
+    }
 
     final Map<String, dynamic> body = isRoomActive
         ? {
@@ -396,6 +477,10 @@ class ChatService extends ChangeNotifier {
         '[CHAT] Risposta ricevuta: '
         '${testo.substring(0, testo.length.clamp(0, 50))}...',
       );
+
+      // collezione usata in questa conversazione, da mandare uguale quando
+      // si crea la stanza (condividi / scansione)
+      _collectionIdConversazione = haCollezione ? collezione : null;
 
       return MessaggioChat(
         testo: testo,
@@ -464,12 +549,22 @@ class ChatService extends ChangeNotifier {
       debugPrint('[CHAT] POST /rooms (prima della query) per sessione: $_sessionId');
       final response = await _dio.post(
         '${AppConfig.chatBaseUrl}/rooms',
-        data: {'session_id': _sessionId, 'tenant_id': AppConfig.tenantId},
+        data: {
+          'session_id': _sessionId,
+          'tenant_id': AppConfig.tenantId,
+          // collezione dei libri in fonte bloccata, cosi' la stanza nasce
+          // legata alla collezione giusta (evita il 409)
+          if (_collezioneFonteBloccata != null)
+            'collection_id': _collezioneFonteBloccata,
+        },
       );
 
       final data = response.data is String
           ? jsonDecode(response.data)
           : response.data;
+
+      _collectionIdStanza =
+          _collezioneDaRisposta(data) ?? _collezioneFonteBloccata;
 
       if ((data['role']?.toString() ?? 'admin') == 'guest') return;
 
@@ -512,12 +607,24 @@ class ChatService extends ChangeNotifier {
           // serve il codice admin, altrimenti il server risponde 403.
           'tenant_id': AppConfig.tenantId,
           if (_roomCodeAdmin != null) 'room_code': _roomCodeAdmin,
+          // la stanza va creata con la collezione dei libri in fonte
+          // bloccata: se no le domande successive tornano 409
+          // "Collezione diversa dalla stanza"
+          if (_collezioneFonteBloccata != null)
+            'collection_id': _collezioneFonteBloccata,
         },
       );
 
       final data = response.data is String
           ? jsonDecode(response.data)
           : response.data;
+
+      _collectionIdStanza =
+          _collezioneDaRisposta(data) ?? _collezioneFonteBloccata;
+      debugPrint(
+        '[CHAT] Collezione della stanza: $_collectionIdStanza '
+        '(conversazione: $_collectionIdConversazione)',
+      );
 
       final adminCode = data['admin_room_id']?.toString();
       final guestCode = data['guest_room_id']?.toString();
@@ -616,6 +723,13 @@ class ChatService extends ChangeNotifier {
 
       _lastRevision = data['revision'] as int?;
       _lastUpdatedAt = data['updated_at']?.toString();
+
+      // collezione della stanza aperta da codice (se il server la manda)
+      final collezioneStanza = _collezioneDaRisposta(data);
+      if (collezioneStanza != null) {
+        _collectionIdStanza = collezioneStanza;
+        _collectionIdConversazione = collezioneStanza;
+      }
 
       final payload = data['payload'];
 
@@ -740,6 +854,9 @@ class ChatService extends ChangeNotifier {
       _activeRoomCode = _adminRoomId ?? _guestRoomId;
       _lastRevision = data['revision'] as int?;
       _lastUpdatedAt = data['updated_at']?.toString();
+
+      // la copia mantiene la collezione della stanza originale
+      _collectionIdStanza = _collezioneDaRisposta(data) ?? _collectionIdStanza;
 
       debugPrint(
         '[CHAT] Room duplicata, admin: $_adminRoomId, guest: $_guestRoomId',

@@ -46,6 +46,19 @@ class _CatalogueViewState extends State<CatalogueView> {
     super.dispose();
   }
 
+  // cerca la collezione attiva tra quelle scaricate da
+  // GET /api/collections/public/magic/. Ritorna null se non c'e' (es. la
+  // lista e' stata riscaricata e la collezione non esiste piu'), cosi'
+  // non si rompe la schermata come succedeva con firstWhere.
+  CollectionV2Model? _collezioneAttiva(CatalogueViewModel vm) {
+    final id = vm.selectedCollectionId;
+    if (id == null) return null;
+    for (final c in vm.collezioni) {
+      if (c.id == id) return c;
+    }
+    return null;
+  }
+
   @override
   Widget build(BuildContext context) {
     final isTablet = MediaQuery.sizeOf(context).shortestSide >= 600;
@@ -56,6 +69,8 @@ class _CatalogueViewState extends State<CatalogueView> {
       value: _viewModel,
       child: Consumer<CatalogueViewModel>(
         builder: (context, vm, child) {
+          final activeColl = _collezioneAttiva(vm);
+
           return FractionallySizedBox(
             heightFactor: isLandscape ? (isTablet ? 0.8 : 1) : 0.8,
             child: Column(
@@ -81,14 +96,16 @@ class _CatalogueViewState extends State<CatalogueView> {
                   child: ListView(
                     padding: EdgeInsets.zero,
                     children: [
+                      // le collezioni ora arrivano dalla GET pubblica
+                      // /api/collections/public/magic/ (campo name), non piu'
+                      // dal percorso medievale scritto a mano.
                       FontiCollectionsSection(
                         collezioni: vm.collezioni,
                         selectedCollectionId: vm.selectedCollectionId,
                         onCollectionSelected: vm.setCollection,
                       ),
 
-                      if (vm.selectedCollectionId != null &&
-                          vm.opereFiltrate.isNotEmpty)
+                      if (activeColl != null && vm.opereFiltrate.isNotEmpty)
                         Padding(
                           padding: const EdgeInsets.symmetric(
                             horizontal: 16.0,
@@ -96,13 +113,16 @@ class _CatalogueViewState extends State<CatalogueView> {
                           ),
                           child: Builder(
                             builder: (context) {
-                              final activeColl = vm.collezioni.firstWhere(
-                                (c) => c.id == vm.selectedCollectionId,
+                              // i libri della collezione sono quelli che hanno
+                              // collection_id uguale all'id della collezione
+                              // (non piu' la lista bookIds dentro la collezione).
+                              final idsCollezione = vm.idsLibriCollezione(
+                                activeColl.id,
                               );
 
                               final allSelected =
-                                  activeColl.bookIds.isNotEmpty &&
-                                  activeColl.bookIds.every(
+                                  idsCollezione.isNotEmpty &&
+                                  idsCollezione.every(
                                     (id) => vm.selectedBookIds.contains(id),
                                   );
 
@@ -128,6 +148,11 @@ class _CatalogueViewState extends State<CatalogueView> {
                         const FontiDownloadingMessage()
                       else if (vm.tuttiILibri.isEmpty)
                         const FontiEmptyCatalogMessage()
+                      // mentre si scaricano i libri della collezione scelta
+                      // si mostra il caricamento invece di "nessun risultato"
+                      else if (vm.isLoadingLibriCollezione &&
+                          vm.opereFiltrate.isEmpty)
+                        const FontiDownloadingMessage()
                       else if (vm.opereFiltrate.isEmpty)
                         const FontiEmptySearchResults()
                       else
@@ -339,6 +364,8 @@ class FontiCollectionsSection extends StatelessWidget {
                   },
                 ),
               ),
+              // un chip per ogni collezione della GET pubblica, con il campo
+              // name come etichetta (es. Classici italiani, Test 01, ...)
               ...collezioni.map(
                 (collection) => Padding(
                   padding: const EdgeInsets.only(right: 8.0),
